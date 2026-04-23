@@ -1,232 +1,217 @@
-import { useState, useEffect } from "react";
-import { Plus, Search, Edit2, Trash2, FileText } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { 
+  UploadCloud, 
+  X, 
+  FileText, 
+  ChevronRight, 
+  Image as ImageIcon,
+  Smile,
+  Plus,
+  MessageSquare,
+  MoreHorizontal,
+  Trash2,
+  ExternalLink
+} from "lucide-react";
 import "../styles/notes.css";
 
 function Notes() {
-  const [showModal, setShowModal] = useState(false);
-  const [isEdit, setIsEdit] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { category } = useParams();
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
-  const [notes, setNotes] = useState(() => {
-    try {
-      if (typeof window === "undefined" || !window.localStorage) return [];
-      const saved = localStorage.getItem("notes");
-      if (!saved || saved === "undefined" || saved === "null") return [];
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-      localStorage.removeItem("notes");
-      return [];
-    } catch (error) {
-      console.error("LocalStorage error:", error);
-      localStorage.removeItem("notes");
-      return [];
-    }
+  // --- UI States ---
+  const [pageIcon, setPageIcon] = useState("📓");
+  const [hasCover, setHasCover] = useState(true);
+  const [showComments, setShowComments] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+
+  // --- Upload & File State ---
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const [uploadedFiles, setUploadedFiles] = useState(() => {
+    const saved = localStorage.getItem("starNote_files");
+    return saved ? JSON.parse(saved) : [
+      { 
+        name: "Calculus_Chapter_4.pdf", 
+        size: "2.4 MB", 
+        date: "Today",
+        icon: "📐",
+        cat: "university",
+        content: "Calculus Chapter 4 Overview:\n1. The Derivative as a Function.\n2. Differentiation Rules.\n3. The Chain Rule."
+      },
+      { 
+        name: "Physics_Notes.docx", 
+        size: "1.1 MB", 
+        date: "Yesterday",
+        icon: "⚛️",
+        cat: "university",
+        content: "Newton's Laws of Motion:\nFirst Law: Inertia.\nSecond Law: F = ma.\nThird Law: Action & Reaction."
+      }
+    ];
   });
 
-  const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
-
   useEffect(() => {
-    localStorage.setItem("notes", JSON.stringify(notes));
-  }, [notes]);
+    localStorage.setItem("starNote_files", JSON.stringify(uploadedFiles));
+  }, [uploadedFiles]);
 
-  const handleAddNote = () => {
-    if (!title.trim() || !subject.trim()) return;
+  const filteredFiles = category 
+    ? uploadedFiles.filter(f => f.cat === category)
+    : uploadedFiles;
 
-    const newNote = {
-      title,
-      subject: subject.toLowerCase(),
-      date: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-      }),
+  // --- Handlers ---
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) setSelectedFile(file);
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile) return;
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const newFile = {
+        name: selectedFile.name,
+        size: (selectedFile.size / (1024 * 1024)).toFixed(1) + " MB",
+        date: "Just now",
+        icon: selectedFile.type.includes("pdf") ? "📕" : "📄",
+        cat: category || "general",
+        type: selectedFile.type,
+        blobUrl: e.target.result
+      };
+      setUploadedFiles(prev => [newFile, ...prev]);
+      setSelectedFile(null);
+      setIsUploading(false);
+      setUploadProgress(0);
     };
-
-    setNotes((prev) => [newNote, ...prev]);
-    resetModal();
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 25;
+      setUploadProgress(progress);
+      if (progress >= 100) {
+        clearInterval(interval);
+        reader.readAsDataURL(selectedFile);
+      }
+    }, 200);
   };
 
-  const handleEdit = (index) => {
-    const realIndex = notes.findIndex(n => n === filteredNotes[index]);
-    const note = notes[realIndex];
-    if (!note) return;
-
-    setTitle(note.title);
-    setSubject(note.subject);
-    setEditIndex(realIndex);
-    setIsEdit(true);
-    setShowModal(true);
+  const deleteFile = (e, globalIndex) => {
+    e.stopPropagation();
+    const fileToTrash = uploadedFiles[globalIndex];
+    
+    // Save to Trash
+    const currentTrash = JSON.parse(localStorage.getItem("starNote_trash") || "[]");
+    localStorage.setItem("starNote_trash", JSON.stringify([fileToTrash, ...currentTrash]));
+    
+    // Remove from main list
+    const updated = uploadedFiles.filter((_, i) => i !== globalIndex);
+    setUploadedFiles(updated);
+    setActiveMenuId(null);
   };
-
-  const handleUpdateNote = () => {
-    if (!title.trim() || !subject.trim()) return;
-
-    setNotes((prev) =>
-      prev.map((n, i) =>
-        i === editIndex
-          ? { ...n, title, subject: subject.toLowerCase() }
-          : n
-      )
-    );
-
-    resetModal();
-  };
-
-  const handleDelete = (index) => {
-    const realIndex = notes.findIndex(n => n === filteredNotes[index]);
-    setNotes((prev) => prev.filter((_, i) => i !== realIndex));
-  };
-
-  const resetModal = () => {
-    setTitle("");
-    setSubject("");
-    setShowModal(false);
-    setIsEdit(false);
-    setEditIndex(null);
-  };
-
-  const filteredNotes = notes.filter(n => 
-    n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    n.subject.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
-    <div className="notes-page fade-in">
-      {/* HEADER */}
+    <div className="notes-page fade-in" onClick={() => setActiveMenuId(null)}>
+      
+      <div className="breadcrumb">
+        <span>Private</span>
+        <ChevronRight size={14} />
+        <span className="capitalize">{category || "All Notes"}</span>
+      </div>
+
       <div className="notes-header">
-        <div>
-          <h1 className="page-title">Documents</h1>
-          <p className="page-subtitle">Manage your study notes and resources.</p>
-        </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={18} />
-          <span>New Document</span>
-        </button>
-      </div>
-
-      {/* CONTROLS */}
-      <div className="notes-controls">
-        <div className="search-bar">
-          <Search size={18} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search documents..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {hasCover && (
+          <div className="notes-cover">
+            <div className="cover-placeholder"></div>
+            <button className="btn-add-cover" onClick={() => setHasCover(false)}>Remove cover</button>
+          </div>
+        )}
+        
+        <div className="header-main" style={{ marginTop: hasCover ? "-40px" : "40px" }}>
+          <div className="page-icon" onClick={() => setPageIcon("✨")}>{pageIcon}</div>
+          <h1 className="page-title">{category ? category.charAt(0).toUpperCase() + category.slice(1) : "Notes & Materials"}</h1>
+          <div className="page-meta">
+            <button className="btn-meta" onClick={() => setPageIcon("🧠")}><Smile size={16} /> Add icon</button>
+            {!hasCover && <button className="btn-meta" onClick={() => setHasCover(true)}><ImageIcon size={16} /> Add cover</button>}
+            <button className="btn-meta" onClick={() => setShowComments(!showComments)}><MessageSquare size={16} /> Add comment</button>
+          </div>
         </div>
       </div>
 
-      {/* EMPTY STATE */}
-      {notes.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">
-            <FileText size={48} />
-          </div>
-          <h3>No documents found</h3>
-          <p>Get started by creating a new document for your studies.</p>
-          <button className="btn-secondary mt-4" onClick={() => setShowModal(true)}>
-            Create Document
-          </button>
+      <div className="notes-content">
+        <div 
+          className={`notion-drop-zone ${isDragging ? 'active' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setIsDragging(false); setSelectedFile(e.dataTransfer.files[0]); }}
+          onClick={() => !selectedFile && fileInputRef.current?.click()}
+        >
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} />
+          {!selectedFile ? (
+            <div className="upload-prompt">
+              <UploadCloud size={24} />
+              <span>Click or drag files to upload to <b>{category || "Workspace"}</b></span>
+            </div>
+          ) : (
+            <div className="file-ready slide-up" onClick={(e) => e.stopPropagation()}>
+              <FileText size={20} className="icon-primary" />
+              <div className="file-ready-info"><span className="name">{selectedFile.name}</span></div>
+              {isUploading ? (
+                <div className="upload-progress-container">
+                  <div className="progress-bar-mini"><div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div></div>
+                </div>
+              ) : (
+                <div className="upload-actions">
+                  <button className="btn-confirm-upload" onClick={handleUpload}>Upload</button>
+                  <button className="btn-cancel-file" onClick={() => setSelectedFile(null)}><X size={16} /></button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      ) : filteredNotes.length === 0 ? (
-        <div className="empty-state">
-          <h3>No matching documents</h3>
-          <p>Try adjusting your search query.</p>
-        </div>
-      ) : (
-        /* LIST */
-        <div className="notes-container">
-          <div className="notes-grid-header">
-            <div className="col-title">Title</div>
-            <div className="col-subject">Subject</div>
-            <div className="col-date">Last Edited</div>
-            <div className="col-actions"></div>
-          </div>
-          
-          <div className="notes-list">
-            {filteredNotes.map((note, index) => (
-              <div className="note-card" key={index} style={{ animationDelay: `${index * 50}ms` }}>
-                <div className="col-title note-title-group" onClick={() => handleEdit(index)}>
-                  <FileText size={16} className="note-icon" />
-                  <span className="note-title">{note.title}</span>
+
+        <div className="notes-grid">
+          {filteredFiles.map((f) => {
+            const globalIndex = uploadedFiles.indexOf(f);
+            return (
+              <div className="notion-card" key={globalIndex} onClick={() => navigate(`/reader/${globalIndex}`)}>
+                <div className="card-icon">{f.icon}</div>
+                <div className="card-info">
+                  <h3>{f.name}</h3>
+                  <p>Edited {f.date}</p>
                 </div>
                 
-                <div className="col-subject">
-                  <span className="badge" data-subject={note.subject}>
-                    {note.subject}
-                  </span>
-                </div>
-
-                <div className="col-date">
-                  <span className="note-date">{note.date}</span>
-                </div>
-
-                <div className="col-actions">
-                  <div className="action-buttons">
-                    <button className="btn-icon" onClick={() => handleEdit(index)}>
-                      <Edit2 size={16} />
-                    </button>
-                    <button className="btn-icon danger" onClick={() => handleDelete(index)}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                <div className="card-actions-wrapper">
+                  <button 
+                    className="card-more" 
+                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === globalIndex ? null : globalIndex); }}
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+                  
+                  {activeMenuId === globalIndex && (
+                    <div className="card-dropdown slide-up" onClick={(e) => e.stopPropagation()}>
+                      <button className="dropdown-item" onClick={() => navigate(`/reader/${globalIndex}`)}>
+                        <ExternalLink size={14} /> Open
+                      </button>
+                      <button className="dropdown-item delete" onClick={(e) => deleteFile(e, globalIndex)}>
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+            );
+          })}
+          <div className="notion-card add-card" onClick={() => navigate("/templates")}>
+            <Plus size={20} />
+            <span>Use Template</span>
           </div>
         </div>
-      )}
-
-      {/* MODAL */}
-      {showModal && (
-        <div className="modal-backdrop" onClick={resetModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{isEdit ? "Edit Document" : "Create Document"}</h2>
-              <p>{isEdit ? "Update your document details below." : "Add a new document to your workspace."}</p>
-            </div>
-
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Title</label>
-                <input
-                  placeholder="e.g. Chapter 1 Summary"
-                  className="input-field"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Subject</label>
-                <input
-                  placeholder="e.g. Computer Science"
-                  className="input-field"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-ghost" onClick={resetModal}>
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={isEdit ? handleUpdateNote : handleAddNote}
-                disabled={!title.trim() || !subject.trim()}
-              >
-                {isEdit ? "Save Changes" : "Create"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Send, User, Bot, Loader2 } from "lucide-react";
+import { Send, User, Sparkles, Loader2 } from "lucide-react";
 import "../styles/ai.css";
 
 // 🔥 init Gemini
@@ -9,7 +9,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 function AI() {
   const [messages, setMessages] = useState([
-    { role: "ai", text: "Hello! How can I assist you with your studies today?" },
+    { role: "ai", text: "Hello! I'm your AI Tutor. How can I help you with your studies today?" },
   ]);
 
   const [input, setInput] = useState("");
@@ -31,7 +31,6 @@ function AI() {
     setLoading(true);
 
     try {
-      // Basic context by feeding previous messages
       const historyText = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join("\n");
       const prompt = historyText + `\nUser: ${input}\nAssistant:`;
       
@@ -49,7 +48,7 @@ function AI() {
         ...prev,
         {
           role: "ai",
-          text: err?.message || "I encountered an error. Please try again later.",
+          text: err?.message || "I had trouble processing that. Please try again.",
         },
       ]);
     }
@@ -58,66 +57,73 @@ function AI() {
   };
 
   return (
-    <div className="ai-container">
-      {/* CHAT AREA */}
-      <div className="chat-window">
-        <div className="chat-scroll">
-          {messages.map((msg, i) => (
-            <div key={i} className={`chat-message ${msg.role}`}>
-              <div className="chat-message-inner">
-                <div className={`avatar ${msg.role}`}>
-                  {msg.role === "user" ? <User size={18} /> : <Bot size={18} />}
-                </div>
-                <div className="message-content">
-                  <p>{msg.text}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+    <div className="ai-page fade-in">
+      <div className="ai-header">
+        <h1 className="page-title">AI Tutor</h1>
+        <p className="page-subtitle">Ask questions and get help with your study materials.</p>
+      </div>
 
-          {loading && (
-            <div className="chat-message ai loading-message">
-              <div className="chat-message-inner">
-                <div className="avatar ai">
-                  <Bot size={18} />
-                </div>
-                <div className="message-content">
-                  <div className="typing-indicator">
-                    <span></span><span></span><span></span>
+      <div className="ai-container">
+        {/* CHAT AREA */}
+        <div className="chat-window">
+          <div className="chat-scroll">
+            {messages.map((msg, i) => (
+              <div key={i} className={`chat-message ${msg.role}`}>
+                <div className="chat-message-inner">
+                  <div className={`avatar ${msg.role}`}>
+                    {msg.role === "user" ? <User size={18} /> : <Sparkles size={18} />}
+                  </div>
+                  <div className="message-content">
+                    <p>{msg.text}</p>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-          <div ref={chatEndRef} className="chat-anchor"></div>
-        </div>
-      </div>
+            ))}
 
-      {/* INPUT AREA */}
-      <div className="chat-input-wrapper">
-        <div className="chat-input-container">
-          <textarea
-            className="chat-input"
-            placeholder="Message AI..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            rows={1}
-          />
-          <button 
-            className={`send-button ${input.trim() ? 'active' : ''}`}
-            onClick={handleSend}
-            disabled={!input.trim() || loading}
-          >
-            {loading ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
-          </button>
+            {loading && (
+              <div className="chat-message ai loading-message">
+                <div className="chat-message-inner">
+                  <div className="avatar ai">
+                    <Sparkles size={18} />
+                  </div>
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} className="chat-anchor"></div>
+          </div>
         </div>
-        <p className="chat-footer">AI can make mistakes. Verify important information.</p>
+
+        {/* INPUT AREA */}
+        <div className="chat-input-wrapper">
+          <div className="chat-input-container">
+            <textarea
+              className="chat-input"
+              placeholder="Ask a question..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              rows={1}
+            />
+            <button 
+              className={`send-button ${input.trim() ? 'active' : ''}`}
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
+            >
+              {loading ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
+            </button>
+          </div>
+          <p className="chat-footer">AI can make mistakes. Always check important information.</p>
+        </div>
       </div>
     </div>
   );

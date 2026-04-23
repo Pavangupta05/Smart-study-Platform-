@@ -1,5 +1,5 @@
 /* ===== RESET & FONTS ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 * {
   margin: 0;
@@ -9,63 +9,68 @@
 
 /* ===== THEME VARIABLES ===== */
 :root {
-  /* LIGHT MODE */
-  --bg: #fafafa;
+  /* LIGHT MODE (Zen Study) */
+  --bg: #fcfcfb; /* Soft neutral parchment */
   --surface: #ffffff;
-  --surface-hover: #f4f4f5;
-  --text: #09090b;
-  --text-secondary: #71717a;
-  --text-muted: #a1a1aa;
+  --surface-hover: #f5f5f4;
+  --text: #1c1917; /* Warm dark gray */
+  --text-secondary: #57534e;
+  --text-muted: #a8a29e;
 
-  --primary: #000000;
-  --primary-hover: #27272a;
+  --primary: #1B4332; /* Deep emerald green */
+  --primary-hover: #081c15;
+  --primary-weak: #edf5f0;
   --primary-foreground: #ffffff;
   
-  --border: #e4e4e7;
-  --border-focus: #18181b;
-  --ring: rgba(24, 24, 27, 0.15);
+  --border: #e7e5e4;
+  --border-focus: #1B4332;
+  --ring: rgba(27, 67, 50, 0.2);
   
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.03), 0 2px 4px rgba(28, 25, 23, 0.02);
+  --shadow-lg: 0 12px 24px -4px rgba(28, 25, 23, 0.04), 0 4px 8px -4px rgba(28, 25, 23, 0.03);
+  --shadow-modal: 0 24px 48px -12px rgba(28, 25, 23, 0.08);
   
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
   --radius-full: 9999px;
+  
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Noto Serif", Georgia, serif;
   
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body.dark {
-  /* DARK MODE */
-  --bg: #09090b;
-  --surface: #18181b;
-  --surface-hover: #27272a;
-  --text: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  /* DARK MODE (Athenaeum Nightfall) */
+  --bg: #0a0a0a;
+  --surface: #131313; /* Deep charcoal surface */
+  --surface-hover: #1c1c1c;
+  --text: #f5f5f4;
+  --text-secondary: #a8a29e;
+  --text-muted: #57534e;
 
-  --primary: #ffffff;
-  --primary-hover: #e4e4e7;
-  --primary-foreground: #09090b;
+  --primary: #10b981; /* Vibrant emerald accent */
+  --primary-hover: #34d399;
+  --primary-weak: rgba(16, 185, 129, 0.1);
+  --primary-foreground: #022c22;
   
-  --border: #27272a;
-  --border-focus: #fafafa;
-  --ring: rgba(250, 250, 250, 0.15);
+  --border: #262626;
+  --border-focus: #10b981;
+  --ring: rgba(16, 185, 129, 0.3);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
 /* ===== BASE ===== */
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -81,6 +86,12 @@ body {
   overflow: hidden;
 }
 
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column-reverse; /* Bottom navigation on mobile */
+  }
+}
+
 .main {
   flex: 1;
   display: flex;
@@ -89,6 +100,16 @@ body {
   overflow: hidden;
   background-color: var(--bg);
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .dashboard-minimal {
+    padding: 24px 20px 100px 20px;
+    height: 100%;
+  }
+  .main {
+    height: calc(100vh - 64px); /* Subtract mobile nav height */
+  }
 }
 
 /* ===== UTILITIES ===== */
@@ -108,7 +129,7 @@ button:active {
 input:focus, textarea:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 2px var(--ring);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 /* ===== KEYFRAMES ===== */

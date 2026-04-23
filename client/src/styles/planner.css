@@ -1,0 +1,65 @@
+/* PLANNER ZEN POLISH - RESPONSIVE */
+
+.planner-page {
+  padding: 60px 80px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.planner-header .page-title {
+  font-family: var(--font-serif);
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.planner-container {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 64px;
+}
+
+/* --- RESPONSIVENESS --- */
+@media (max-width: 1100px) {
+  .planner-container {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .planner-page {
+    padding: 30px 20px 100px 20px;
+  }
+  .planner-header .page-title {
+    font-size: 34px;
+  }
+  .block-main {
+    padding: 20px;
+  }
+  .block-time {
+    width: 50px;
+    gap: 16px;
+  }
+}
+
+/* STYLES CONTINUED */
+.block-main { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px 32px; box-shadow: var(--shadow-md); transition: all 0.3s; }
+.timeline-block { display: flex; gap: 32px; position: relative; margin-bottom: 0; }
+.block-time { width: 60px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+.time-line { width: 2px; background: var(--border); flex-grow: 1; }
+.timeline-block:last-child .time-line { display: none; }
+.block-content { flex-grow: 1; padding-bottom: 32px; }
+.control-card, .insight-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 32px; box-shadow: var(--shadow-lg); margin-bottom: 32px; }
+.btn-add-task { width: 100%; height: 52px; border-radius: 14px; background: var(--primary); color: white; border: none; font-weight: 700; cursor: pointer; }
+.input-group { margin-bottom: 20px; }
+.input-group input { width: 100%; height: 48px; border-radius: 12px; background: var(--bg); border: 2px solid var(--border); padding: 0 16px; }
+.load-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.load-btn { height: 40px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
+.load-btn.active { background: var(--primary); color: white; }
+.load-label { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+.load-label.low { background: #f0fdf4; color: #16a34a; }
+.load-label.medium { background: #fefce8; color: #ca8a04; }
+.load-label.high { background: #fef2f2; color: #dc2626; }
+.energy-indicator { background: var(--primary-weak); color: var(--primary); padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
