@@ -1,0 +1,52 @@
+.sidebar {
+  width: 240px;
+  padding: 24px 14px;
+  border-right: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 28px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 🔥 ITEM */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* 🔥 ACTIVE */
+.item.active {
+  background: var(--primary-weak);
+  color: var(--primary);
+  font-weight: 500;
+  position: relative;
+}
+
+.item.active::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 6px;
+  height: 70%;
+  width: 3px;
+  background: var(--primary);
+  border-radius: 2px;
+}
