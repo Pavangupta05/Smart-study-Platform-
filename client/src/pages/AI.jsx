@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Send, User, Sparkles, Loader2 } from "lucide-react";
+import { User, Sparkles, Loader2 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import "../styles/ai.css";
 
 // 🔥 init Gemini
@@ -14,25 +15,38 @@ function AI() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const location = useLocation();
   const chatEndRef = useRef(null);
+
+  // 🔽 Handle initial message from GlobalAskAI
+  useEffect(() => {
+    if (location.state?.initialMessage) {
+      handleSend(location.state.initialMessage);
+      // Clear state so it doesn't re-trigger on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // 🔽 Auto scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // 🚀 Send message
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
+  // Handle messages from global bar (optional logic if needed)
+  // For now, this is the chat area only.
 
-    const userMsg = { role: "user", text: input };
+  const handleSend = async (customInput) => {
+    const textToSend = customInput || input;
+    if (!textToSend.trim() || loading) return;
+
+    const userMsg = { role: "user", text: textToSend };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
       const historyText = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join("\n");
-      const prompt = historyText + `\nUser: ${input}\nAssistant:`;
+      const prompt = historyText + `\nUser: ${textToSend}\nAssistant:`;
       
       const result = await model.generateContent(prompt);
       const response = await result.response;
@@ -96,33 +110,6 @@ function AI() {
             )}
             <div ref={chatEndRef} className="chat-anchor"></div>
           </div>
-        </div>
-
-        {/* INPUT AREA */}
-        <div className="chat-input-wrapper">
-          <div className="chat-input-container">
-            <textarea
-              className="chat-input"
-              placeholder="Ask a question..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              rows={1}
-            />
-            <button 
-              className={`send-button ${input.trim() ? 'active' : ''}`}
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-            >
-              {loading ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
-            </button>
-          </div>
-          <p className="chat-footer">AI can make mistakes. Always check important information.</p>
         </div>
       </div>
     </div>

@@ -6,17 +6,20 @@ function Settings() {
   const [activeTab, setActiveTab] = useState("general");
   
   // Toggle States
-  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   const [autoSave, setAutoSave] = useState(true);
   const [emailReports, setEmailReports] = useState(true);
   const [studyReminders, setStudyReminders] = useState(false);
   const [aiData, setAiData] = useState(false);
   const [publicMap, setPublicMap] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
 
   useEffect(() => {
-    document.body.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
+    document.body.classList.remove("light", "dark");
+    document.body.classList.add(theme);
+    localStorage.setItem("theme", theme);
+    // Trigger storage event for other components (like App.jsx) to sync
+    window.dispatchEvent(new Event("storage"));
+  }, [theme]);
 
   const tabs = [
     { id: "general", label: "General", icon: <Sliders size={18} /> },
@@ -66,7 +69,7 @@ function Settings() {
                     <label>App Theme</label>
                     <p>Switch between light and dark modes.</p>
                   </div>
-                  <MinimalSwitch isOn={dark} onToggle={() => setDark(!dark)} />
+                  <MinimalSwitch isOn={theme === "dark"} onToggle={() => setTheme(theme === "dark" ? "light" : "dark")} />
                 </div>
 
                 <div className="setting-item">

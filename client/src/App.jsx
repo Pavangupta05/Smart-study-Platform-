@@ -1,26 +1,34 @@
 import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
 import AI from "./pages/AI";
-import Planner from "./pages/Planner";
 import Settings from "./pages/Settings";
+import Planner from "./pages/Planner";
 import Templates from "./pages/Templates";
 import Trash from "./pages/Trash";
 import Reader from "./pages/Reader";
 import SearchModal from "./components/SearchModal";
+import GlobalAskAI from "./components/GlobalAskAI";
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [theme, setTheme] = useState(localStorage.getItem("starNote_theme") || "light");
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
+  const location = useLocation();
 
   useEffect(() => {
-    // Apply theme to body
-    document.body.className = theme;
-    localStorage.setItem("starNote_theme", theme);
+    document.body.classList.remove("light", "dark");
+    document.body.classList.add(theme);
+    localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const syncTheme = () => setTheme(localStorage.getItem("theme") || "light");
+    window.addEventListener("storage", syncTheme);
+    return () => window.removeEventListener("storage", syncTheme);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -32,10 +40,6 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === "light" ? "dark" : "light");
-  };
 
   return (
     <div className={`app ${theme}`}>
@@ -58,6 +62,9 @@ function App() {
       </div>
 
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      
+      {/* Show only on AI page as requested */}
+      {location.pathname === "/ai" && <GlobalAskAI />}
     </div>
   );
 }
