@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Clock, Coffee, Brain, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Plus, Clock, Coffee, Brain, ChevronRight, CheckCircle2, Wand2, Trash2 } from "lucide-react";
 import "../styles/planner.css";
 
 function Planner() {
@@ -12,22 +12,39 @@ function Planner() {
   ]);
 
   const [newTask, setNewTask] = useState("");
+  const [newTime, setNewTime] = useState("");
   const [newLoad, setNewLoad] = useState("Medium");
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   const toggleTask = (id) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const deleteTask = (id) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleOptimize = () => {
+    setIsOptimizing(true);
+    setTimeout(() => {
+      setIsOptimizing(false);
+      // Logic for reordering tasks could go here
+    }, 1500);
   };
 
   const addTask = (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
 
-    const lastTime = tasks[tasks.length - 1]?.time || "08:00";
-    const [hours, minutes] = lastTime.split(":").map(Number);
-    const nextTime = new Date();
-    nextTime.setHours(hours + 1, minutes);
+    let formattedTime = newTime;
     
-    const formattedTime = nextTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    if (!formattedTime) {
+      const lastTime = tasks[tasks.length - 1]?.time || "08:00";
+      const [hours, minutes] = lastTime.split(":").map(Number);
+      const nextTime = new Date();
+      nextTime.setHours(hours + 1, minutes);
+      formattedTime = nextTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
 
     const taskObj = {
       id: Date.now(),
@@ -38,8 +55,9 @@ function Planner() {
       type: "task"
     };
 
-    setTasks([...tasks, taskObj]);
+    setTasks([...tasks, taskObj].sort((a, b) => a.time.localeCompare(b.time)));
     setNewTask("");
+    setNewTime("");
   };
 
   return (
@@ -54,10 +72,16 @@ function Planner() {
         {/* TIMELINE COLUMN */}
         <div className="timeline-column">
           <div className="timeline-header">
-            <h2 className="section-title">Today's Schedule</h2>
-            <div className="energy-indicator">
-              <Brain size={14} /> Best Focus Time: 08:00 - 11:30
+            <div>
+              <h2 className="section-title">Today's Schedule</h2>
+              <div className="energy-indicator">
+                <Brain size={14} /> Best Focus Time: 08:00 - 11:30
+              </div>
             </div>
+            <button className={`btn-ai-optimize ${isOptimizing ? 'loading' : ''}`} onClick={handleOptimize}>
+              <Wand2 size={16} />
+              <span>{isOptimizing ? "Optimizing..." : "Optimize with AI"}</span>
+            </button>
           </div>
 
           <div className="adaptive-timeline">
@@ -90,6 +114,13 @@ function Planner() {
                       >
                         <CheckCircle2 size={18} />
                       </button>
+                      <button 
+                        className="btn-delete-task"
+                        onClick={() => deleteTask(item.id)}
+                        title="Delete Task"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -110,6 +141,16 @@ function Planner() {
                   placeholder="e.g. Master Neural Networks"
                   value={newTask}
                   onChange={(e) => setNewTask(e.target.value)}
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Target Time</label>
+                <input 
+                  type="time" 
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  className="time-input-smooth"
                 />
               </div>
 

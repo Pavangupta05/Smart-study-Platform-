@@ -10,12 +10,14 @@ import Planner from "./pages/Planner";
 import Templates from "./pages/Templates";
 import Trash from "./pages/Trash";
 import Reader from "./pages/Reader";
+import Flashcards from "./pages/Flashcards";
 import SearchModal from "./components/SearchModal";
 import GlobalAskAI from "./components/GlobalAskAI";
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
+  const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
   const location = useLocation();
 
   useEffect(() => {
@@ -23,6 +25,10 @@ function App() {
     document.body.classList.add(theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("zenMode", zenMode);
+  }, [zenMode]);
 
   useEffect(() => {
     const syncTheme = () => setTheme(localStorage.getItem("theme") || "light");
@@ -42,22 +48,23 @@ function App() {
   }, []);
 
   return (
-    <div className={`app ${theme}`}>
-      <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />
+    <div className={`app ${theme} ${zenMode ? "zen-mode" : ""}`}>
+      {!zenMode && <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />}
 
       <div className="main">
-        <Topbar />
+        <Topbar zenMode={zenMode} setZenMode={setZenMode} />
 
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/notes/:category" element={<Notes />} />
+          <Route path="/flashcards" element={<Flashcards />} />
           <Route path="/ai" element={<AI />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/trash" element={<Trash />} />
-          <Route path="/reader/:id" element={<Reader />} />
+          <Route path="/reader/:id" element={<Reader zenMode={zenMode} setZenMode={setZenMode} />} />
         </Routes>
       </div>
 

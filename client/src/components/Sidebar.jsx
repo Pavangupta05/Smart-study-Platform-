@@ -13,7 +13,8 @@ import {
   Trash2, 
   LayoutTemplate,
   Menu,
-  X
+  X,
+  Layers
 } from "lucide-react"; 
 import "../styles/sidebar.css";
 
@@ -74,6 +75,10 @@ function Sidebar({ onOpenSearch }) {
             <NavLink to="/notes" onClick={closeMobileMenu} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
               <FileText size={18} />
               <span>Notes</span>
+            </NavLink>
+            <NavLink to="/flashcards" onClick={closeMobileMenu} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
+              <Layers size={18} />
+              <span>Flashcards</span>
             </NavLink>
             <NavLink to="/ai" onClick={closeMobileMenu} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
               <Sparkles size={18} />
@@ -142,6 +147,9 @@ function Sidebar({ onOpenSearch }) {
         </NavLink>
         <NavLink to="/notes" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
           <FileText size={22} />
+        </NavLink>
+        <NavLink to="/flashcards" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
+          <Layers size={22} />
         </NavLink>
         <NavLink to="/ai" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
           <Sparkles size={22} />

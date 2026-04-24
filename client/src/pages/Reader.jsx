@@ -37,7 +37,7 @@ import "../styles/reader.css";
 import "../styles/reader-mobile.css";
 import "../styles/reader-tablet.css";
 
-function Reader() {
+function Reader({ zenMode, setZenMode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [zoom, setZoom] = useState(100);
@@ -48,7 +48,16 @@ function Reader() {
   const [pages, setPages] = useState([""]);
   const [currentPage, setCurrentPage] = useState(0);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false);
+  
+  // SYNC WITH GLOBAL ZEN MODE
+  useEffect(() => {
+    if (zenMode !== undefined) {
+      // Local state isFocusMode is effectively zenMode
+    }
+  }, [zenMode]);
+
+  const isFocusMode = zenMode;
+  const setIsFocusMode = setZenMode;
   
   // BREAKPOINT STATES
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -416,9 +425,20 @@ function Reader() {
                 )}
               </div>
               <div className="ai-card-modern">
+                <div className="card-header-modern"><Layers size={18} className="text-blue" /><span>Flashcard Gen</span></div>
+                <p>Turn this document into flashcards.</p>
+                <button className="card-btn-modern" onClick={() => navigate("/flashcards", { state: { sourceFile: file.name } })}>
+                  Generate Deck
+                </button>
+              </div>
+
+              <div className="ai-card-modern">
                 <div className="card-header-modern"><MessageSquare size={18} className="text-blue" /><span>AI Tutor</span></div>
                 <p>Ask questions and get explained concepts.</p>
-                <button className="card-btn-modern" onClick={() => navigate("/ai")}>Go to AI Tutor</button>
+                <div className="ai-actions-row">
+                  <button className="card-btn-modern" onClick={() => navigate("/ai")}>Chat</button>
+                  <button className="card-btn-icon-modern" title="Voice Ask"><Plus size={18} /></button>
+                </div>
               </div>
 
               <div className="notes-section-modern">

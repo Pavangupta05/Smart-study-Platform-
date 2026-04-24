@@ -260,22 +260,75 @@ body.dark .reader-modern-desktop {
   background: var(--d-bg);
   border: 1px solid var(--d-border);
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.card-header-modern { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; }
-.card-btn-modern {
+.card-header-modern { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  font-weight: 700; 
+  font-size: 13px; 
+  color: var(--d-text);
+  margin-bottom: 2px;
+}
+
+.ai-card-modern p {
+  font-size: 13px;
+  color: var(--d-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.ai-actions-row {
+  display: flex;
+  gap: 8px;
   width: 100%;
-  height: 40px;
+  margin-top: 4px;
+}
+
+.card-btn-modern {
+  flex: 1;
+  height: 38px;
   background: var(--d-blue-weak);
   color: var(--d-blue);
-  border: 1px solid var(--d-blue);
+  border: 1px solid transparent;
   border-radius: 10px;
   font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-btn-modern:hover {
+  background: var(--d-blue);
+  color: white;
+}
+
+.card-btn-icon-modern {
+  width: 38px;
+  height: 38px;
+  background: var(--d-surface);
+  border: 1px solid var(--d-border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--d-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.card-btn-icon-modern:hover {
+  background: var(--d-border);
+  color: var(--d-text);
 }
 
 /* NOTES SECTION */

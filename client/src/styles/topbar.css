@@ -51,7 +51,43 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+}
+
+.zen-toggle {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.zen-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  transform: scale(1.05);
+}
+
+.zen-toggle.active {
+  color: #0084ff;
+  background: rgba(0, 132, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 132, 255, 0.1);
+}
+
+.topbar.zen {
+  background: transparent;
+  border-bottom: none;
+  padding: 0 60px;
+}
+
+.topbar.zen .search-box {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .avatar {
