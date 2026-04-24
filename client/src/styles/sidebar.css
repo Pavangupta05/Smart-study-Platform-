@@ -102,6 +102,17 @@
   font-weight: 600;
 }
 
+.logout-btn {
+  background: transparent;
+  border: none;
+  width: 100%;
+}
+
+.logout-btn:hover {
+  background: #fee2e2 !important;
+  color: #ef4444 !important;
+}
+
 .nested-item .chevron {
   opacity: 0.4;
   transition: transform 0.2s;

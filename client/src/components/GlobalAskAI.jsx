@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Edit3, Command, X, ListFilter, Zap, Loader2 } from "lucide-react";
+import { Search, Mic, MicOff, Command, X, ListFilter, Zap, Loader2, Edit3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./GlobalAskAI.css";
@@ -9,17 +9,24 @@ function GlobalAskAI() {
   const [isFocused, setIsFocused] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
   const searchInputRef = useRef(null);
+  const transcriptRef = useRef("");
 
   const suggestions = [
     { icon: <Zap size={14} />, text: "Summarize this page" },
     { icon: <Search size={14} />, text: "Explain Quantum Physics" },
     { icon: <Edit3 size={14} />, text: "Help me write a summary" },
   ];
+
+  // 🌀 Unified Spring Transition
+  const springTransition = { type: "spring", stiffness: 500, damping: 40, mass: 1 };
+
 
   // ⌨️ Ctrl + K shortcut
   useEffect(() => {
@@ -43,9 +50,13 @@ function GlobalAskAI() {
 
   const handleAskAI = () => {
     if (!input.trim()) return;
-    // Navigate to AI page and pass state if needed, or use a global state manager
-    // For now, we navigate to /ai
-    navigate("/ai", { state: { initialMessage: input } });
+    
+    if (location.pathname === "/ai") {
+      window.dispatchEvent(new CustomEvent("globalAskAI", { detail: input }));
+    } else {
+      navigate("/ai", { state: { initialMessage: input } });
+    }
+    
     setInput("");
     setIsFocused(false);
   };
@@ -58,36 +69,113 @@ function GlobalAskAI() {
     }
   };
 
+  // 🎙️ Bulletproof Voice Recognition Setup
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join("");
+      
+      transcriptRef.current = transcript;
+      setInput(transcript);
+      inputRef.current?.focus();
+      setIsFocused(true);
+      setShowDropdown(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      
+      // Auto-submit when voice finishes
+      if (transcriptRef.current.trim()) {
+        if (window.location.pathname === "/ai") {
+          window.dispatchEvent(new CustomEvent("globalAskAI", { detail: transcriptRef.current }));
+        } else {
+          navigate("/ai", { state: { initialMessage: transcriptRef.current } });
+        }
+        setInput("");
+        setIsFocused(false);
+        transcriptRef.current = ""; // Reset
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+
+    try {
+      recognition.start();
+      setIsListening(true);
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  };
+
+  const toggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
   return (
     <div className="notion-floating-wrapper global">
       <motion.div 
         className="notion-ask-ai-group"
+        layout
         animate={{ gap: isSearchActive ? "8px" : "12px" }}
+        transition={springTransition}
       >
         {/* 1. SEARCH / FULL SEARCH PILL */}
         <motion.div 
+          layout
           className={isSearchActive ? "full-search-bar" : "notion-circle-btn search-trigger"}
           animate={{ 
             width: isSearchActive ? (window.innerWidth < 768 ? "calc(100vw - 100px)" : "500px") : "52px" 
           }}
-          transition={{ type: "spring", stiffness: 600, damping: 38 }}
+          transition={springTransition}
           onClick={() => !isSearchActive && setIsSearchActive(true)}
         >
           <motion.div 
+            layout
             className="search-flex-container"
             animate={{ 
               padding: isSearchActive ? "0 20px" : "0",
               justifyContent: isSearchActive ? "flex-start" : "center"
             }}
-            transition={{ type: "spring", stiffness: 600, damping: 38 }}
+            transition={springTransition}
           >
             <motion.div
+              layout
               animate={{ 
                 width: isSearchActive ? "auto" : "52px",
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center"
               }}
+              transition={springTransition}
             >
               <Search size={isSearchActive ? 22 : 20} className="search-icon-left" />
             </motion.div>
@@ -116,17 +204,19 @@ function GlobalAskAI() {
         </motion.div>
 
         {/* 2. ASK AI PILL */}
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {!isSearchActive && (
             <motion.div 
+              layout
               className={`notion-ask-ai-pill ${isFocused ? "is-focused" : ""}`}
-              initial={{ opacity: 1, width: "240px" }}
+              initial={{ opacity: 0, width: 0, scale: 0.9 }}
               animate={{ 
                 opacity: 1, 
-                width: isFocused ? "var(--search-width-focused, 500px)" : "var(--search-width-initial, 240px)" 
+                width: isFocused ? "var(--search-width-focused, 500px)" : "var(--search-width-initial, 240px)",
+                scale: 1 
               }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ type: "spring", stiffness: 600, damping: 38 }}
+              exit={{ opacity: 0, width: 0, scale: 0.9 }}
+              transition={springTransition}
             >
               <div className="pill-content">
                 <div className="pill-avatar">
@@ -196,11 +286,12 @@ function GlobalAskAI() {
           )}
         </AnimatePresence>
 
-        {/* 3. COMPOSE / CLOSE BUTTON */}
-        <div className="action-button-container">
-          <AnimatePresence>
+        {/* 3. VOICE / CLOSE BUTTON */}
+        <motion.div layout transition={springTransition} className="action-button-container">
+          <AnimatePresence mode="wait">
             {isSearchActive ? (
               <motion.button 
+                layout
                 key="close"
                 className="notion-circle-btn close"
                 initial={{ opacity: 0, scale: 0.5, rotate: -45 }}
@@ -216,19 +307,21 @@ function GlobalAskAI() {
               </motion.button>
             ) : (
               <motion.button 
-                key="action"
-                className="notion-circle-btn action"
+                layout
+                key="voice"
+                className={`notion-circle-btn voice ${isListening ? 'listening' : ''}`}
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
                 transition={{ duration: 0.15 }}
-                onClick={handleAskAI}
+                onClick={toggleVoice}
+                title={isListening ? "Stop listening" : "Voice input"}
               >
-                <Edit3 size={20} strokeWidth={2} />
+                {isListening ? <MicOff size={20} /> : <Mic size={20} strokeWidth={2} />}
               </motion.button>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );

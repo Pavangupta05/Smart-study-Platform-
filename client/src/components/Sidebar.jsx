@@ -14,7 +14,8 @@ import {
   LayoutTemplate,
   Menu,
   X,
-  Layers
+  Layers,
+  LogOut
 } from "lucide-react"; 
 import "../styles/sidebar.css";
 
@@ -91,7 +92,7 @@ function Sidebar({ onOpenSearch }) {
             <div className="group-label">Favorites</div>
             <NavLink to="/notes" className="item" onClick={closeMobileMenu}>
               <Star size={16} className="icon-fav" />
-              <span>Thesis Draft</span>
+              <span>Project Draft</span>
             </NavLink>
           </div>
 
@@ -134,6 +135,13 @@ function Sidebar({ onOpenSearch }) {
             <Settings size={18} />
             <span>Settings</span>
           </NavLink>
+          <button className="item logout-btn" onClick={() => {
+            localStorage.removeItem("isAuthenticated");
+            window.location.reload();
+          }}>
+            <LogOut size={18} />
+            <span>Log Out</span>
+          </button>
         </div>
       </div>
 

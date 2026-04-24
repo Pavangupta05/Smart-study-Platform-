@@ -9,7 +9,11 @@ import {
   BookOpen, 
   Sparkles,
   ArrowRight,
-  Layout
+  Layout,
+  Flame,
+  Layers,
+  FileText,
+  Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../styles/dashboard.css";
@@ -30,20 +34,23 @@ function Dashboard() {
   const [newTask, setNewTask] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // --- Recent Files State ---
   const [recentFiles, setRecentFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     localStorage.setItem("starNote_tasks", JSON.stringify(tasks));
   }, [tasks]);
 
   useEffect(() => {
+    setIsLoading(true);
     const saved = localStorage.getItem("starNote_files");
     if (saved) {
       const files = JSON.parse(saved);
       // Attach original index so search filtering doesn't break navigation IDs
       setRecentFiles(files.map((f, index) => ({ ...f, originalIndex: index })));
     }
+    const timer = setTimeout(() => setIsLoading(false), 500); // Simulate network latency
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredFiles = recentFiles.filter(f => 
@@ -77,8 +84,8 @@ function Dashboard() {
     <div className="dashboard-minimal fade-in">
       <header className="dash-header">
         <div className="dash-greeting">
-          <h1>Welcome back!</h1>
-          <p>You have {tasks.filter(t => !t.completed).length} tasks remaining for today.</p>
+          <h1>Hello!</h1>
+          <p>{tasks.filter(t => !t.completed).length} tasks left today.</p>
         </div>
         <div className="dash-header-actions">
           <div className="dash-search">
@@ -95,6 +102,38 @@ function Dashboard() {
           </button>
         </div>
       </header>
+
+      {/* STUDY INSIGHTS */}
+      <section className="study-insights slide-up">
+        <div className="insight-card">
+          <div className="insight-icon streak"><Flame size={20} /></div>
+          <div className="insight-info">
+            <span className="insight-value">12 Days</span>
+            <span className="insight-label">Study Streak</span>
+          </div>
+        </div>
+        <div className="insight-card">
+          <div className="insight-icon cards"><Layers size={20} /></div>
+          <div className="insight-info">
+            <span className="insight-value">124</span>
+            <span className="insight-label">Cards Mastered</span>
+          </div>
+        </div>
+        <div className="insight-card">
+          <div className="insight-icon notes"><FileText size={20} /></div>
+          <div className="insight-info">
+            <span className="insight-value">{recentFiles.length}</span>
+            <span className="insight-label">Total Notes</span>
+          </div>
+        </div>
+        <div className="insight-card">
+          <div className="insight-icon time"><Clock size={20} /></div>
+          <div className="insight-info">
+            <span className="insight-value">42.5h</span>
+            <span className="insight-label">Focus Time</span>
+          </div>
+        </div>
+      </section>
 
       <div className="dash-content">
         <div className="dash-main">
@@ -131,15 +170,27 @@ function Dashboard() {
               </button>
             </div>
             <div className="doc-grid">
-              {filteredFiles.length > 0 ? filteredFiles.map((file) => (
-                <div key={file.originalIndex} className="doc-card-mini" onClick={() => navigate(`/reader/${file.originalIndex}`)}>
-                  <div className="doc-icon-small">{file.icon || "📄"}</div>
-                  <div className="doc-details">
-                    <span className="doc-name">{file.name}</span>
-                    <span className="doc-time">{file.date}</span>
+              {isLoading ? (
+                [1, 2, 3, 4].map((i) => (
+                  <div key={`skel-${i}`} className="doc-card-mini skeleton">
+                    <div className="skeleton-icon" style={{ width: 32, height: 32, marginBottom: 0, marginRight: 12 }}></div>
+                    <div className="doc-details" style={{ width: '100%' }}>
+                      <div className="skeleton-text short" style={{ height: 10, marginBottom: 6 }}></div>
+                      <div className="skeleton-text long" style={{ height: 8 }}></div>
+                    </div>
                   </div>
-                </div>
-              )) : (
+                ))
+              ) : filteredFiles.length > 0 ? (
+                filteredFiles.map((file) => (
+                  <div key={file.originalIndex} className="doc-card-mini" onClick={() => navigate(`/reader/${file.originalIndex}`)}>
+                    <div className="doc-icon-small">{file.icon || "📄"}</div>
+                    <div className="doc-details">
+                      <span className="doc-name">{file.name}</span>
+                      <span className="doc-time">{file.date}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
                 <div className="empty-docs-dash" onClick={() => navigate("/notes")}>
                   <Layout size={24} />
                   <p>{searchQuery ? "No matching materials found." : "No materials yet. Start by uploading one."}</p>

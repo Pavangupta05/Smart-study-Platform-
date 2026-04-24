@@ -31,7 +31,8 @@ import {
   Layers,
   StickyNote,
   X,
-  Maximize
+  Maximize,
+  Share2
 } from "lucide-react";
 import "../styles/reader.css";
 import "../styles/reader-mobile.css";
@@ -280,12 +281,33 @@ function Reader({ zenMode, setZenMode }) {
   };
 
   if (error) return <div className="reader-error"><AlertCircle size={48} /><h2>Error Loading</h2><button onClick={() => navigate("/notes")}>Back</button></div>;
-  if (!file) return <div className="reader-loading"><div className="loader-ring"></div></div>;
+  if (!file) return (
+    <div className="reader-modern-desktop">
+      <header className="reader-header-modern" style={{ padding: '0 24px' }}>
+        <div className="header-left">
+          <div className="skeleton-icon" style={{ width: 40, height: 40, margin: 0 }}></div>
+          <div className="skeleton-text short" style={{ width: 150, height: 16, margin: 0, borderRadius: 8 }}></div>
+        </div>
+      </header>
+      <div className="reader-layout-modern">
+        <aside className="left-toolbar-modern" style={{ paddingTop: 20 }}>
+           {[1,2,3].map(i => <div key={i} className="skeleton-icon" style={{ width: 40, height: 40, margin: '10px auto' }}></div>)}
+        </aside>
+        <main className="main-workspace-modern" style={{ padding: '40px 80px' }}>
+           <div className="skeleton-text" style={{ width: '80%', height: 40, marginBottom: 30, borderRadius: 12 }}></div>
+           <div className="skeleton-text" style={{ width: '100%', height: 20, marginBottom: 16, borderRadius: 8 }}></div>
+           <div className="skeleton-text" style={{ width: '90%', height: 20, marginBottom: 16, borderRadius: 8 }}></div>
+           <div className="skeleton-text" style={{ width: '95%', height: 20, marginBottom: 16, borderRadius: 8 }}></div>
+           <div className="skeleton-text" style={{ width: '60%', height: 20, marginBottom: 40, borderRadius: 8 }}></div>
+        </main>
+      </div>
+    </div>
+  );
 
   // --- DESKTOP VIEW ---
   if (isDesktop) {
     return (
-      <div className={`reader-modern-desktop ${isFocusMode ? 'focus-mode' : ''}`}>
+      <div className={`reader-modern-desktop ${isFocusMode ? 'zen-mode-active' : ''}`}>
         <header className="reader-header-modern">
           <div className="header-left">
             <button className="btn-icon-modern" onClick={() => navigate("/notes")}><ChevronLeft size={20} /></button>
@@ -374,6 +396,7 @@ function Reader({ zenMode, setZenMode }) {
               </div>
               <div className="action-group-modern">
                 <button className="btn-action-modern" onClick={() => saveFileChanges({})}><Save size={18} /><span>Save</span></button>
+                <button className="btn-action-modern" onClick={() => alert("Note shared! Public link: https://starnote.ai/shared/" + id)}><Share2 size={18} /><span>Share</span></button>
               </div>
             </div>
             <div className="document-viewport-modern">
@@ -398,9 +421,16 @@ function Reader({ zenMode, setZenMode }) {
                 )}
               </div>
             </div>
+            
+            {/* FLOATING ZEN MODE EXIT BUTTON */}
+            {isFocusMode && (
+              <button className="btn-exit-zen slide-up" onClick={() => setIsFocusMode(false)}>
+                <Minimize2 size={16} /> Exit Zen Mode
+              </button>
+            )}
           </main>
 
-          <aside className={`right-sidebar-modern ${showSidebar ? 'open' : ''}`}>
+          <aside className={`right-sidebar-modern ${showSidebar && !isFocusMode ? 'open' : ''}`}>
             <div className="sidebar-top-modern">
               <h3>AI Assistant</h3>
               <button className="close-sidebar-modern" onClick={() => setShowSidebar(false)}><X size={18} /></button>

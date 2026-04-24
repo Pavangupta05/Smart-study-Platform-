@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { Plus, Clock, Coffee, Brain, ChevronRight, CheckCircle2, Wand2, Trash2 } from "lucide-react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import "../styles/planner.css";
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
+const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 function Planner() {
   const [tasks, setTasks] = useState([
@@ -8,13 +12,14 @@ function Planner() {
     { id: 2, time: "10:30", title: "Quick Break", load: "None", completed: false, type: "break" },
     { id: 3, time: "11:00", title: "Linear Algebra Problem Set", load: "Medium", completed: false, type: "task" },
     { id: 4, time: "13:00", title: "Lunch", load: "None", completed: false, type: "break" },
-    { id: 5, time: "14:00", title: "Write Thesis Draft", load: "High", completed: false, type: "task" },
+    { id: 5, time: "14:00", title: "Write Project Draft", load: "High", completed: false, type: "task" },
   ]);
 
   const [newTask, setNewTask] = useState("");
   const [newTime, setNewTime] = useState("");
   const [newLoad, setNewLoad] = useState("Medium");
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizeTip, setOptimizeTip] = useState("");
 
   const toggleTask = (id) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
@@ -24,13 +29,63 @@ function Planner() {
     setTasks(prev => prev.filter(t => t.id !== id));
   };
 
-  const handleOptimize = () => {
+  const handleOptimize = async () => {
     setIsOptimizing(true);
-    setTimeout(() => {
-      setIsOptimizing(false);
-      // Logic for reordering tasks could go here
-    }, 1500);
+    setOptimizeTip("");
+
+    try {
+      const taskList = tasks.map(t => `${t.time} - ${t.title} (${t.load} difficulty, type: ${t.type})`).join("\n");
+
+      const prompt = `You are a study schedule optimizer. Given this student's study plan:
+
+${taskList}
+
+Optimize the schedule by:
+1. Placing high-difficulty tasks during peak focus hours (8AM-11AM)
+2. Adding strategic breaks after intense sessions
+3. Grouping related subjects together
+4. Ensuring proper rest periods
+
+Return TWO things:
+1. A JSON array of the optimized tasks with keys: "time" (HH:MM 24h), "title", "load" (High/Medium/Low/None), "type" (task/break)
+2. A short 1-line tip explaining the optimization
+
+Format your response EXACTLY like this (no markdown, no code fences):
+TASKS: [{"time":"08:00","title":"...","load":"High","type":"task"}]
+TIP: Your optimization tip here`;
+
+      const result = await aiModel.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text().trim();
+
+      // Parse TASKS line
+      const tasksMatch = text.match(/TASKS:\s*(\[.*\])/s);
+      const tipMatch = text.match(/TIP:\s*(.*)/);
+
+      if (tasksMatch) {
+        const optimizedTasks = JSON.parse(tasksMatch[1]);
+        const newTasks = optimizedTasks.map((t, i) => ({
+          id: Date.now() + i,
+          time: t.time,
+          title: t.title,
+          load: t.load,
+          completed: false,
+          type: t.type || "task"
+        }));
+        setTasks(newTasks.sort((a, b) => a.time.localeCompare(b.time)));
+      }
+
+      if (tipMatch) {
+        setOptimizeTip(tipMatch[1]);
+      }
+    } catch (err) {
+      console.error("AI Optimize Error:", err);
+      setOptimizeTip("Could not optimize right now. Try again in a moment.");
+    }
+
+    setIsOptimizing(false);
   };
+
 
   const addTask = (e) => {
     e.preventDefault();
@@ -177,12 +232,22 @@ function Planner() {
           </div>
 
           <div className="insight-card">
-            <h3 className="card-title">Study Tip</h3>
-            <p>Since you have a <strong>High Difficulty</strong> task this morning, we've added a break at 10:30 to help you stay fresh.</p>
+            <h3 className="card-title">
+              {optimizeTip ? "🤖 AI Insight" : "Study Tip"}
+            </h3>
+            <p>
+              {optimizeTip 
+                ? optimizeTip 
+                : `You have ${tasks.filter(t => t.load === 'High').length} high-difficulty task(s) today. Use the "Optimize with AI" button to get a smarter schedule.`
+              }
+            </p>
             <div className="velocity-metric">
-              <span>Progress Bar</span>
+              <span>Today's Progress — {tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0}%</span>
               <div className="progress-mini">
-                <div className="progress-fill" style={{ width: '85%' }}></div>
+                <div 
+                  className="progress-fill" 
+                  style={{ width: tasks.length > 0 ? `${(tasks.filter(t => t.completed).length / tasks.length) * 100}%` : '0%' }}
+                ></div>
               </div>
             </div>
           </div>

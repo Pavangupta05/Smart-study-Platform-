@@ -44,11 +44,19 @@ function Trash() {
       <div className="trash-header">
         <div className="header-info">
           <h1 className="page-title">Trash</h1>
-          <p className="page-subtitle">Recently deleted items will be permanently removed after 30 days.</p>
+          <p className="page-subtitle">Deleted items stay here for 30 days.</p>
         </div>
         {trashItems.length > 0 && (
-          <button className="btn-empty-all" onClick={emptyTrash}>Empty Trash</button>
+          <button className="btn-empty-all" onClick={emptyTrash}>
+            <Trash2 size={16} />
+            <span>Empty Trash</span>
+          </button>
         )}
+      </div>
+
+      <div className="trash-warning-banner">
+        <AlertCircle size={18} />
+        <span>Items deleted permanently cannot be recovered.</span>
       </div>
 
       {trashItems.length > 0 ? (

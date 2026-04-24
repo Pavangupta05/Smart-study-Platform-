@@ -1,5 +1,6 @@
 import { Search, Maximize2, Minimize2 } from "lucide-react";
 import StudyTimer from "./StudyTimer";
+import ProfileDropdown from "./ProfileDropdown";
 import "../styles/topbar.css";
 
 function Topbar({ zenMode, setZenMode }) {
@@ -23,7 +24,7 @@ function Topbar({ zenMode, setZenMode }) {
         {/* New Integrated Pomodoro Timer */}
         <StudyTimer />
         
-        <div className="avatar">P</div>
+        <ProfileDropdown />
       </div>
     </div>
   );

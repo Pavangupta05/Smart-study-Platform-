@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   UploadCloud, 
@@ -11,7 +12,8 @@ import {
   MessageSquare,
   MoreHorizontal,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Edit3
 } from "lucide-react";
 import "../styles/notes.css";
 
@@ -22,15 +24,29 @@ function Notes() {
 
   // --- UI States ---
   const [pageIcon, setPageIcon] = useState("📓");
-  const [hasCover, setHasCover] = useState(true);
+  const [coverImage, setCoverImage] = useState(() => localStorage.getItem("starNote_cover") || "");
+  const [hasCover, setHasCover] = useState(() => !!localStorage.getItem("starNote_cover") || false);
   const [showComments, setShowComments] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  
+  const coverInputRef = useRef(null);
+
+  // --- UI Polish States ---
+  const [toast, setToast] = useState(null);
+  const [renameModal, setRenameModal] = useState({ isOpen: false, index: null, currentName: "" });
+  const [isLoading, setIsLoading] = useState(true);
 
   // --- Upload & File State ---
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 600); // Simulate network load
+    return () => clearTimeout(timer);
+  }, [category]);
 
   const [uploadedFiles, setUploadedFiles] = useState(() => {
     const saved = localStorage.getItem("starNote_files");
@@ -62,7 +78,27 @@ function Notes() {
     ? uploadedFiles.filter(f => f.cat === category)
     : uploadedFiles;
 
+  const emojis = ["📓", "✨", "🧠", "💡", "📚", "🎯", "🎓", "🌟", "🔥"];
+  const handleAddIcon = () => {
+    const currentIndex = emojis.indexOf(pageIcon);
+    const nextIndex = (currentIndex + 1) % emojis.length;
+    setPageIcon(emojis[nextIndex]);
+  };
+
   // --- Handlers ---
+  const handleCoverUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCoverImage(event.target.result);
+        setHasCover(true);
+        localStorage.setItem("starNote_cover", event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) setSelectedFile(file);
@@ -99,18 +135,48 @@ function Notes() {
     }, 200);
   };
 
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const deleteFile = (e, globalIndex) => {
     e.stopPropagation();
     const fileToTrash = uploadedFiles[globalIndex];
     
-    // Save to Trash
     const currentTrash = JSON.parse(localStorage.getItem("starNote_trash") || "[]");
     localStorage.setItem("starNote_trash", JSON.stringify([fileToTrash, ...currentTrash]));
     
-    // Remove from main list
     const updated = uploadedFiles.filter((_, i) => i !== globalIndex);
     setUploadedFiles(updated);
     setActiveMenuId(null);
+    showToast(`"${fileToTrash.name}" moved to trash.`);
+  };
+
+  const handleRename = (e, globalIndex) => {
+    e.stopPropagation();
+    setRenameModal({ isOpen: true, index: globalIndex, currentName: uploadedFiles[globalIndex].name });
+    setActiveMenuId(null);
+  };
+
+  const confirmRename = () => {
+    if (renameModal.currentName.trim() !== "") {
+      const updated = [...uploadedFiles];
+      updated[renameModal.index] = { ...updated[renameModal.index], name: renameModal.currentName };
+      setUploadedFiles(updated);
+      showToast("File renamed successfully.");
+    }
+    setRenameModal({ isOpen: false, index: null, currentName: "" });
+  };
+
+  const handleDuplicate = (e, globalIndex) => {
+    e.stopPropagation();
+    const fileToDup = uploadedFiles[globalIndex];
+    const newFile = { ...fileToDup, name: fileToDup.name + " (Copy)", date: "Just now" };
+    const updated = [newFile, ...uploadedFiles];
+    setUploadedFiles(updated);
+    setActiveMenuId(null);
+    showToast("File duplicated.");
   };
 
   const createNewNotebook = () => {
@@ -145,20 +211,57 @@ function Notes() {
 
       <div className="notes-header">
         {hasCover && (
-          <div className="notes-cover">
-            <div className="cover-placeholder"></div>
-            <button className="btn-add-cover" onClick={() => setHasCover(false)}>Remove cover</button>
+          <div className="notes-cover" style={coverImage ? { backgroundImage: `url(${coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+            {!coverImage && <div className="cover-placeholder"></div>}
+            
+            <div className="cover-actions-overlay">
+              <button className="btn-add-cover" onClick={() => coverInputRef.current?.click()}>
+                Change cover
+              </button>
+              <button className="btn-add-cover" onClick={() => {
+                setHasCover(false);
+                setCoverImage("");
+                localStorage.removeItem("starNote_cover");
+              }}>
+                Remove
+              </button>
+            </div>
           </div>
         )}
+
+        {/* Hidden file input must be always rendered for the refs to work */}
+        <input 
+          type="file" 
+          ref={coverInputRef} 
+          style={{ display: "none" }} 
+          accept="image/*"
+          onChange={handleCoverUpload}
+        />
         
         <div className="header-main" style={{ marginTop: hasCover ? "-40px" : "40px" }}>
-          <div className="page-icon" onClick={() => setPageIcon("✨")}>{pageIcon}</div>
+          <div className="page-icon" onClick={handleAddIcon}>{pageIcon}</div>
           <h1 className="page-title">{category ? category.charAt(0).toUpperCase() + category.slice(1) : "Notes & Materials"}</h1>
           <div className="page-meta">
-            <button className="btn-meta" onClick={() => setPageIcon("🧠")}><Smile size={16} /> Add icon</button>
-            {!hasCover && <button className="btn-meta" onClick={() => setHasCover(true)}><ImageIcon size={16} /> Add cover</button>}
+            <button className="btn-meta" onClick={handleAddIcon}><Smile size={16} /> Add icon</button>
+            {!hasCover && <button className="btn-meta" onClick={() => coverInputRef.current?.click()}><ImageIcon size={16} /> Add cover</button>}
             <button className="btn-meta" onClick={() => setShowComments(!showComments)}><MessageSquare size={16} /> Add comment</button>
           </div>
+
+          {showComments && (
+            <div className="comment-input fade-in">
+              <input 
+                type="text" 
+                placeholder="Type a description or comment... (Press Enter to save)" 
+                autoFocus 
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowComments(false);
+                    // Could save to local storage here if needed
+                  }
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -194,49 +297,166 @@ function Notes() {
           )}
         </div>
 
-        <div className="notes-grid">
-          {filteredFiles.map((f) => {
-            const globalIndex = uploadedFiles.indexOf(f);
-            return (
-              <div className="notion-card" key={globalIndex} onClick={() => navigate(`/reader/${globalIndex}`)}>
-                <div className="card-icon">{f.icon}</div>
-                <div className="card-info">
-                  <h3>{f.name}</h3>
-                  <p>Edited {f.date}</p>
-                </div>
-                
-                <div className="card-actions-wrapper">
-                  <button 
-                    className="card-more" 
-                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === globalIndex ? null : globalIndex); }}
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-                  
-                  {activeMenuId === globalIndex && (
-                    <div className="card-dropdown slide-up" onClick={(e) => e.stopPropagation()}>
-                      <button className="dropdown-item" onClick={() => navigate(`/reader/${globalIndex}`)}>
-                        <ExternalLink size={14} /> Open
-                      </button>
-                      <button className="dropdown-item delete" onClick={(e) => deleteFile(e, globalIndex)}>
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
+        <div className="notes-tabs fade-in">
+          {["All", "Personal", "University", "Work"].map((tab) => {
+             const tabPath = tab === "All" ? "/notes" : `/notes/${tab.toLowerCase()}`;
+             const isActive = tab === "All" ? !category : category === tab.toLowerCase();
+             return (
+               <button 
+                 key={tab} 
+                 className={`tab-btn ${isActive ? "active" : ""}`}
+                 onClick={(e) => { e.stopPropagation(); navigate(tabPath); }}
+                 style={{ position: "relative" }}
+               >
+                 {tab}
+                 {isActive && (
+                   <motion.div 
+                     layoutId="tab-underline" 
+                     className="tab-underline"
+                     style={{ position: 'absolute', bottom: -2, left: 0, right: 0, height: 2, background: 'var(--primary)', borderRadius: '2px' }}
+                   />
+                 )}
+               </button>
+             );
           })}
-          <div className="notion-card add-card" onClick={createNewNotebook}>
-            <Plus size={20} />
-            <span>New Notebook</span>
-          </div>
-          <div className="notion-card add-card" onClick={() => navigate("/templates")}>
-            <Plus size={20} />
-            <span>Use Template</span>
-          </div>
         </div>
+
+        {filteredFiles.length === 0 ? (
+          <div className="empty-state fade-in">
+            <div className="empty-illustration">📭</div>
+            <h3>No notes found</h3>
+            <p>Your <b>{category || "workspace"}</b> is empty. Upload a file or start fresh.</p>
+            <button className="btn-primary" onClick={(e) => { e.stopPropagation(); createNewNotebook(); }}>
+              <Plus size={16} /> Create Notebook
+            </button>
+          </div>
+        ) : (
+          <div className="notes-grid">
+            {isLoading ? (
+              // Skeleton Loaders
+              [1, 2, 3, 4].map((i) => (
+                <div className="notion-card skeleton" key={`skel-${i}`}>
+                  <div className="skeleton-icon"></div>
+                  <div className="skeleton-text short"></div>
+                  <div className="skeleton-text long"></div>
+                </div>
+              ))
+            ) : (
+              <>
+                {filteredFiles.map((f) => {
+                  const globalIndex = uploadedFiles.indexOf(f);
+                  return (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                      className="notion-card" 
+                      key={globalIndex} 
+                      onClick={() => navigate(`/reader/${globalIndex}`)}
+                    >
+                      <div className="card-icon">{f.icon}</div>
+                      <div className="card-info">
+                        <h3>{f.name}</h3>
+                        <p>Edited {f.date}</p>
+                      </div>
+                      
+                      <div className="card-actions-wrapper">
+                        <button 
+                          className="card-more" 
+                          onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === globalIndex ? null : globalIndex); }}
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+                        
+                        <AnimatePresence>
+                          {activeMenuId === globalIndex && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 5 }}
+                              className="card-dropdown" 
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button className="dropdown-item" onClick={() => navigate(`/reader/${globalIndex}`)}>
+                                <ExternalLink size={14} /> Open
+                              </button>
+                              <button className="dropdown-item" onClick={(e) => handleRename(e, globalIndex)}>
+                                <Edit3 size={14} /> Rename
+                              </button>
+                              <button className="dropdown-item" onClick={(e) => handleDuplicate(e, globalIndex)}>
+                                <FileText size={14} /> Duplicate
+                              </button>
+                              <div className="dropdown-divider"></div>
+                              <button className="dropdown-item delete" onClick={(e) => deleteFile(e, globalIndex)}>
+                                <Trash2 size={14} /> Delete
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                <div className="notion-card add-card" onClick={createNewNotebook}>
+                  <Plus size={20} />
+                  <span>New Notebook</span>
+                </div>
+                <div className="notion-card add-card" onClick={() => navigate("/templates")}>
+                  <Plus size={20} />
+                  <span>Use Template</span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* --- CUSTOM MODALS & TOASTS --- */}
+      <AnimatePresence>
+        {renameModal.isOpen && (
+          <div className="modal-backdrop" onClick={() => setRenameModal({ isOpen: false, index: null, currentName: "" })}>
+            <motion.div 
+              className="custom-modal"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3>Rename File</h3>
+              <input 
+                type="text" 
+                value={renameModal.currentName} 
+                onChange={(e) => setRenameModal(prev => ({ ...prev, currentName: e.target.value }))}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmRename();
+                  if (e.key === "Escape") setRenameModal({ isOpen: false, index: null, currentName: "" });
+                }}
+              />
+              <div className="modal-actions">
+                <button className="btn-cancel" onClick={() => setRenameModal({ isOpen: false, index: null, currentName: "" })}>Cancel</button>
+                <button className="btn-confirm" onClick={confirmRename}>Rename</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            className="toast-notification"
+            initial={{ opacity: 0, y: 50, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, x: "-50%" }}
+          >
+            <div className="toast-icon">✨</div>
+            <span>{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

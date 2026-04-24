@@ -13,11 +13,14 @@ import Reader from "./pages/Reader";
 import Flashcards from "./pages/Flashcards";
 import SearchModal from "./components/SearchModal";
 import GlobalAskAI from "./components/GlobalAskAI";
+import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
   const location = useLocation();
 
   useEffect(() => {
@@ -47,6 +50,18 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  if (!isAuthenticated) {
+    return (
+      <div className={theme}>
+        <Routes>
+          <Route path="/landing" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="*" element={<Landing />} />
+        </Routes>
+      </div>
+    );
+  }
+
   return (
     <div className={`app ${theme} ${zenMode ? "zen-mode" : ""}`}>
       {!zenMode && <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />}
@@ -65,6 +80,7 @@ function App() {
           <Route path="/templates" element={<Templates />} />
           <Route path="/trash" element={<Trash />} />
           <Route path="/reader/:id" element={<Reader zenMode={zenMode} setZenMode={setZenMode} />} />
+          <Route path="*" element={<Dashboard />} />
         </Routes>
       </div>
 

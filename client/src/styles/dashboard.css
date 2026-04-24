@@ -66,6 +66,79 @@
   font-weight: 500;
 }
 
+/* STUDY INSIGHTS */
+.study-insights {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  width: 100%;
+  max-width: 1100px;
+  margin-bottom: 40px;
+}
+
+.insight-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.insight-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+
+.insight-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insight-icon.streak { background: #fee2e2; color: #ef4444; }
+.insight-icon.cards { background: #dbeafe; color: #3b82f6; }
+.insight-icon.notes { background: #fef3c7; color: #f59e0b; }
+.insight-icon.time { background: #dcfce7; color: #10b981; }
+
+.insight-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.insight-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.insight-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 1024px) {
+  .study-insights {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .study-insights {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* MAIN CONTENT GRID */
 .dash-content {
   display: grid;

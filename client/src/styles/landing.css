@@ -1,0 +1,244 @@
+.landing-page {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 5000;
+}
+
+.landing-nav {
+  height: 80px;
+  padding: 0 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.landing-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--primary);
+}
+
+.landing-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.btn-login-nav {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-weight: 600;
+  color: var(--text);
+  transition: all 0.2s;
+}
+
+.btn-login-nav:hover {
+  background: var(--surface-hover);
+}
+
+.btn-join-nav {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.btn-join-nav:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.landing-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+}
+
+.slide-container {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.slide-visual {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 500px;
+}
+
+.floating-blob {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  animation: float-blob 10s infinite ease-in-out;
+}
+
+@keyframes float-blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -40px) scale(1.1); }
+}
+
+.slide-emoji {
+  font-size: 180px;
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.1));
+  z-index: 2;
+  animation: float-emoji 5s infinite ease-in-out;
+}
+
+@keyframes float-emoji {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.slide-info {
+  flex: 1.2;
+}
+
+.slide-icon-wrapper {
+  margin-bottom: 24px;
+}
+
+.slide-info h1 {
+  font-family: var(--font-serif);
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.slide-info p {
+  font-size: 20px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 48px;
+  max-width: 500px;
+}
+
+.slide-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.btn-next {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 18px 36px;
+  border-radius: 40px;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-next:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.btn-skip {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: 600;
+  padding: 10px 20px;
+}
+
+.landing-footer {
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.slide-indicators {
+  display: flex;
+  gap: 12px;
+}
+
+.indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.indicator.active {
+  width: 32px;
+  border-radius: 10px;
+  background: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .landing-nav {
+    padding: 0 20px;
+    height: 60px;
+  }
+  .slide-container {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  .slide-visual {
+    height: 220px;
+  }
+  .slide-emoji {
+    font-size: 80px;
+  }
+  .floating-blob {
+    width: 150px;
+    height: 150px;
+  }
+  .slide-info h1 {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+  .slide-info p {
+    font-size: 15px;
+    margin-bottom: 24px;
+    padding: 0 10px;
+  }
+  .btn-next {
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+  .slide-indicators {
+    margin-bottom: 20px;
+  }
+}

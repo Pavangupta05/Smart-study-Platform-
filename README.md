@@ -111,6 +111,8 @@ npm run dev
 2. Generate API key
 3. Paste it into `.env`
 
+
+npm install react-markdown
 ---
 
 ## 🚀 Future Improvements
