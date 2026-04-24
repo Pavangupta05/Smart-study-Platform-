@@ -28,6 +28,7 @@ function Dashboard() {
   });
 
   const [newTask, setNewTask] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // --- Recent Files State ---
   const [recentFiles, setRecentFiles] = useState([]);
@@ -40,9 +41,14 @@ function Dashboard() {
     const saved = localStorage.getItem("starNote_files");
     if (saved) {
       const files = JSON.parse(saved);
-      setRecentFiles(files.slice(0, 4));
+      // Attach original index so search filtering doesn't break navigation IDs
+      setRecentFiles(files.map((f, index) => ({ ...f, originalIndex: index })));
     }
   }, []);
+
+  const filteredFiles = recentFiles.filter(f => 
+    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ).slice(0, 4);
 
   const addTask = (e) => {
     e.preventDefault();
@@ -75,6 +81,14 @@ function Dashboard() {
           <p>You have {tasks.filter(t => !t.completed).length} tasks remaining for today.</p>
         </div>
         <div className="dash-header-actions">
+          <div className="dash-search">
+            <input 
+              type="text" 
+              placeholder="Search materials..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <button className="btn-resume" onClick={() => navigate("/ai")}>
             <Sparkles size={16} />
             <span>Ask AI Tutor</span>
@@ -98,7 +112,11 @@ function Dashboard() {
                   <div className="progress-fill" style={{ width: `${progress}%` }}></div>
                 </div>
               </div>
-              <button className="btn-start-session" onClick={() => navigate("/planner")}>
+              <button className="btn-start-session" onClick={() => {
+                const last = localStorage.getItem("starNote_lastActive");
+                if (last && last !== "undefined" && last !== "null") navigate(`/reader/${last}`);
+                else navigate("/notes");
+              }}>
                 <Play size={18} fill="currentColor" />
               </button>
             </div>
@@ -113,8 +131,8 @@ function Dashboard() {
               </button>
             </div>
             <div className="doc-grid">
-              {recentFiles.length > 0 ? recentFiles.map((file, i) => (
-                <div key={i} className="doc-card-mini" onClick={() => navigate(`/reader/${i}`)}>
+              {filteredFiles.length > 0 ? filteredFiles.map((file) => (
+                <div key={file.originalIndex} className="doc-card-mini" onClick={() => navigate(`/reader/${file.originalIndex}`)}>
                   <div className="doc-icon-small">{file.icon || "📄"}</div>
                   <div className="doc-details">
                     <span className="doc-name">{file.name}</span>
@@ -124,7 +142,7 @@ function Dashboard() {
               )) : (
                 <div className="empty-docs-dash" onClick={() => navigate("/notes")}>
                   <Layout size={24} />
-                  <p>No materials yet. Start by uploading one.</p>
+                  <p>{searchQuery ? "No matching materials found." : "No materials yet. Start by uploading one."}</p>
                 </div>
               )}
             </div>

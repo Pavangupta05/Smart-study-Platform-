@@ -1,0 +1,188 @@
+/* STARNOTE READER - TABLET ENGINE (HIGH-FIDELITY OPTIMIZATION) */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  :root {
+    --t-bg: #f8fafc;
+    --t-surface: #ffffff;
+    --t-border: #e2e8f0;
+    --t-blue: #3b82f6;
+    --t-blue-weak: #eff6ff;
+    --t-text: #1e293b;
+    --t-paper: #ffffff;
+  }
+
+  body.dark .reader-modern-mobile {
+    --t-bg: #09090b;
+    --t-surface: #121214;
+    --t-border: #27272a;
+    --t-blue: #3b82f6;
+    --t-blue-weak: rgba(59, 130, 246, 0.1);
+    --t-text: #f4f4f5;
+    --t-paper: #1a1a1c;
+  }
+
+  /* Core Layout */
+  .reader-modern-mobile {
+    background: var(--t-bg);
+    color: var(--t-text);
+  }
+
+  /* Premium Tablet Header */
+  .mobile-reader-header {
+    height: 80px;
+    padding: 0 32px;
+    background: var(--t-surface);
+    border-bottom: 1px solid var(--t-border);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  }
+
+  .m-header-left { gap: 24px; }
+  .m-file-name { font-size: 18px; font-weight: 800; }
+  .m-page-indicator { font-size: 13px; margin-top: 2px; }
+
+  /* Floating Tablet Control Pill */
+  .m-secondary-toolbar {
+    height: 72px;
+    background: transparent;
+    border-bottom: none;
+    justify-content: center;
+    gap: 60px;
+    padding: 0;
+    margin-top: 10px;
+  }
+
+  .m-page-nav, .m-zoom-controls {
+    padding: 8px 16px;
+    background: var(--t-surface);
+    border: 1px solid var(--t-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    gap: 16px;
+  }
+
+  /* Centered Document Workspace */
+  .m-mobile-viewport {
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    overflow-y: auto;
+  }
+
+  .m-document-wrapper {
+    max-width: 85%;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.12);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--t-paper);
+  }
+
+  /* iPad Style Floating Tool Dock (Corrected Pill) */
+  .m-bottom-toolbar {
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 460px; /* Slightly slimmer */
+    padding: 8px 20px;
+    background: var(--t-surface);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--t-border);
+    border-radius: 40px; /* More pill-shaped */
+    box-shadow: 0 15px 45px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: center;
+  }
+
+  .m-tools-row {
+    gap: 20px;
+    justify-content: center;
+  }
+
+  .m-tool-btn {
+    width: 68px;
+    height: 68px;
+    border-radius: 18px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .m-tool-btn:active {
+    transform: scale(0.85);
+  }
+
+  .m-tool-btn.active {
+    background: var(--t-blue);
+    color: white;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Tablet-Optimized Drawing Options Popup */
+  .m-tool-options-panel {
+    background: var(--t-surface);
+    border: 1px solid var(--t-border);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: row; /* Horizontal on tablets */
+    align-items: center;
+    gap: 32px;
+    backdrop-filter: blur(10px);
+  }
+
+  .color-swatches { gap: 12px; }
+  .swatch { width: 32px; height: 32px; }
+
+  /* Floating Tablet Sidebar (AI Assistant) */
+  .m-bottom-sheet {
+    width: 420px;
+    left: auto;
+    right: 30px;
+    bottom: 120px;
+    border-radius: 28px;
+    height: auto;
+    max-height: 65vh;
+    padding: 0 24px 30px;
+    background: var(--t-surface);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+    border: 1px solid var(--t-border);
+    visibility: hidden;
+    transform: translateX(120%); /* Slide from right on tablets */
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(15px);
+  }
+
+  .m-bottom-sheet.open {
+    visibility: visible;
+    transform: translateX(0);
+  }
+
+  .sheet-handle {
+    width: 60px;
+    height: 6px;
+    margin: 16px auto 32px;
+  }
+
+  /* Typography Refinements */
+  .m-paper-body {
+    font-size: 19px;
+    line-height: 1.8;
+    padding: 60px 50px;
+  }
+}
+
+/* Specific landscape tablet mode for maximum efficiency */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+  .m-mobile-viewport {
+    padding: 20px 120px;
+  }
+  
+  .m-bottom-toolbar {
+    bottom: 25px;
+  }
+
+  .m-bottom-sheet {
+    width: 380px;
+    right: 25px;
+  }
+}

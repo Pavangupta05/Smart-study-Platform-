@@ -113,6 +113,27 @@ function Notes() {
     setActiveMenuId(null);
   };
 
+  const createNewNotebook = () => {
+    const saved = localStorage.getItem("starNote_files");
+    const files = saved ? JSON.parse(saved) : [];
+    const newNotebook = {
+      name: "My New Notebook",
+      size: "0.1 MB",
+      date: "Just now",
+      icon: "📓",
+      cat: "personal",
+      type: "notebook",
+      pages: [" "], 
+      notes: [],
+      bookmarks: [],
+      drawHistory: {}
+    };
+    const updated = [newNotebook, ...files];
+    localStorage.setItem("starNote_files", JSON.stringify(updated));
+    setUploadedFiles(updated); // Update state to trigger re-render
+    navigate(`/reader/0`); // Navigate to the first item (the new one)
+  };
+
   return (
     <div className="notes-page fade-in" onClick={() => setActiveMenuId(null)}>
       
@@ -206,6 +227,10 @@ function Notes() {
               </div>
             );
           })}
+          <div className="notion-card add-card" onClick={createNewNotebook}>
+            <Plus size={20} />
+            <span>New Notebook</span>
+          </div>
           <div className="notion-card add-card" onClick={() => navigate("/templates")}>
             <Plus size={20} />
             <span>Use Template</span>
@@ -215,5 +240,25 @@ function Notes() {
     </div>
   );
 }
+
+const createNewNotebook = () => {
+  const saved = localStorage.getItem("starNote_files");
+  const files = saved ? JSON.parse(saved) : [];
+  const newNotebook = {
+    name: "New Notebook",
+    size: "0 MB",
+    date: "Just now",
+    icon: "📓",
+    cat: "personal",
+    type: "notebook",
+    pages: [" "], // Initialize with one blank page
+    notes: [],
+    bookmarks: [],
+    drawHistory: {}
+  };
+  const updated = [newNotebook, ...files];
+  localStorage.setItem("starNote_files", JSON.stringify(updated));
+  window.location.href = `/reader/${0}`; // Navigate to the new notebook
+};
 
 export default Notes;
