@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
+import Preloader from "./components/Preloader";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
 import AI from "./pages/AI";
@@ -16,11 +17,17 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 
 function App() {
+  const [loading, setLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
   const location = useLocation();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     document.body.classList.remove("light", "dark");
@@ -48,6 +55,8 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  if (loading) return <Preloader />;
 
   if (!isAuthenticated) {
     return (

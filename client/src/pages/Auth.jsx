@@ -25,17 +25,17 @@ function Auth() {
       <div className="auth-card-container">
         <motion.div 
           className="auth-card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <div className="auth-header">
             <div className="auth-logo" onClick={() => navigate("/landing")}>
-              <Sparkles size={32} />
-              <span>StarNote AI</span>
+              <Sparkles size={32} strokeWidth={2.5} />
+              <span>STARNOTE AI</span>
             </div>
-            <h1>{isLogin ? "Welcome back" : "Create Account"}</h1>
-            <p>{isLogin ? "Sign in to access your workspace." : "Join StarNote to start studying."}</p>
+            <h1>{isLogin ? "Welcome Back" : "Create Account"}</h1>
+            <p>{isLogin ? "Sign in to access your workspace" : "Join StarNote to start studying"}</p>
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit}>
@@ -43,11 +43,10 @@ function Auth() {
               {!isLogin && (
                 <motion.div 
                   className="input-group"
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  style={{ overflow: "hidden" }}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <label>Full Name</label>
                   <div className="input-wrapper">
@@ -69,7 +68,7 @@ function Auth() {
             <div className="input-group">
               <div className="label-row">
                 <label>Password</label>
-                {isLogin && <button type="button" className="btn-link">Forgot?</button>}
+                {isLogin && <button type="button" className="btn-forgot-link">Forgot Password?</button>}
               </div>
               <div className="input-wrapper">
                 <Lock size={18} />
@@ -81,14 +80,14 @@ function Auth() {
               {!isLogin && (
                 <motion.div 
                   className="terms-wrapper"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
                   <label className="checkbox-container">
                     <input type="checkbox" required />
                     <span className="checkmark"></span>
-                    <span className="terms-text">I agree to the <b>Terms of Service</b> and <b>Privacy Policy</b></span>
+                    <span className="terms-text">I agree to the <b>Terms</b> & <b>Privacy</b></span>
                   </label>
                 </motion.div>
               )}
@@ -117,26 +116,13 @@ function Auth() {
 
           <div className="auth-footer">
             <p>
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
+              {isLogin ? "New to StarNote?" : "Already have an account?"}
               <button className="btn-link-toggle" onClick={() => setIsLogin(!isLogin)}>
-                {isLogin ? "Sign Up" : "Log In"}
+                {isLogin ? "Sign Up Free" : "Log In"}
               </button>
             </p>
           </div>
         </motion.div>
-      </div>
-      
-      <div className="auth-visual">
-        <div className="auth-visual-content">
-          <div className="visual-quote">
-            "StarNote has completely changed how I prepare for exams. The AI Tutor is like having a professor in my pocket 24/7."
-          </div>
-          <div className="visual-author">— Sarah Chen, University of Oxford</div>
-        </div>
-        <div className="auth-blobs">
-          <div className="blob b1"></div>
-          <div className="blob b2"></div>
-        </div>
       </div>
     </div>
   );

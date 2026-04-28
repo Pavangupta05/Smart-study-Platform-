@@ -1,4 +1,4 @@
-import { Search, Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, Menu } from "lucide-react";
 import StudyTimer from "./StudyTimer";
 import ProfileDropdown from "./ProfileDropdown";
 import "../styles/topbar.css";
@@ -6,25 +6,35 @@ import "../styles/topbar.css";
 function Topbar({ zenMode, setZenMode }) {
   return (
     <div className={`topbar ${zenMode ? "zen" : ""}`}>
-      <div className="search-box">
-        <Search size={16} />
-        <input placeholder="Search documents..." />
+      {/* LEFT SECTION: NAVIGATION (EMPTY FOR IOS MINIMALISM) */}
+      <div className="topbar-left">
+        {/* Removed for cleaner look */}
       </div>
 
-      <div className="actions">
-        {/* Zen Mode Toggle */}
-        <button 
-          className={`zen-toggle ${zenMode ? "active" : ""}`}
-          onClick={() => setZenMode(!zenMode)}
-          title={zenMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-        >
-          {zenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-        </button>
+      {/* CENTER SECTION: CONTEXT / TIMER */}
+      <div className="topbar-center">
+        <div className="topbar-context">
+          <StudyTimer />
+        </div>
+      </div>
 
-        {/* New Integrated Pomodoro Timer */}
-        <StudyTimer />
-        
-        <ProfileDropdown />
+      {/* RIGHT SECTION: ACTIONS */}
+      <div className="topbar-right">
+        <div className="action-group">
+          <button 
+            className={`topbar-btn zen-toggle ${zenMode ? "active" : ""}`}
+            onClick={() => setZenMode(!zenMode)}
+            title={zenMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+          >
+            <div className="btn-icon-container">
+              {zenMode ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </div>
+          </button>
+          
+          <div className="divider-v"></div>
+          
+          <ProfileDropdown />
+        </div>
       </div>
     </div>
   );
