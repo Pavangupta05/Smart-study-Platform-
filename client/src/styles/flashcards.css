@@ -16,7 +16,7 @@
   align-items: center;
   gap: 10px;
   background: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
   border: none;
   padding: 12px 24px;
   border-radius: 12px;
@@ -24,7 +24,7 @@
   font-size: 15px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 15px var(--primary-shadow);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary:hover {
@@ -102,21 +102,28 @@
 
 .btn-study:hover {
   background: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
 }
 
 /* AI TEASER CARD */
 .deck-card.ai-teaser {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-  color: white;
+  background: rgba(var(--primary-rgb), 0.9);
+  color: var(--primary-foreground);
   border: none;
   padding: 24px;
   position: relative;
   justify-content: center;
+  overflow: hidden;
+}
+
+body.dark .deck-card.ai-teaser {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body.light .deck-card.ai-teaser {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: var(--primary);
 }
 
 .ai-badge {
@@ -290,7 +297,7 @@ body.light .deck-card.ai-teaser {
 
 .count-btn.active {
   background: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
   border-color: var(--primary);
 }
 
@@ -302,15 +309,15 @@ body.light .deck-card.ai-teaser {
   width: calc(100% - 56px);
   margin: 0 28px 28px;
   height: 52px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  color: white;
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: none;
   border-radius: 14px;
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .gen-submit:hover:not(:disabled) {

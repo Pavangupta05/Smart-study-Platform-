@@ -10,20 +10,23 @@
 /* ===== THEME VARIABLES ===== */
 :root {
   /* LIGHT MODE (Zen Study) */
-  --bg: #fcfcfb; /* Soft neutral parchment */
+  --bg: #ffffff; /* Pure white */
+  --bg-rgb: 255, 255, 255;
   --surface: #ffffff;
-  --surface-hover: #f5f5f4;
-  --text: #1c1917; /* Warm dark gray */
-  --text-secondary: #57534e;
-  --text-muted: #a8a29e;
+  --surface-rgb: 255, 255, 255;
+  --surface-hover: #f0f0f0;
+  --text: #000000; /* Pure black for high contrast */
+  --text-secondary: #404040;
+  --text-muted: #737373; /* Darker gray for better visibility */
 
-  --primary: #1B4332; /* Deep emerald green */
-  --primary-hover: #081c15;
-  --primary-weak: #edf5f0;
+  --primary: #171717; /* Minimal deep charcoal */
+  --primary-hover: #000000;
+  --primary-weak: #f5f5f4;
   --primary-foreground: #ffffff;
+  --primary-rgb: 23, 23, 23;
   
-  --border: #e7e5e4;
-  --border-focus: #1B4332;
+  --border: #d4d4d4; /* Slightly darker border for visibility on white */
+  --border-focus: #000000;
   --ring: rgba(27, 67, 50, 0.2);
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
@@ -47,20 +50,23 @@
 body.dark {
   /* DARK MODE (Athenaeum Nightfall) */
   --bg: #0a0a0a;
+  --bg-rgb: 10, 10, 10;
   --surface: #131313; /* Deep charcoal surface */
+  --surface-rgb: 19, 19, 19;
   --surface-hover: #1c1c1c;
   --text: #f5f5f4;
   --text-secondary: #a8a29e;
   --text-muted: #57534e;
 
-  --primary: #10b981; /* Vibrant emerald accent */
-  --primary-hover: #34d399;
-  --primary-weak: rgba(16, 185, 129, 0.1);
-  --primary-foreground: #022c22;
+  --primary: #f5f5f4; /* Minimal off-white */
+  --primary-hover: #ffffff;
+  --primary-weak: #1c1c1c;
+  --primary-foreground: #0a0a0a;
+  --primary-rgb: 245, 245, 244;
   
   --border: #262626;
-  --border-focus: #10b981;
-  --ring: rgba(16, 185, 129, 0.3);
+  --border-focus: #f5f5f4;
+  --ring: rgba(245, 245, 244, 0.2);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);

@@ -12,7 +12,6 @@ import Trash from "./pages/Trash";
 import Reader from "./pages/Reader";
 import Flashcards from "./pages/Flashcards";
 import SearchModal from "./components/SearchModal";
-import GlobalAskAI from "./components/GlobalAskAI";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 
@@ -86,8 +85,7 @@ function App() {
 
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       
-      {/* Show only on AI page as requested */}
-      {location.pathname === "/ai" && <GlobalAskAI />}
+      {/* GlobalAskAI removed — AI page now has its own integrated input */}
     </div>
   );
 }

@@ -74,9 +74,9 @@
 }
 
 .zen-toggle.active {
-  color: #0084ff;
-  background: rgba(0, 132, 255, 0.1);
-  box-shadow: 0 0 15px rgba(0, 132, 255, 0.1);
+  color: var(--primary);
+  background: var(--primary-weak);
+  box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.1);
 }
 
 .topbar.zen {

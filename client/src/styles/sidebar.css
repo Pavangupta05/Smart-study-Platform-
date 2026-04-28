@@ -71,10 +71,28 @@
   padding: 4px;
 }
 
-/* ITEMS */
-.item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+.item { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  padding: 10px 12px; 
+  border-radius: var(--radius-md); 
+  color: var(--text-secondary); 
+  text-decoration: none; 
+  font-size: 14px; 
+  font-weight: 500; 
+  transition: all 0.2s; 
+}
 .item:hover { background: var(--surface-hover); color: var(--text); }
-.item.active { background: var(--primary-weak); color: var(--primary); font-weight: 600; }
+.item.active { 
+  background: var(--primary); 
+  color: var(--primary-foreground); 
+  font-weight: 600; 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+body.dark .item.active {
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+}
 
 /* NESTED ITEMS (University, Research) */
 .nested-item {
@@ -97,8 +115,8 @@
 }
 
 .nested-item.active {
-  background: var(--primary-weak);
-  color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
   font-weight: 600;
 }
 
