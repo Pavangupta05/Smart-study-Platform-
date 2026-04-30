@@ -25,11 +25,10 @@ const UserSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-// Hash password before save
-UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+// Hash password before save (Mongoose 9+ — async middleware, no `next`)
+UserSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
 // Compare passwords

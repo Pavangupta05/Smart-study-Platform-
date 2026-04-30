@@ -30,8 +30,7 @@ function Auth() {
       localStorage.setItem("starNote_token", token);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("starNote_user", JSON.stringify(user));
-      navigate("/");
-      window.location.reload();
+      window.location.href = "/"; // Full reload so App.jsx picks up the new auth state
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong. Please try again.");
     } finally {

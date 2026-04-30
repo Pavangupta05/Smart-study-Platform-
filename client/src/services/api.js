@@ -16,13 +16,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally (token expired → logout)
+// Handle 401 globally — but ONLY for protected routes, not for /auth routes
+// (login/register return 401 for wrong credentials — we don't want to redirect then)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthRoute = error.config?.url?.includes("/auth/");
+    if (error.response?.status === 401 && !isAuthRoute) {
+      // Token expired on a protected route → force logout
       localStorage.removeItem("starNote_token");
       localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("starNote_user");
       window.location.href = "/landing";
     }
     return Promise.reject(error);
