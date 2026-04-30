@@ -14,13 +14,23 @@
   top: max(12px, env(safe-area-inset-top));
   z-index: 1000;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  /* NO transition on background/border/shadow — theme must switch INSTANTLY */
+  transition: none;
 }
 
-body.dark .topbar {
-  background: rgba(15, 15, 15, 0.7) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+body.dark .topbar,
+.topbar.dark {
+  background: rgba(20, 20, 20, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Topbar inner elements also must not transition on theme change */
+.topbar .topbar-context,
+.topbar .action-group,
+.topbar .divider-v,
+.topbar .topbar-btn {
+  transition: none;
 }
 
 /* LEFT SECTION */
@@ -40,7 +50,7 @@ body.dark .topbar {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s ease;
   box-shadow: var(--shadow-md);
   cursor: pointer;
 }
@@ -76,7 +86,7 @@ body.dark .topbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: all 0.3s ease;
+  transition: none;
   box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.05);
 }
 

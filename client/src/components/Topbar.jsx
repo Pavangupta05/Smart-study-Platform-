@@ -1,11 +1,25 @@
+import { useRef, useEffect } from "react";
 import { Maximize2, Minimize2, Menu, PanelLeftOpen } from "lucide-react";
 import StudyTimer from "./StudyTimer";
 import ProfileDropdown from "./ProfileDropdown";
 import "../styles/topbar.css";
 
-function Topbar({ zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
+function Topbar({ theme, zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
+  const topbarRef = useRef(null);
+
+  // Force an instant GPU repaint when theme changes
+  // backdrop-filter compositing layers don't repaint on CSS variable changes without this
+  useEffect(() => {
+    const el = topbarRef.current;
+    if (!el) return;
+    el.style.transform = "translateZ(1px)";
+    requestAnimationFrame(() => {
+      el.style.transform = "";
+    });
+  }, [theme]);
+
   return (
-    <div className={`topbar ${zenMode ? "zen" : ""}`}>
+    <div ref={topbarRef} className={`topbar ${zenMode ? "zen" : ""}`}>
       {/* LEFT SECTION: NAVIGATION */}
       <div className="topbar-left">
       </div>

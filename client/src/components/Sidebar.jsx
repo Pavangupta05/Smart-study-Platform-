@@ -28,7 +28,7 @@ import {
 } from "lucide-react"; 
 import "../styles/sidebar.css";
 
-function Sidebar({ onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
+function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
@@ -75,7 +75,7 @@ function Sidebar({ onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
   return (
     <>
       {/* DESKTOP SIDEBAR & MOBILE OVERLAY */}
-      <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''} ${!isSidebarOpen ? 'collapsed' : ''}`}>
+      <div className={`sidebar ${theme} ${isMobileMenuOpen ? 'mobile-open' : ''} ${!isSidebarOpen ? 'collapsed' : ''}`}>
         <div className="sidebar-top">
           <div className="logo-row" onClick={() => navigate("/")} style={{ cursor: 'pointer' }}>
             <div className="logo-mark">

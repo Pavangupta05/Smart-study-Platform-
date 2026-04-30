@@ -262,6 +262,18 @@ body.dark .auth-divider span { background: #0a0a0a; }
   }
 }
 
+.auth-error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
 .auth-loader {
   width: 24px;
   height: 24px;

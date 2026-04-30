@@ -10,13 +10,14 @@
   flex-direction: column;
   height: 100vh;
   z-index: 100;
-  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s ease, border-color 0.3s ease, transform 0.4s ease !important;
   overflow: hidden;
 }
 
-body.dark .sidebar {
-  background: rgba(10, 10, 10, 0.75) !important;
-  border-color: rgba(255, 255, 255, 0.05) !important;
+body.dark .sidebar,
+.sidebar.dark {
+  background: rgba(15, 15, 15, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 @media (min-width: 769px) {

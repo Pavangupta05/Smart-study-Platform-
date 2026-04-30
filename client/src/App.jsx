@@ -82,6 +82,7 @@ function App() {
     <div className={`app ${theme} ${zenMode ? "zen-mode" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
       {!zenMode && (
         <Sidebar 
+          theme={theme}
           isSidebarOpen={isSidebarOpen} 
           setIsSidebarOpen={setIsSidebarOpen} 
           onOpenSearch={() => setIsSearchOpen(true)} 
@@ -90,6 +91,7 @@ function App() {
 
       <div className="main">
         <Topbar 
+          theme={theme}
           zenMode={zenMode} 
           setZenMode={setZenMode} 
           isSidebarOpen={isSidebarOpen}
