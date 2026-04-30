@@ -22,7 +22,15 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem("sidebarOpen");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const location = useLocation();
+
+  useEffect(() => {
+    localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
+  }, [isSidebarOpen]);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 2000);
@@ -71,11 +79,22 @@ function App() {
   }
 
   return (
-    <div className={`app ${theme} ${zenMode ? "zen-mode" : ""}`}>
-      {!zenMode && <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />}
+    <div className={`app ${theme} ${zenMode ? "zen-mode" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
+      {!zenMode && (
+        <Sidebar 
+          isSidebarOpen={isSidebarOpen} 
+          setIsSidebarOpen={setIsSidebarOpen} 
+          onOpenSearch={() => setIsSearchOpen(true)} 
+        />
+      )}
 
       <div className="main">
-        <Topbar zenMode={zenMode} setZenMode={setZenMode} />
+        <Topbar 
+          zenMode={zenMode} 
+          setZenMode={setZenMode} 
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
 
         <Routes>
           <Route path="/" element={<Dashboard />} />

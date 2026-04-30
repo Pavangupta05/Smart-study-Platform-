@@ -84,7 +84,7 @@ function Dashboard() {
     <div className="dashboard-minimal fade-in">
       <header className="dash-header">
         <div className="dash-greeting">
-          <h1>Hello!</h1>
+          <h1>Welcome Back Pavan !</h1>
           <p>{tasks.filter(t => !t.completed).length} tasks left today.</p>
         </div>
         <div className="dash-header-actions">

@@ -1,14 +1,13 @@
-import { Maximize2, Minimize2, Menu } from "lucide-react";
+import { Maximize2, Minimize2, Menu, PanelLeftOpen } from "lucide-react";
 import StudyTimer from "./StudyTimer";
 import ProfileDropdown from "./ProfileDropdown";
 import "../styles/topbar.css";
 
-function Topbar({ zenMode, setZenMode }) {
+function Topbar({ zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
   return (
     <div className={`topbar ${zenMode ? "zen" : ""}`}>
-      {/* LEFT SECTION: NAVIGATION (EMPTY FOR IOS MINIMALISM) */}
+      {/* LEFT SECTION: NAVIGATION */}
       <div className="topbar-left">
-        {/* Removed for cleaner look */}
       </div>
 
       {/* CENTER SECTION: CONTEXT / TIMER */}
@@ -32,7 +31,6 @@ function Topbar({ zenMode, setZenMode }) {
           </button>
           
           <div className="divider-v"></div>
-          
           <ProfileDropdown />
         </div>
       </div>
