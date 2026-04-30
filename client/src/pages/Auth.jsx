@@ -2,22 +2,41 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Lock, User, ArrowRight, Code, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { authService } from "../services/index";
 import "../styles/auth.css";
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate auth
-    setTimeout(() => {
+    setError("");
+    try {
+      const res = isLogin
+        ? await authService.login({ email: formData.email, password: formData.password })
+        : await authService.register({ name: formData.name, email: formData.email, password: formData.password });
+      
+      const { token, user } = res.data;
+      localStorage.setItem("starNote_token", token);
       localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("starNote_user", JSON.stringify(user));
       navigate("/");
-      window.location.reload(); // Refresh to update App.jsx state
-    }, 1500);
+      window.location.reload();
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -51,7 +70,7 @@ function Auth() {
                   <label>Full Name</label>
                   <div className="input-wrapper">
                     <User size={18} />
-                    <input type="text" placeholder="John Doe" required />
+                    <input type="text" name="name" placeholder="John Doe" value={formData.name} onChange={handleChange} required />
                   </div>
                 </motion.div>
               )}
@@ -61,7 +80,7 @@ function Auth() {
               <label>Email Address</label>
               <div className="input-wrapper">
                 <Mail size={18} />
-                <input type="email" placeholder="name@example.com" required />
+                <input type="email" name="email" placeholder="name@example.com" value={formData.email} onChange={handleChange} required />
               </div>
             </div>
 
@@ -72,9 +91,11 @@ function Auth() {
               </div>
               <div className="input-wrapper">
                 <Lock size={18} />
-                <input type="password" placeholder="••••••••" required />
+                <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
               </div>
             </div>
+
+            {error && <p className="auth-error">{error}</p>}
 
             <AnimatePresence>
               {!isLogin && (
