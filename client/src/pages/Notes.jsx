@@ -15,11 +15,14 @@ import {
   ExternalLink,
   Edit3
 } from "lucide-react";
+import { notesService } from "../services/index";
+import { useUser } from "../context/UserContext";
 import "../styles/notes.css";
 
 function Notes() {
   const { category } = useParams();
   const navigate = useNavigate();
+  const { socket } = useUser();
   const fileInputRef = useRef(null);
 
   // --- UI States ---
@@ -42,40 +45,31 @@ function Notes() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  const fetchNotes = () => {
+    notesService.getAll().then(res => {
+      setUploadedFiles(res.data.notes || []);
+    }).catch(err => {
+      console.error(err);
+      const saved = localStorage.getItem("starNote_files");
+      if (saved) setUploadedFiles(JSON.parse(saved));
+    }).finally(() => setIsLoading(false));
+  };
+
   useEffect(() => {
     setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 600); // Simulate network load
-    return () => clearTimeout(timer);
-  }, [category]);
-
-  const [uploadedFiles, setUploadedFiles] = useState(() => {
-    const saved = localStorage.getItem("starNote_files");
-    return saved ? JSON.parse(saved) : [
-      { 
-        name: "Calculus_Chapter_4.pdf", 
-        size: "2.4 MB", 
-        date: "Today",
-        icon: "📐",
-        cat: "university",
-        content: "Calculus Chapter 4 Overview:\n1. The Derivative as a Function.\n2. Differentiation Rules.\n3. The Chain Rule."
-      },
-      { 
-        name: "Physics_Notes.docx", 
-        size: "1.1 MB", 
-        date: "Yesterday",
-        icon: "⚛️",
-        cat: "university",
-        content: "Newton's Laws of Motion:\nFirst Law: Inertia.\nSecond Law: F = ma.\nThird Law: Action & Reaction."
-      }
-    ];
-  });
+    fetchNotes();
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem("starNote_files", JSON.stringify(uploadedFiles));
-  }, [uploadedFiles]);
+    if (!socket) return;
+    socket.on("sync_notes", fetchNotes);
+    return () => socket.off("sync_notes", fetchNotes);
+  }, [socket]);
 
   const filteredFiles = category 
-    ? uploadedFiles.filter(f => f.cat === category)
+    ? uploadedFiles.filter(f => f.category === category || f.cat === category)
     : uploadedFiles;
 
   const emojis = ["📓", "✨", "🧠", "💡", "📚", "🎯", "🎓", "🌟", "🔥"];
@@ -104,35 +98,46 @@ function Notes() {
     if (file) setSelectedFile(file);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) return;
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const newFile = {
-        name: selectedFile.name,
-        size: (selectedFile.size / (1024 * 1024)).toFixed(1) + " MB",
-        date: "Just now",
-        icon: selectedFile.type.includes("pdf") ? "📕" : "📄",
-        cat: category || "general",
-        type: selectedFile.type,
-        blobUrl: e.target.result
-      };
-      setUploadedFiles(prev => [newFile, ...prev]);
-      setSelectedFile(null);
+    
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    formData.append("name", selectedFile.name);
+    formData.append("size", (selectedFile.size / (1024 * 1024)).toFixed(1) + " MB");
+    formData.append("icon", selectedFile.type.includes("pdf") ? "📕" : "📄");
+    formData.append("category", category || "general");
+    formData.append("fileType", selectedFile.type);
+
+    try {
+      // Simulate progress since we don't have direct upload progress from axios yet
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 15;
+        if (progress > 90) progress = 90;
+        setUploadProgress(progress);
+      }, 100);
+
+      const res = await notesService.create(formData);
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      setTimeout(() => {
+        setUploadedFiles(prev => [res.data.note, ...prev]);
+        showToast("File uploaded successfully.");
+        setSelectedFile(null);
+        setIsUploading(false);
+        setUploadProgress(0);
+      }, 400);
+
+    } catch (err) {
+      console.error("Upload error:", err);
       setIsUploading(false);
       setUploadProgress(0);
-    };
-    
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 25;
-      setUploadProgress(progress);
-      if (progress >= 100) {
-        clearInterval(interval);
-        reader.readAsDataURL(selectedFile);
-      }
-    }, 200);
+      showToast("Upload failed. Please try again.");
+    }
   };
 
   const showToast = (message) => {
@@ -140,17 +145,21 @@ function Notes() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const deleteFile = (e, globalIndex) => {
+  const deleteFile = async (e, globalIndex) => {
     e.stopPropagation();
     const fileToTrash = uploadedFiles[globalIndex];
+    const id = fileToTrash._id || fileToTrash.id;
     
-    const currentTrash = JSON.parse(localStorage.getItem("starNote_trash") || "[]");
-    localStorage.setItem("starNote_trash", JSON.stringify([fileToTrash, ...currentTrash]));
-    
-    const updated = uploadedFiles.filter((_, i) => i !== globalIndex);
-    setUploadedFiles(updated);
-    setActiveMenuId(null);
-    showToast(`"${fileToTrash.name}" moved to trash.`);
+    try {
+      if (id) await notesService.trash(id);
+      const updated = uploadedFiles.filter((_, i) => i !== globalIndex);
+      setUploadedFiles(updated);
+      showToast(`"${fileToTrash.name}" moved to trash.`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActiveMenuId(null);
+    }
   };
 
   const handleRename = (e, globalIndex) => {
@@ -159,45 +168,60 @@ function Notes() {
     setActiveMenuId(null);
   };
 
-  const confirmRename = () => {
+  const confirmRename = async () => {
     if (renameModal.currentName.trim() !== "") {
-      const updated = [...uploadedFiles];
-      updated[renameModal.index] = { ...updated[renameModal.index], name: renameModal.currentName };
-      setUploadedFiles(updated);
-      showToast("File renamed successfully.");
+      const file = uploadedFiles[renameModal.index];
+      const id = file._id || file.id;
+      
+      try {
+        if (id) {
+          const res = await notesService.update(id, { name: renameModal.currentName });
+          const updated = [...uploadedFiles];
+          updated[renameModal.index] = res.data.note;
+          setUploadedFiles(updated);
+        }
+        showToast("File renamed successfully.");
+      } catch (err) {
+        console.error(err);
+      }
     }
     setRenameModal({ isOpen: false, index: null, currentName: "" });
   };
 
-  const handleDuplicate = (e, globalIndex) => {
+  const handleDuplicate = async (e, globalIndex) => {
     e.stopPropagation();
     const fileToDup = uploadedFiles[globalIndex];
-    const newFile = { ...fileToDup, name: fileToDup.name + " (Copy)", date: "Just now" };
-    const updated = [newFile, ...uploadedFiles];
-    setUploadedFiles(updated);
-    setActiveMenuId(null);
-    showToast("File duplicated.");
+    const newName = fileToDup.name + " (Copy)";
+    
+    try {
+      const { _id, id, createdAt, updatedAt, ...rest } = fileToDup;
+      const res = await notesService.create({ ...rest, name: newName });
+      setUploadedFiles(prev => [res.data.note, ...prev]);
+      showToast("File duplicated.");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActiveMenuId(null);
+    }
   };
 
-  const createNewNotebook = () => {
-    const saved = localStorage.getItem("starNote_files");
-    const files = saved ? JSON.parse(saved) : [];
+  const createNewNotebook = async () => {
     const newNotebook = {
       name: "My New Notebook",
       size: "0.1 MB",
-      date: "Just now",
       icon: "📓",
-      cat: "personal",
-      type: "notebook",
+      category: "personal",
+      fileType: "notebook",
       pages: [" "], 
-      notes: [],
-      bookmarks: [],
-      drawHistory: {}
     };
-    const updated = [newNotebook, ...files];
-    localStorage.setItem("starNote_files", JSON.stringify(updated));
-    setUploadedFiles(updated); // Update state to trigger re-render
-    navigate(`/reader/0`); // Navigate to the first item (the new one)
+    
+    try {
+      const res = await notesService.create(newNotebook);
+      setUploadedFiles(prev => [res.data.note, ...prev]);
+      navigate(`/reader/${res.data.note._id}`);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -345,6 +369,7 @@ function Notes() {
               <>
                 {filteredFiles.map((f) => {
                   const globalIndex = uploadedFiles.indexOf(f);
+                  const id = f._id || f.id || globalIndex;
                   return (
                     <motion.div 
                       layout
@@ -353,8 +378,8 @@ function Notes() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2 }}
                       className="notion-card" 
-                      key={globalIndex} 
-                      onClick={() => navigate(`/reader/${globalIndex}`)}
+                      key={id} 
+                      onClick={() => navigate(`/reader/${id}`)}
                     >
                       <div className="card-icon">{f.icon}</div>
                       <div className="card-info">
@@ -379,7 +404,7 @@ function Notes() {
                               className="card-dropdown" 
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <button className="dropdown-item" onClick={() => navigate(`/reader/${globalIndex}`)}>
+                              <button className="dropdown-item" onClick={() => navigate(`/reader/${id}`)}>
                                 <ExternalLink size={14} /> Open
                               </button>
                               <button className="dropdown-item" onClick={(e) => handleRename(e, globalIndex)}>
@@ -460,25 +485,5 @@ function Notes() {
     </div>
   );
 }
-
-const createNewNotebook = () => {
-  const saved = localStorage.getItem("starNote_files");
-  const files = saved ? JSON.parse(saved) : [];
-  const newNotebook = {
-    name: "New Notebook",
-    size: "0 MB",
-    date: "Just now",
-    icon: "📓",
-    cat: "personal",
-    type: "notebook",
-    pages: [" "], // Initialize with one blank page
-    notes: [],
-    bookmarks: [],
-    drawHistory: {}
-  };
-  const updated = [newNotebook, ...files];
-  localStorage.setItem("starNote_files", JSON.stringify(updated));
-  window.location.href = `/reader/${0}`; // Navigate to the new notebook
-};
 
 export default Notes;

@@ -138,6 +138,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Cinematic transition for theme-critical properties */
+  transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1), color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ===== LAYOUT ===== */
@@ -163,13 +165,15 @@ body {
   position: relative;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .dashboard-minimal {
     padding: 24px 20px 100px 20px;
     height: 100%;
   }
   .main {
-    height: calc(100vh - 64px); /* Subtract mobile nav height */
+    /* Account for fixed topbar (56px) + safe area + bottom dock */
+    padding-top: calc(56px + env(safe-area-inset-top, 0px));
+    height: 100%;
   }
 }
 
@@ -180,11 +184,12 @@ button, input, select, textarea {
 
 .btn-primary, .btn-secondary, button {
   cursor: pointer;
-  transition: var(--transition-smooth);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .btn-primary:active, .btn-secondary:active, button:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
+  transition: transform 0.1s ease;
 }
 
 .card, .glass-card {
@@ -279,8 +284,49 @@ body.dark code {
   100% { opacity: 0.6; }
 }
 
+/* ===== GLOBAL THEME TRANSITION ===== */
+/* Smooth transition when switching dark/light modes */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 0.6s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Exclude animation-critical elements from the theme transition */
+.spin,
+.skeleton,
+.ai-thinking-dots span,
+.mobile-dock,
+.indicator,
+.chevron-toggle,
+.sidebar,
+.sidebar *,
+.topbar-v2,
+.topbar-v2 *,
+[data-no-transition],
+[data-no-transition] * {
+  /* Let these elements manage their own transitions */
+  transition-property: none;
+}
+
+/* Re-enable specific transitions needed for these elements */
+.sidebar {
+  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.25s ease,
+              border-color 0.25s ease,
+              transform 0.3s ease !important;
+}
+
 .spin {
+  transition: none !important;
   animation: spin 1.5s linear infinite;
+}
+
+.skeleton {
+  transition: none !important;
+  animation: pulse 1.5s infinite ease-in-out !important;
 }
 
 @keyframes spin {

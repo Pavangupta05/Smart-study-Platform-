@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { flashcardsService } from "../services/index";
 import "./StudySession.css";
 
 function StudySession({ deck, onExit }) {
@@ -8,12 +9,9 @@ function StudySession({ deck, onExit }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Mock cards for the deck
-  const cards = [
-    { q: "What is the powerhouse of the cell?", a: "The Mitochondria" },
-    { q: "What is the chemical symbol for Gold?", a: "Au" },
-    { q: "Who discovered Penicillin?", a: "Alexander Fleming" },
-    { q: "What is the speed of light?", a: "299,792,458 m/s" },
+  // Use cards from the deck, fallback to a dummy if empty
+  const cards = deck?.cards?.length > 0 ? deck.cards : [
+    { front: "No cards found.", back: "Add some cards to this deck!" }
   ];
 
   const handleNext = () => {
@@ -29,6 +27,18 @@ function StudySession({ deck, onExit }) {
       setCurrentIndex(currentIndex - 1);
       setIsFlipped(false);
     }
+  };
+
+  const handleFeedback = async (isEasy) => {
+    const card = cards[currentIndex];
+    if (card._id) {
+      try {
+        await flashcardsService.update(card._id, { mastered: isEasy });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    handleNext();
   };
 
   return (
@@ -52,12 +62,12 @@ function StudySession({ deck, onExit }) {
         <div className={`flashcard-wrapper ${isFlipped ? "flipped" : ""}`} onClick={() => setIsFlipped(!isFlipped)}>
           <div className="flashcard-front">
             <div className="card-tag">QUESTION</div>
-            <div className="card-text">{cards[currentIndex].q}</div>
+            <div className="card-text">{cards[currentIndex].front || cards[currentIndex].q}</div>
             <div className="card-hint">Click to flip</div>
           </div>
           <div className="flashcard-back">
             <div className="card-tag">ANSWER</div>
-            <div className="card-text">{cards[currentIndex].a}</div>
+            <div className="card-text">{cards[currentIndex].back || cards[currentIndex].a}</div>
             <div className="card-hint">Click to see question</div>
           </div>
         </div>
@@ -68,8 +78,8 @@ function StudySession({ deck, onExit }) {
           <button className="nav-btn" onClick={handlePrev} disabled={currentIndex === 0}><ChevronLeft size={24} /></button>
           
           <div className="feedback-btns">
-            <button className="btn-feedback easy"><ThumbsUp size={20} /> <span>Easy</span></button>
-            <button className="btn-feedback hard"><ThumbsDown size={20} /> <span>Hard</span></button>
+            <button className="btn-feedback easy" onClick={(e) => { e.stopPropagation(); handleFeedback(true); }}><ThumbsUp size={20} /> <span>Easy</span></button>
+            <button className="btn-feedback hard" onClick={(e) => { e.stopPropagation(); handleFeedback(false); }}><ThumbsDown size={20} /> <span>Hard</span></button>
           </div>
 
           <button className="nav-btn" onClick={handleNext} disabled={currentIndex === cards.length - 1}><ChevronRight size={24} /></button>

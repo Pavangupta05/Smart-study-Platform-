@@ -1,11 +1,17 @@
 /* PREMIUM SMART PLANNER - DESIGN SYSTEM */
 
 .planner-page {
-  padding: 60px 80px;
-  background: var(--bg);
+  padding: 60px 80px 100px;
+  background: transparent; /* Show global mesh */
   flex: 1;
   overflow-y: auto;
   scroll-behavior: smooth;
+}
+
+@media (max-width: 768px) {
+  .planner-page {
+    padding: 24px 20px 140px; /* Extra padding for mobile dock */
+  }
 }
 
 .planner-header {
@@ -136,21 +142,23 @@
 }
 
 .block-main {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(var(--surface-rgb), 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(120, 120, 120, 0.15);
   border-radius: 20px;
   padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 }
 
 .timeline-block:hover .block-main {
-  border-color: var(--primary-weak);
+  border-color: rgba(120, 120, 120, 0.3);
   transform: translateX(4px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .block-info {
@@ -185,14 +193,18 @@
   letter-spacing: 0.05em;
 }
 
-.load-label.low { background: #f0fdf4; color: #16a34a; }
-.load-label.medium { background: #fefce8; color: #ca8a04; }
-.load-label.high { background: #fef2f2; color: #dc2626; }
+.load-label.low  { background: rgba(22, 163, 74, 0.1);  color: #16a34a; }
+.load-label.medium { background: rgba(202, 138, 4, 0.1);  color: #ca8a04; }
+.load-label.high { background: rgba(220, 38, 38, 0.1);  color: #dc2626; }
+
+body.dark .load-label.low    { background: rgba(22, 163, 74, 0.15);  color: #4ade80; }
+body.dark .load-label.medium { background: rgba(202, 138, 4, 0.15);  color: #fbbf24; }
+body.dark .load-label.high   { background: rgba(220, 38, 38, 0.15);  color: #f87171; }
 
 .btn-check {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: rgba(120, 120, 120, 0.05);
+  border: 1px solid rgba(120, 120, 120, 0.15);
+  border-radius: 12px;
   width: 38px;
   height: 38px;
   display: flex;
@@ -221,7 +233,12 @@
 
 .btn-delete-task:hover {
   color: #ef4444;
-  background: #fee2e2;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+body.dark .btn-delete-task:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .timeline-block.completed .block-main {
@@ -239,21 +256,21 @@
   gap: 32px;
 }
 
-.planner-card, .task-card {
+.control-card, .insight-card {
   background: rgba(var(--surface-rgb), 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(var(--primary-rgb), 0.05);
-  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(120, 120, 120, 0.15);
+  border-radius: 24px;
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
   transition: var(--transition-smooth);
 }
 
-.planner-card:hover, .task-card:hover {
-  border-color: rgba(var(--primary-rgb), 0.12);
+.control-card:hover, .insight-card:hover {
+  border-color: rgba(120, 120, 120, 0.3);
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.05);
 }
 
 .input-group {
@@ -271,9 +288,9 @@
 .input-group input, .time-input-smooth {
   width: 100%;
   height: 48px;
-  border-radius: 14px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(120, 120, 120, 0.05);
+  border: 1px solid rgba(120, 120, 120, 0.1);
   padding: 0 16px;
   font-size: 14px;
   color: var(--text);
@@ -283,8 +300,7 @@
 
 .input-group input:focus, .time-input-smooth:focus {
   border-color: var(--primary);
-  background: var(--surface);
-  box-shadow: 0 0 0 4px var(--primary-weak);
+  background: rgba(120, 120, 120, 0.08);
 }
 
 .load-selector {
@@ -295,9 +311,9 @@
 
 .load-btn {
   height: 40px;
-  border-radius: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(120, 120, 120, 0.05);
+  border: 1px solid rgba(120, 120, 120, 0.1);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
@@ -309,6 +325,7 @@
   background: var(--primary);
   color: var(--primary-foreground);
   border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .btn-add-task {

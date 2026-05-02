@@ -26,10 +26,13 @@ import {
   Binary,
   Shapes
 } from "lucide-react"; 
+import { useUser } from "../context/UserContext";
+import { notesService } from "../services/index";
 import "../styles/sidebar.css";
 
 function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
   const navigate = useNavigate();
+  const { user, firstName, initials, logout } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
     important: false,
@@ -54,22 +57,22 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
     setIsSidebarOpen(false);
   };
 
-  const createQuickNote = (e, cat) => {
+  const createQuickNote = async (e, cat) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentFiles = JSON.parse(localStorage.getItem("starNote_files") || "[]");
     const newNote = {
-      id: Date.now(),
       name: `Untitled ${cat.charAt(0).toUpperCase() + cat.slice(1)} Note`,
       size: "0 KB",
-      date: "Just now",
       icon: "📄",
-      cat: cat,
+      category: cat,
       content: "# New Note\n\nStart typing here..."
     };
-    const updated = [newNote, ...currentFiles];
-    localStorage.setItem("starNote_files", JSON.stringify(updated));
-    navigate(`/notes/${newNote.id}`);
+    try {
+      const res = await notesService.create(newNote);
+      navigate(`/reader/${res.data.note._id}`);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -235,97 +238,23 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
           </div>
         </div>
 
-        <div style={{ padding: isSidebarOpen ? '16px' : '12px 0', borderTop: '1px solid var(--border)', marginTop: 'auto', transition: 'all 0.3s' }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: isSidebarOpen ? '12px' : '0',
-            padding: isSidebarOpen ? '12px' : '0',
-            background: isSidebarOpen ? 'var(--surface-hover)' : 'transparent',
-            border: isSidebarOpen ? '1px solid var(--border)' : 'none',
-            borderRadius: '20px',
-            boxShadow: isSidebarOpen ? '0 4px 12px rgba(0,0,0,0.05)' : 'none',
-            alignItems: 'center',
-            transition: 'all 0.3s'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: isSidebarOpen ? '12px' : '0', width: '100%', justifyContent: isSidebarOpen ? 'flex-start' : 'center' }}>
-              <div style={{ position: 'relative', width: isSidebarOpen ? '40px' : '48px', height: isSidebarOpen ? '40px' : '48px', flexShrink: 0, transition: 'all 0.3s' }}>
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  background: 'var(--text)',
-                  color: 'var(--surface)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '800',
-                  fontSize: isSidebarOpen ? '13px' : '15px'
-                }}>VG</div>
-                {isSidebarOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '1px',
-                    right: '1px',
-                    width: '10px',
-                    height: '10px',
-                    background: '#10b981',
-                    border: '2px solid var(--surface)',
-                    borderRadius: '50%'
-                  }}></div>
-                )}
-              </div>
-              {isSidebarOpen && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden', animation: 'fadeIn 0.3s' }}>
-                  <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Vinod Gupta</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '500', opacity: 0.8 }}>Pro Student</span>
-                </div>
-              )}
-            </div>
-            
-            {isSidebarOpen && (
-              <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid var(--border)', width: '100%', animation: 'fadeIn 0.3s' }}>
-                <NavLink to="/settings" style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '8px 0',
-                  borderRadius: '12px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  textDecoration: 'none'
-                }} onClick={handleNavLinkClick}>
-                  <Settings size={14} />
-                  <span>Settings</span>
-                </NavLink>
-                <button style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '8px 0',
-                  borderRadius: '12px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }} onClick={() => {
-                  localStorage.removeItem("isAuthenticated");
-                  window.location.reload();
-                }}>
-                  <LogOut size={14} />
-                  <span>Logout</span>
-                </button>
-              </div>
-            )}
+        {/* ULTRA-MINIMAL USER DOCK */}
+        <div className="premium-user-dock">
+          <div className="user-dock-avatar">
+            {initials}
+            <div className="user-dock-status"></div>
+          </div>
+          <div className="user-dock-info">
+            <span className="user-dock-name">{user?.name || firstName}</span>
+            <span className="user-dock-plan">{user?.plan === 'pro' ? 'Pro' : 'Free'}</span>
+          </div>
+          <div className="user-dock-icon-actions">
+            <NavLink to="/settings" className="icon-action-btn" title="Settings" onClick={handleNavLinkClick}>
+              <Settings size={15} />
+            </NavLink>
+            <button className="icon-action-btn logout-icon" title="Logout" onClick={() => logout()}>
+              <LogOut size={15} />
+            </button>
           </div>
         </div>
       </div>

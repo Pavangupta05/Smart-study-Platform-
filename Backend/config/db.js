@@ -4,7 +4,7 @@ let isMockMode = false;
 
 const connectDB = async () => {
   if (!process.env.MONGO_URI || process.env.MONGO_URI === "PASTE_YOUR_MONGODB_URI_HERE") {
-    console.warn("⚠️  MongoDB URI not set. Running in MOCK MODE (in-memory data, not persisted).");
+    console.warn("⚠️  MongoDB URI not set. Running in MOCK MODE (Data persisted locally to mockDB.json).");
     isMockMode = true;
     return false;
   }

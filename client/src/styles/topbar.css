@@ -1,190 +1,407 @@
-.topbar {
-  height: 60px;
-  margin: 12px 24px;
-  background: rgba(var(--bg-rgb), 0.75) !important;
-  backdrop-filter: blur(25px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
-  border: 1px solid rgba(var(--primary-rgb), 0.1) !important;
-  border-radius: 24px;
+/* ============================================================
+   TOPBAR v2 — Premium Cross-Platform Navigation Bar
+   Supports: iOS Safari, Android Chrome, iPad, Desktop
+   Theme: Instant switching via body.dark / body.light
+   ============================================================ */
+
+/* ── Variables (supplement global.css) ── */
+:root {
+  --tv2-h: 60px;                        /* Desktop height */
+  --tv2-h-mobile: 56px;                 /* Mobile/tablet height */
+  --tv2-radius: 20px;                   /* Desktop pill radius */
+  --tv2-margin: 10px 16px;             /* Desktop margin */
+  --tv2-blur: blur(28px) saturate(180%);
+}
+
+/* ============================================================
+   BASE SHELL
+   ============================================================ */
+.topbar-v2 {
+  /* Layout */
+  position: sticky;
+  top: max(var(--tv2-margin-top, 10px), env(safe-area-inset-top));
+  z-index: 1200;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 0 24px;
-  position: sticky;
-  top: max(12px, env(safe-area-inset-top));
-  z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  /* NO transition on background/border/shadow — theme must switch INSTANTLY */
+  height: var(--tv2-h);
+  margin: 10px 16px;
+  padding: 0 16px;
+  border-radius: var(--tv2-radius);
+
+  /* Glass morphism — light mode */
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: var(--tv2-blur);
+  -webkit-backdrop-filter: var(--tv2-blur);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* ⚡ Instant theme switch — no transition lag */
   transition: none;
+
+  /* Prevent safe-area clipping on notched devices */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
-body.dark .topbar,
-.topbar.dark {
-  background: rgba(20, 20, 20, 0.8) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+/* ── Dark mode — single authoritative override ── */
+.topbar-v2.dark {
+  background: rgba(12, 12, 14, 0.78);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Topbar inner elements also must not transition on theme change */
-.topbar .topbar-context,
-.topbar .action-group,
-.topbar .divider-v,
-.topbar .topbar-btn {
-  transition: none;
+/* ── Elevated state (on page scroll) ── */
+.topbar-v2.elevated {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 16px 48px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.topbar-v2.elevated.dark {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* LEFT SECTION */
-.topbar-left {
+/* ── Zen / focus mode ── */
+.topbar-v2.zen {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px) translateZ(0);
+}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+.tv2-left {
   display: flex;
+  align-items: center;
+  gap: 10px;
   justify-content: flex-start;
+}
+
+.tv2-center {
+  display: flex;
+  justify-content: center;
   align-items: center;
 }
 
-.sidebar-toggle-btn {
-  width: 40px;
-  height: 40px;
+.tv2-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ============================================================
+   SIDEBAR TOGGLE + ICON BUTTONS
+   ============================================================ */
+.tv2-icon-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
   color: var(--text-secondary);
-  transition: transform 0.2s ease;
-  box-shadow: var(--shadow-md);
   cursor: pointer;
+  flex-shrink: 0;
+  /* Let individual hover transition run without global theme transition */
+  transition: color 0.15s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
-.sidebar-toggle-btn:hover {
+.tv2-icon-btn-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: transparent;
+  transition: background 0.15s ease;
+  pointer-events: none;
+}
+
+.tv2-icon-btn:hover .tv2-icon-btn-bg {
+  background: rgba(0, 0, 0, 0.06);
+}
+.topbar-v2.dark .tv2-icon-btn:hover .tv2-icon-btn-bg {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tv2-icon-btn:hover { color: var(--text); }
+
+.tv2-icon-btn:active {
+  transform: scale(0.9);
+}
+
+/* Sidebar toggle hover - subtle arrow direction hint */
+.tv2-icon-btn.sidebar-toggle:hover { transform: translateX(2px); }
+.tv2-icon-btn.sidebar-toggle:active { transform: scale(0.9); }
+
+/* Zen button active state */
+.tv2-icon-btn.zen-btn.active .tv2-icon-btn-bg {
   background: var(--primary);
-  color: var(--primary-foreground);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+}
+.tv2-icon-btn.zen-btn.active { color: var(--primary-foreground); }
+
+/* Notification badge */
+.tv2-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg);
+  line-height: 1;
+  pointer-events: none;
 }
 
+/* ============================================================
+   BREADCRUMB PILL
+   ============================================================ */
+.tv2-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.topbar-v2.dark .tv2-breadcrumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.bc-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.bc-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   THEME TOGGLE PILL
+   ============================================================ */
+.tv2-theme-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  flex-shrink: 0;
+}
+.topbar-v2.dark .tv2-theme-pill {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tv2-theme-pill:hover {
+  background: rgba(0, 0, 0, 0.07);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text);
+}
+.topbar-v2.dark .tv2-theme-pill:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.tv2-theme-pill:active { transform: scale(0.95); }
+
+/* The sliding track */
+.theme-track {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border-radius: 10px;
+  background: #e5e5ea; /* iOS-style grey */
+  flex-shrink: 0;
+  transition: background 0.25s ease;
+  display: flex;
+  align-items: center;
+}
+.theme-track.dark {
+  background: #3a3a4a;
+}
+
+.theme-thumb {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease, color 0.25s ease;
+  left: 2px;
+}
+.theme-track.dark .theme-thumb {
+  transform: translateX(12px);
+  background: #1a1a2e;
+  color: #a78bfa;
+}
+.theme-track.light .theme-thumb {
+  color: #f59e0b;
+}
+
+.tv2-theme-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  min-width: 32px;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.tv2-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+.topbar-v2.dark .tv2-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================================
+   RESPONSIVE OVERRIDES
+   ============================================================ */
+
+/* ── Tablet (600px–1024px) ── */
+@media (max-width: 1024px) and (min-width: 601px) {
+  .topbar-v2 {
+    margin: 8px 12px;
+    padding: 0 14px;
+    border-radius: 18px;
+    height: var(--tv2-h-mobile);
+  }
+
+  .bc-label { font-size: 12.5px; }
+  .tv2-theme-label { display: none; }
+  .tv2-theme-pill { padding: 5px 7px; }
+}
+
+/* ── Mobile (<= 600px) ── */
+@media (max-width: 600px) {
+  .topbar-v2 {
+    /* Full-width bar at the very top, no margin, no pill radius */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    height: calc(var(--tv2-h-mobile) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 14px 0 14px;
+    grid-template-columns: auto 1fr auto;
+    gap: 0;
+    /* Slightly more opaque on mobile for readability */
+    background: rgba(255, 255, 255, 0.88);
+  }
+  .topbar-v2.dark {
+    background: rgba(10, 10, 12, 0.9);
+  }
+
+  /* Hide non-essential elements on small screens */
+  .tv2-breadcrumb { padding: 5px 9px 5px 8px; gap: 5px; }
+  .bc-label { font-size: 12px; }
+  .tv2-theme-label { display: none; }
+  .tv2-theme-pill { padding: 5px 7px; }
+  .tv2-center { justify-content: center; }
+  
+  /* Compact icon buttons on mobile */
+  .tv2-icon-btn { width: 34px; height: 34px; border-radius: 10px; }
+  .tv2-right { gap: 4px; }
+
+  /* Add body padding to prevent content going under fixed topbar */
+  /* (handled by main-content padding in global.css) */
+}
+
+/* ── iOS: Handle notched devices (iPhone X+) ── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  @media (max-width: 600px) {
+    .topbar-v2 {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+}
+
+/* ── Desktop utility classes ── */
 .desktop-only {
   display: flex !important;
 }
-
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .desktop-only {
     display: none !important;
   }
 }
 
-/* CENTER SECTION */
-.topbar-center {
-  display: flex;
-  justify-content: center;
-}
-
-.topbar-context {
-  background: rgba(var(--primary-rgb), 0.03);
-  border: 1px solid rgba(var(--primary-rgb), 0.1);
-  padding: 6px 20px;
-  border-radius: 99px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: none;
-  box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.05);
-}
-
-body.dark .topbar-context {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.03);
-}
-
-/* RIGHT SECTION */
-.topbar-right {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-.action-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  background: var(--surface-hover);
-  border-radius: 99px;
-  border: 1px solid var(--border);
-  height: 46px; /* Explicit height for perfect centering */
-}
-
-body.dark .action-group {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-/* COMMON BUTTONS */
-.topbar-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-}
-
-
-.btn-icon-container {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  transition: all 0.2s ease;
-  line-height: 0;
-}
-
-.topbar-btn:hover .btn-icon-container {
-  background: var(--surface);
-  color: var(--text);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-
-.topbar-btn.active .btn-icon-container {
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.divider-v {
-  width: 1px;
-  height: 20px;
-  background: var(--border);
-}
-
-.topbar.zen {
-  background: transparent;
-  border-bottom: none;
-  padding: 0 60px;
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  .topbar {
-    margin: 0;
-    border-radius: 0;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    padding: 0 16px;
-    height: calc(60px + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
-    top: 0;
+/* ============================================================
+   MOBILE: offset main content from fixed topbar
+   ============================================================ */
+@media (max-width: 600px) {
+  .main {
+    padding-top: calc(var(--tv2-h-mobile) + env(safe-area-inset-top)) !important;
   }
-  .action-group {
-    background: transparent;
-    border: none;
-    padding: 0;
-    gap: 10px;
-  }
-  .divider-v {
-    display: none;
-  }
+}
+
+/* ============================================================
+   ACCESSIBILITY & FOCUS
+   ============================================================ */
+.tv2-icon-btn:focus-visible,
+.tv2-theme-pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   PROFILE DROPDOWN (scoped position override)
+   ============================================================ */
+.tv2-right .profile-dropdown-container {
+  position: relative;
 }

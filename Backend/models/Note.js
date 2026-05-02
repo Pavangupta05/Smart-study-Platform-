@@ -4,7 +4,7 @@ const NoteSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   name: { type: String, required: true, trim: true },
   icon: { type: String, default: "📄" },
-  category: { type: String, enum: ["personal", "university", "work", "general"], default: "general" },
+  category: { type: String, default: "general" },
   size: { type: String, default: "0 MB" },
   fileType: { type: String, default: "text" }, // pdf, docx, notebook, etc.
   content: { type: String, default: "" },      // Text content or notebook pages

@@ -1,16 +1,15 @@
 /* STARNOTE TEMPLATES REDESIGN */
 
 .templates-page {
-  padding: 48px 64px;
-  height: calc(100vh - 64px);
+  padding: 48px 64px 100px;
+  flex: 1; /* Fix height overlap */
   overflow-y: auto;
-  background: var(--bg);
+  background: transparent; /* Show global mesh */
 }
 
 @media (max-width: 768px) {
   .templates-page {
-    padding: 24px 20px 100px 20px;
-    height: 100%;
+    padding: 24px 20px 140px 20px; /* Dock padding */
   }
 }
 
@@ -34,6 +33,13 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: rgba(var(--surface-rgb), 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(120, 120, 120, 0.15);
+  border-radius: 24px;
+  padding: 20px;
+  height: fit-content;
 }
 
 .nav-title {
@@ -52,7 +58,7 @@
   padding: 10px 16px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
@@ -61,12 +67,12 @@
 }
 
 .cat-btn:hover {
-  background: var(--surface-hover);
+  background: rgba(120, 120, 120, 0.08);
   color: var(--text);
 }
 
 .cat-btn.active {
-  background: var(--primary-weak);
+  background: rgba(var(--primary-rgb), 0.08);
   color: var(--primary);
   font-weight: 600;
 }
@@ -94,9 +100,11 @@
 }
 
 .template-card-modern {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: rgba(var(--surface-rgb), 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(120, 120, 120, 0.15);
+  border-radius: 24px;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -104,12 +112,13 @@
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
 .template-card-modern:hover {
   transform: translateY(-4px);
-  border-color: var(--primary-weak);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+  border-color: rgba(120, 120, 120, 0.3);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
 }
 
 .card-top {
@@ -130,11 +139,11 @@
 .cat-badge {
   font-size: 11px;
   font-weight: 700;
-  background: var(--bg);
+  background: rgba(120, 120, 120, 0.05);
   padding: 4px 10px;
   border-radius: 20px;
   color: var(--text-muted);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(120, 120, 120, 0.1);
 }
 
 .card-body h3 {
@@ -186,8 +195,8 @@
 .icon-box-dashed {
   width: 50px;
   height: 50px;
-  border-radius: 50%;
-  border: 2px dashed var(--border);
+  border-radius: 16px;
+  border: 2px dashed rgba(120, 120, 120, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;

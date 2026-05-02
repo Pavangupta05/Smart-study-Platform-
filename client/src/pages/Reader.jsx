@@ -34,6 +34,7 @@ import {
   Maximize,
   Share2
 } from "lucide-react";
+import { notesService } from "../services/index";
 import "../styles/reader.css";
 import "../styles/reader-mobile.css";
 import "../styles/reader-tablet.css";
@@ -49,6 +50,7 @@ function Reader({ zenMode, setZenMode }) {
   const [pages, setPages] = useState([""]);
   const [currentPage, setCurrentPage] = useState(0);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [objectUrl, setObjectUrl] = useState(null);
   
   // SYNC WITH GLOBAL ZEN MODE
   useEffect(() => {
@@ -88,28 +90,66 @@ function Reader({ zenMode, setZenMode }) {
   }, []);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("starNote_files");
-      let files = [];
-      if (saved) {
-        files = JSON.parse(saved);
-      } else {
-        files = [
-          { name: "Calculus_Chapter_4.pdf", size: "2.4 MB", date: "Today", icon: "📐", cat: "university", content: "Calculus Chapter 4 Overview:\n1. The Derivative as a Function.\n2. Differentiation Rules.\n3. The Chain Rule." },
-          { name: "Physics_Notes.docx", size: "1.1 MB", date: "Yesterday", icon: "⚛️", cat: "university", content: "Newton's Laws of Motion:\nFirst Law: Inertia.\nSecond Law: F = ma.\nThird Law: Action & Reaction." }
-        ];
-        localStorage.setItem("starNote_files", JSON.stringify(files));
-      }
-      const found = files[parseInt(id)];
-      if (found) {
-        setFile(found);
-        if (found.pages) setPages(found.pages);
-        else setPages([found.content || ""]);
-        setDrawHistory(found.drawHistory || {});
-        setNotes(found.notes || []);
-      } else setError(true);
-    } catch (err) { setError(true); }
+    notesService.getById(id)
+      .then(res => {
+        const found = res.data.note;
+        if (found) {
+          setFile(found);
+          if (found.pages && found.pages.length > 0) setPages(found.pages);
+          else setPages([found.content || ""]);
+          setDrawHistory(found.drawHistory || {});
+          setNotes(found.notes || []);
+        } else {
+          setError(true);
+        }
+      })
+      .catch(err => {
+        // Fallback for mock IDs like "0" if in mock mode
+        const saved = localStorage.getItem("starNote_files");
+        if (saved) {
+          const files = JSON.parse(saved);
+          const found = files[parseInt(id)] || files.find(f => f._id === id || f.id === id);
+          if (found) {
+            setFile(found);
+            setPages(found.pages || [found.content || ""]);
+            setDrawHistory(found.drawHistory || {});
+            setNotes(found.notes || []);
+            return;
+          }
+        }
+        setError(true);
+      });
   }, [id]);
+
+  // Convert Base64 blobUrl to Object URL or use static backend URL
+  useEffect(() => {
+    if (file && file.blobUrl) {
+      if (file.blobUrl.startsWith("data:")) {
+        try {
+          // Fetch API can parse data URIs into Blobs
+          fetch(file.blobUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              const url = URL.createObjectURL(blob);
+              setObjectUrl(url);
+            });
+        } catch (e) {
+          console.error("Failed to convert base64 to blob:", e);
+        }
+      } else if (file.blobUrl.startsWith("/uploads/")) {
+        // Build the backend URL dynamically
+        const backendUrl = import.meta.env.VITE_API_URL 
+          ? import.meta.env.VITE_API_URL.replace("/api", "") 
+          : "http://localhost:5000";
+        setObjectUrl(`${backendUrl}${file.blobUrl}`);
+      } else {
+        setObjectUrl(file.blobUrl);
+      }
+    }
+    return () => {
+      if (objectUrl && objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
 
   // FEATURE HANDLERS
   const addNote = () => {
@@ -144,13 +184,14 @@ function Reader({ zenMode, setZenMode }) {
     }
   }, [currentPage, drawHistory]);
 
-  const saveFileChanges = (updates) => {
-    const saved = localStorage.getItem("starNote_files");
-    if (saved) {
-      const files = JSON.parse(saved);
-      files[parseInt(id)] = { ...files[parseInt(id)], ...updates };
-      localStorage.setItem("starNote_files", JSON.stringify(files));
-      setFile(files[parseInt(id)]);
+  const saveFileChanges = async (updates) => {
+    try {
+      const res = await notesService.update(id, updates);
+      setFile(res.data.note);
+    } catch (e) {
+      console.error("Failed to save changes:", e);
+      // Fallback optimistic update for local
+      setFile(prev => ({ ...prev, ...updates }));
     }
   };
 
@@ -411,7 +452,11 @@ function Reader({ zenMode, setZenMode }) {
                   onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
                 />
                 {file.blobUrl ? (
-                  <iframe src={file.blobUrl} title={file.name} className="modern-iframe" style={{ position: 'relative', zIndex: 1 }} />
+                  file.fileType && file.fileType.startsWith("image/") ? (
+                    <img src={file.blobUrl} alt={file.name} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+                  ) : (
+                    <iframe src={objectUrl || file.blobUrl} title={file.name} className="modern-iframe" style={{ position: 'relative', zIndex: 1, backgroundColor: 'white' }} />
+                  )
                 ) : (
                   <div className="paper-a4-modern">
                     <div className="paper-body-modern">
@@ -553,7 +598,11 @@ function Reader({ zenMode, setZenMode }) {
           />
           {file.blobUrl ? (
             <div className="m-iframe-container">
-              <iframe src={file.blobUrl} title={file.name} />
+              {file.fileType && file.fileType.startsWith("image/") ? (
+                <img src={file.blobUrl} alt={file.name} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
+              ) : (
+                <iframe src={objectUrl || file.blobUrl} title={file.name} style={{ width: '100%', height: '100%', border: 'none', backgroundColor: 'white' }} />
+              )}
             </div>
           ) : (
             <div className="m-paper-a4">

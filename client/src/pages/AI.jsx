@@ -24,9 +24,11 @@ import {
   FileText,
   ClipboardPaste,
   X,
+  Trash2,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
+import { notesService, chatService } from "../services/index";
 import "../styles/ai.css";
 
 // Init Gemini
@@ -59,6 +61,7 @@ function AI() {
   const [savedIndex, setSavedIndex] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [attachment, setAttachment] = useState(null);
 
   const location = useLocation();
   const chatEndRef = useRef(null);
@@ -66,6 +69,14 @@ function AI() {
   const textareaRef = useRef(null);
   const plusMenuRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    chatService.getLatest().then(res => {
+      if (res.data.session && res.data.session.messages) {
+        setMessages(res.data.session.messages);
+      }
+    }).catch(console.error);
+  }, []);
 
   const hasMessages = messages.length > 0;
 
@@ -80,14 +91,19 @@ function AI() {
   const plusMenuItems = [
     { icon: <Upload size={18} />, label: "Upload file", action: () => fileInputRef.current?.click() },
     { icon: <Camera size={18} />, label: "Take photo", action: () => alert("Camera feature coming soon!") },
-    { icon: <FolderOpen size={18} />, label: "Browse notes", action: () => {
-      const saved = JSON.parse(localStorage.getItem("starNote_files") || "[]");
-      if (saved.length > 0) {
-        const names = saved.map(f => f.name).join(", ");
-        setInput(`I have these notes: ${names}. Help me study them.`);
-        textareaRef.current?.focus();
-      } else {
-        alert("No notes found. Upload some files first!");
+    { icon: <FolderOpen size={18} />, label: "Browse notes", action: async () => {
+      try {
+        const res = await notesService.getAll();
+        const saved = res.data.notes || [];
+        if (saved.length > 0) {
+          const names = saved.map(f => f.name).join(", ");
+          setInput(`I have these notes: ${names}. Help me study them.`);
+          textareaRef.current?.focus();
+        } else {
+          alert("No notes found. Upload some files first!");
+        }
+      } catch {
+        alert("Failed to load notes.");
       }
     }},
     { icon: <ClipboardPaste size={18} />, label: "Paste text", action: async () => {
@@ -132,8 +148,19 @@ function AI() {
         textareaRef.current?.focus();
       };
       reader.readAsText(file);
+    } else if (file.type === "application/pdf" || file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64Data = ev.target.result.split(',')[1];
+        setAttachment({
+          inlineData: { data: base64Data, mimeType: file.type }
+        });
+        setInput(`I've attached ${file.name}. Please explain it.`);
+        textareaRef.current?.focus();
+      };
+      reader.readAsDataURL(file);
     } else {
-      setInput(`I've uploaded a file: ${file.name} (${(file.size / 1024).toFixed(1)} KB). Please help me analyze it.`);
+      setInput(`I've uploaded a file: ${file.name}. Please help me analyze it.`);
       textareaRef.current?.focus();
     }
 
@@ -229,6 +256,9 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    
+    // Save to backend asynchronously
+    chatService.sendMessage("user", textToSend).catch(console.error);
 
     // Reset textarea height
     if (textareaRef.current) {
@@ -248,11 +278,20 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
         .join("\n");
       const fullPrompt = `${systemPrompt}\n\nChat History:\n${historyText}\n\nUser Question: ${textToSend}\n\nAI Study Assistant:`;
 
-      const result = await model.generateContent(fullPrompt);
+      let contentParts = [fullPrompt];
+      if (attachment) {
+        contentParts.push(attachment);
+        setAttachment(null);
+      }
+
+      const result = await model.generateContent(contentParts);
       const response = await result.response;
       const text = response.text();
-
-      setMessages((prev) => [...prev, { role: "ai", text }]);
+      const aiMsg = { role: "ai", text };
+      setMessages((prev) => [...prev, aiMsg]);
+      
+      // Save AI response to backend
+      chatService.sendMessage("ai", text).catch(console.error);
     } catch (err) {
       console.error("AI Error:", err);
       setMessages((prev) => [
@@ -320,6 +359,18 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
       {hasMessages ? (
         <div className="ai-chat-view">
           <div className="ai-chat-scroll">
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+              <button 
+                className="ai-action-btn" 
+                onClick={async () => {
+                  await chatService.clear();
+                  setMessages([]);
+                }}
+              >
+                <Trash2 size={13} style={{ marginRight: '6px' }} />
+                Clear Chat History
+              </button>
+            </div>
             {messages.map((msg, i) => (
               <div key={i} className={`ai-msg ${msg.role}`}>
                 <div className="ai-msg-inner">

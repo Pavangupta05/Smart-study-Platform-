@@ -1,20 +1,21 @@
 /* GLOBAL PERSISTENT ASK AI BAR - THEME PERSISTENT ENGINE */
 :root {
-  --floating-bg: rgba(28, 28, 28, 0.85);
-  --floating-border: rgba(255, 255, 255, 0.1);
-  --floating-text: #a3a3a3;
-  --floating-input-text: #ffffff;
-  --floating-glow: rgba(0, 132, 255, 0.3);
-  --floating-dropdown: rgba(20, 20, 20, 0.98);
-}
-
-body.light {
+  /* LIGHT MODE defaults */
   --floating-bg: rgba(255, 255, 255, 0.9);
   --floating-border: rgba(0, 0, 0, 0.08);
   --floating-text: #666666;
   --floating-input-text: #1a1a1a;
   --floating-glow: rgba(0, 132, 255, 0.15);
   --floating-dropdown: rgba(255, 255, 255, 0.98);
+}
+
+body.dark {
+  --floating-bg: rgba(28, 28, 28, 0.85);
+  --floating-border: rgba(255, 255, 255, 0.1);
+  --floating-text: #a3a3a3;
+  --floating-input-text: #ffffff;
+  --floating-glow: rgba(0, 132, 255, 0.3);
+  --floating-dropdown: rgba(20, 20, 20, 0.98);
 }
 
 .notion-floating-wrapper.global {
@@ -92,9 +93,9 @@ body.light {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-body.light .notion-circle-btn:hover {
-  background: #000;
-  color: #fff;
+body.dark .notion-circle-btn:hover {
+  background: #ffffff;
+  color: #000000;
 }
 
 .notion-circle-btn.voice.listening {

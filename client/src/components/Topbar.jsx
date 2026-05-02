@@ -1,54 +1,113 @@
-import { useRef, useEffect } from "react";
-import { Maximize2, Minimize2, Menu, PanelLeftOpen } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation, NavLink } from "react-router-dom";
+import {
+  Maximize2, Minimize2, Sun, Moon, Search,
+  LayoutGrid, Clock3, StickyNote, LibraryBig, Sparkles,
+  Menu, ChevronRight, Bell, Settings
+} from "lucide-react";
 import StudyTimer from "./StudyTimer";
 import ProfileDropdown from "./ProfileDropdown";
 import "../styles/topbar.css";
 
-function Topbar({ theme, zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
-  const topbarRef = useRef(null);
+// Route → label map
+const PAGE_LABELS = {
+  "/":           { label: "Dashboard",  Icon: LayoutGrid },
+  "/planner":    { label: "Planner",    Icon: Clock3 },
+  "/notes":      { label: "Notes",      Icon: StickyNote },
+  "/flashcards": { label: "Flashcards", Icon: LibraryBig },
+  "/ai":         { label: "AI Tutor",   Icon: Sparkles },
+  "/settings":   { label: "Settings",   Icon: Settings },
+};
 
-  // Force an instant GPU repaint when theme changes
-  // backdrop-filter compositing layers don't repaint on CSS variable changes without this
+function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
+  const location = useLocation();
+  const topbarRef = useRef(null);
+  const [scrolled, setScrolled] = useState(false);
+  const [notifCount] = useState(2); // Demo notification count
+
+  // Derive page context from current route
+  const currentPage = PAGE_LABELS[location.pathname] || PAGE_LABELS["/"];
+  const PageIcon = currentPage.Icon;
+
+  // Elevate topbar on scroll
   useEffect(() => {
-    const el = topbarRef.current;
-    if (!el) return;
-    el.style.transform = "translateZ(1px)";
-    requestAnimationFrame(() => {
-      el.style.transform = "";
-    });
-  }, [theme]);
+    const mainEl = document.querySelector(".page-scroll, .main-content, .dashboard-minimal, .page-content");
+    if (!mainEl) return;
+    const onScroll = () => setScrolled(mainEl.scrollTop > 10);
+    mainEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => mainEl.removeEventListener("scroll", onScroll);
+  }, [location.pathname]);
+
+  // Instant theme toggle — directly manipulates DOM before React re-render
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    // Apply instantly to DOM (no waiting for re-render)
+    document.body.classList.remove("light", "dark");
+    document.body.classList.add(next);
+    localStorage.setItem("theme", next);
+    // Then sync React state
+    if (setTheme) {
+      setTheme(next);
+    }
+    // Also dispatch custom event for any other listeners (e.g. Settings.jsx)
+    window.dispatchEvent(new CustomEvent("themeChange", { detail: { theme: next } }));
+  };
+
+  const isDark = theme === "dark";
 
   return (
-    <div ref={topbarRef} className={`topbar ${zenMode ? "zen" : ""}`}>
-      {/* LEFT SECTION: NAVIGATION */}
-      <div className="topbar-left">
-      </div>
+    <header
+      ref={topbarRef}
+      className={`topbar-v2 ${isDark ? "dark" : "light"} ${scrolled ? "elevated" : ""} ${zenMode ? "zen" : ""}`}
+      data-no-transition-init
+    >
+      {/* ── LEFT: sidebar toggle + breadcrumb ── */}
+      <div className="tv2-left">
 
-      {/* CENTER SECTION: CONTEXT / TIMER */}
-      <div className="topbar-center">
-        <div className="topbar-context">
-          <StudyTimer />
+
+        {/* Page breadcrumb pill */}
+        <div className="tv2-breadcrumb">
+          <PageIcon size={15} strokeWidth={2.25} className="bc-icon" />
+          <span className="bc-label">{currentPage.label}</span>
         </div>
       </div>
 
-      {/* RIGHT SECTION: ACTIONS */}
-      <div className="topbar-right">
-        <div className="action-group">
-          <button 
-            className={`topbar-btn zen-toggle ${zenMode ? "active" : ""}`}
-            onClick={() => setZenMode(!zenMode)}
-            title={zenMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-          >
-            <div className="btn-icon-container">
-              {zenMode ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </div>
-          </button>
-          
-          <div className="divider-v"></div>
-          <ProfileDropdown />
-        </div>
+      {/* ── CENTER: study timer ── */}
+      <div className="tv2-center">
+        <StudyTimer />
       </div>
-    </div>
+
+      {/* ── RIGHT: actions cluster ── */}
+      <div className="tv2-right">
+
+
+        {/* Notification bell */}
+        <button className="tv2-icon-btn notif-btn" aria-label="Notifications" title="Notifications">
+          <span className="tv2-icon-btn-bg" />
+          <Bell size={17} strokeWidth={2.25} />
+          {notifCount > 0 && (
+            <span className="tv2-badge">{notifCount}</span>
+          )}
+        </button>
+
+        {/* Zen / focus mode */}
+        <button
+          className={`tv2-icon-btn zen-btn ${zenMode ? "active" : ""}`}
+          onClick={() => setZenMode(!zenMode)}
+          aria-label={zenMode ? "Exit focus mode" : "Focus mode"}
+          title={zenMode ? "Exit focus mode" : "Enter focus mode"}
+        >
+          <span className="tv2-icon-btn-bg" />
+          {zenMode ? <Minimize2 size={17} strokeWidth={2.25} /> : <Maximize2 size={17} strokeWidth={2.25} />}
+        </button>
+
+        {/* Divider */}
+        <div className="tv2-divider desktop-only" />
+
+        {/* Profile */}
+        <ProfileDropdown />
+      </div>
+    </header>
   );
 }
 

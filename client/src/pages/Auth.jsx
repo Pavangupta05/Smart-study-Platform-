@@ -7,14 +7,32 @@ import "../styles/auth.css";
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgot, setIsForgot] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setError("");
+    setSuccessMsg("");
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await authService.forgotPassword({ email: formData.email });
+      setSuccessMsg(res.data.message || "Email sent successfully.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -52,13 +70,13 @@ function Auth() {
               <Sparkles size={32} strokeWidth={2.5} />
               <span>STARNOTE AI</span>
             </div>
-            <h1>{isLogin ? "Welcome Back" : "Create Account"}</h1>
-            <p>{isLogin ? "Sign in to access your workspace" : "Join StarNote to start studying"}</p>
+            <h1>{isForgot ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}</h1>
+            <p>{isForgot ? "Enter your email to receive a reset link" : isLogin ? "Sign in to access your workspace" : "Join StarNote to start studying"}</p>
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={isForgot ? handleForgotSubmit : handleSubmit}>
             <AnimatePresence mode="popLayout">
-              {!isLogin && (
+              {!isLogin && !isForgot && (
                 <motion.div 
                   className="input-group"
                   initial={{ opacity: 0, y: -10 }}
@@ -83,21 +101,33 @@ function Auth() {
               </div>
             </div>
 
-            <div className="input-group">
-              <div className="label-row">
-                <label>Password</label>
-                {isLogin && <button type="button" className="btn-forgot-link">Forgot Password?</button>}
-              </div>
-              <div className="input-wrapper">
-                <Lock size={18} />
-                <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required />
-              </div>
-            </div>
+            <AnimatePresence mode="popLayout">
+              {!isForgot && (
+                <motion.div 
+                  className="input-group"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div className="label-row">
+                    <label>Password</label>
+                    {isLogin && <button type="button" className="btn-forgot-link" onClick={() => setIsForgot(true)}>Forgot Password?</button>}
+                  </div>
+                  <div className="input-wrapper">
+                    <Lock size={18} />
+                    <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required={!isForgot} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {error && <p className="auth-error">{error}</p>}
+            {successMsg && <p className="auth-error" style={{ color: "var(--primary)", background: "rgba(var(--primary-rgb), 0.1)", border: "1px solid var(--primary)" }}>{successMsg}</p>}
 
             <AnimatePresence>
-              {!isLogin && (
+              {!isLogin && !isForgot && (
                 <motion.div 
                   className="terms-wrapper"
                   initial={{ opacity: 0 }}
@@ -118,7 +148,7 @@ function Auth() {
                 <div className="auth-loader"></div>
               ) : (
                 <>
-                  <span>{isLogin ? "Sign In" : "Create Account"}</span>
+                  <span>{isForgot ? "Send Reset Link" : isLogin ? "Sign In" : "Create Account"}</span>
                   <ArrowRight size={18} />
                 </>
               )}
@@ -136,10 +166,13 @@ function Auth() {
 
           <div className="auth-footer">
             <p>
-              {isLogin ? "New to StarNote?" : "Already have an account?"}
-              <button className="btn-link-toggle" onClick={() => setIsLogin(!isLogin)}>
-                {isLogin ? "Sign Up Free" : "Log In"}
-              </button>
+              {isForgot ? (
+                <button className="btn-link-toggle" onClick={() => setIsForgot(false)}>Back to Login</button>
+              ) : isLogin ? (
+                <>New to StarNote? <button className="btn-link-toggle" onClick={() => setIsLogin(false)}>Sign Up Free</button></>
+              ) : (
+                <>Already have an account? <button className="btn-link-toggle" onClick={() => setIsLogin(true)}>Log In</button></>
+              )}
             </p>
           </div>
         </motion.div>

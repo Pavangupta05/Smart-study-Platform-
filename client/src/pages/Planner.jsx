@@ -1,19 +1,35 @@
 import { useState, useEffect } from "react";
 import { Plus, Clock, Coffee, Brain, ChevronRight, CheckCircle2, Wand2, Trash2 } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { tasksService } from "../services/index";
+import { useUser } from "../context/UserContext";
 import "../styles/planner.css";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
 const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 function Planner() {
-  const [tasks, setTasks] = useState([
-    { id: 1, time: "08:00", title: "Quantum Physics Research", load: "High", completed: false, type: "task" },
-    { id: 2, time: "10:30", title: "Quick Break", load: "None", completed: false, type: "break" },
-    { id: 3, time: "11:00", title: "Linear Algebra Problem Set", load: "Medium", completed: false, type: "task" },
-    { id: 4, time: "13:00", title: "Lunch", load: "None", completed: false, type: "break" },
-    { id: 5, time: "14:00", title: "Write Project Draft", load: "High", completed: false, type: "task" },
-  ]);
+  const { socket } = useUser();
+  const [tasks, setTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const fetchTasks = () => {
+    tasksService.getAll().then(res => {
+      const plannerItems = (res.data.tasks || []).filter(t => t.time);
+      setTasks(plannerItems.sort((a, b) => a.time.localeCompare(b.time)));
+    }).catch(console.error).finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetchTasks();
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("sync_tasks", fetchTasks);
+    return () => socket.off("sync_tasks", fetchTasks);
+  }, [socket]);
 
   const [newTask, setNewTask] = useState("");
   const [newTime, setNewTime] = useState("");
@@ -21,12 +37,16 @@ function Planner() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizeTip, setOptimizeTip] = useState("");
 
-  const toggleTask = (id) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const toggleTask = async (id) => {
+    const task = tasks.find(t => (t._id || t.id) === id);
+    if (!task) return;
+    setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !t.completed } : t));
+    try { await tasksService.toggle(id, !task.completed); } catch {}
   };
 
-  const deleteTask = (id) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
+  const deleteTask = async (id) => {
+    setTasks(prev => prev.filter(t => (t._id || t.id) !== id));
+    try { await tasksService.delete(id); } catch {}
   };
 
   const handleOptimize = async () => {
@@ -34,7 +54,7 @@ function Planner() {
     setOptimizeTip("");
 
     try {
-      const taskList = tasks.map(t => `${t.time} - ${t.title} (${t.load} difficulty, type: ${t.type})`).join("\n");
+      const taskList = tasks.map(t => `${t.time} - ${t.text || t.title} (${t.priority || t.load} difficulty, type: ${t.type})`).join("\n");
 
       const prompt = `You are a study schedule optimizer. Given this student's study plan:
 
@@ -64,15 +84,29 @@ TIP: Your optimization tip here`;
 
       if (tasksMatch) {
         const optimizedTasks = JSON.parse(tasksMatch[1]);
-        const newTasks = optimizedTasks.map((t, i) => ({
-          id: Date.now() + i,
-          time: t.time,
-          title: t.title,
-          load: t.load,
-          completed: false,
-          type: t.type || "task"
-        }));
-        setTasks(newTasks.sort((a, b) => a.time.localeCompare(b.time)));
+        const newTasks = [];
+        for (const t of optimizedTasks) {
+          const payload = {
+            text: t.title,
+            time: t.time,
+            priority: t.load,
+            type: t.type || "task",
+            completed: false
+          };
+          try {
+            const res = await tasksService.create(payload);
+            newTasks.push(res.data.task);
+          } catch (e) {
+            console.error("Failed to save optimized task:", e);
+          }
+        }
+        
+        // Refetch to cleanly update list with new ones (clear out old ones? Wait, optimize might just append. Let's just set the new ones)
+        // If optimizing completely overwrites the day, we should probably delete old ones first. 
+        // For now, let's just append to be safe or overwrite UI.
+        const allRes = await tasksService.getAll();
+        const plannerItems = (allRes.data.tasks || []).filter(item => item.time);
+        setTasks(plannerItems.sort((a, b) => a.time.localeCompare(b.time)));
       }
 
       if (tipMatch) {
@@ -87,7 +121,7 @@ TIP: Your optimization tip here`;
   };
 
 
-  const addTask = (e) => {
+  const addTask = async (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
 
@@ -101,16 +135,19 @@ TIP: Your optimization tip here`;
       formattedTime = nextTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
-    const taskObj = {
-      id: Date.now(),
+    const payload = {
+      text: newTask,
       time: formattedTime,
-      title: newTask,
-      load: newLoad,
-      completed: false,
+      priority: newLoad,
       type: "task"
     };
 
-    setTasks([...tasks, taskObj].sort((a, b) => a.time.localeCompare(b.time)));
+    try {
+      const res = await tasksService.create(payload);
+      setTasks(prev => [...prev, res.data.task].sort((a, b) => a.time.localeCompare(b.time)));
+    } catch (e) {
+      console.error(e);
+    }
     setNewTask("");
     setNewTime("");
   };
@@ -140,10 +177,14 @@ TIP: Your optimization tip here`;
           </div>
 
           <div className="adaptive-timeline">
-            {tasks.map((item, index) => (
+            {isLoading ? (
+              [1, 2, 3].map(i => (
+                <div key={i} className="timeline-block skeleton" style={{ minHeight: "80px", marginBottom: "16px", borderRadius: "16px", background: "rgba(120, 120, 120, 0.1)" }}></div>
+              ))
+            ) : tasks.map((item, index) => (
               <div 
-                key={item.id} 
-                className={`timeline-block ${item.type} ${item.completed ? 'completed' : ''} ${item.load === 'High' ? 'high-priority' : ''}`}
+                key={item._id || item.id} 
+                className={`timeline-block ${item.type} ${item.completed ? 'completed' : ''} ${(item.priority || item.load) === 'High' ? 'high-priority' : ''}`}
               >
                 <div className="block-time">
                   <span>{item.time}</span>
@@ -154,24 +195,24 @@ TIP: Your optimization tip here`;
                   <div className="block-main">
                     <div className="block-info">
                       {item.type === 'break' ? <Coffee size={18} className="break-icon" /> : null}
-                      <h3>{item.title}</h3>
+                      <h3>{item.text || item.title}</h3>
                     </div>
                     
                     <div className="block-meta">
-                      {item.load !== "None" && (
-                        <span className={`load-label ${item.load.toLowerCase()}`}>
-                          {item.load} Difficulty
+                      {(item.priority || item.load) !== "None" && (
+                        <span className={`load-label ${(item.priority || item.load).toLowerCase()}`}>
+                          {item.priority || item.load} Difficulty
                         </span>
                       )}
                       <button 
                         className={`btn-check ${item.completed ? 'active' : ''}`}
-                        onClick={() => toggleTask(item.id)}
+                        onClick={() => toggleTask(item._id || item.id)}
                       >
                         <CheckCircle2 size={18} />
                       </button>
                       <button 
                         className="btn-delete-task"
-                        onClick={() => deleteTask(item.id)}
+                        onClick={() => deleteTask(item._id || item.id)}
                         title="Delete Task"
                       >
                         <Trash2 size={16} />
@@ -238,7 +279,7 @@ TIP: Your optimization tip here`;
             <p>
               {optimizeTip 
                 ? optimizeTip 
-                : `You have ${tasks.filter(t => t.load === 'High').length} high-difficulty task(s) today. Use the "Optimize with AI" button to get a smarter schedule.`
+                : `You have ${tasks.filter(t => (t.priority || t.load) === 'High').length} high-difficulty task(s) today. Use the "Optimize with AI" button to get a smarter schedule.`
               }
             </p>
             <div className="velocity-metric">

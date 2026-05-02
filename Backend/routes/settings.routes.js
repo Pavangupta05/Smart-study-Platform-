@@ -23,7 +23,14 @@ router.get("/", protect, async (req, res) => {
 router.put("/", protect, async (req, res) => {
   const { settings, name, email, bio, avatar } = req.body;
   const update = {};
-  if (settings) update.settings = settings;
+  
+  // Safe partial update for settings using dot notation
+  if (settings) {
+    Object.keys(settings).forEach(key => {
+      update[`settings.${key}`] = settings[key];
+    });
+  }
+  
   if (name) update.name = name;
   if (email) update.email = email;
   if (bio !== undefined) update.bio = bio;

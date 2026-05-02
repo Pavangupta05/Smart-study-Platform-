@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+import { Toaster } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Preloader from "./components/Preloader";
@@ -15,6 +17,7 @@ import Flashcards from "./pages/Flashcards";
 import SearchModal from "./components/SearchModal";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -49,8 +52,13 @@ function App() {
 
   useEffect(() => {
     const syncTheme = () => setTheme(localStorage.getItem("theme") || "light");
+    const syncThemeCustom = (e) => setTheme(e.detail?.theme || localStorage.getItem("theme") || "light");
     window.addEventListener("storage", syncTheme);
-    return () => window.removeEventListener("storage", syncTheme);
+    window.addEventListener("themeChange", syncThemeCustom);
+    return () => {
+      window.removeEventListener("storage", syncTheme);
+      window.removeEventListener("themeChange", syncThemeCustom);
+    };
   }, []);
 
   useEffect(() => {
@@ -72,6 +80,7 @@ function App() {
         <Routes>
           <Route path="/landing" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/resetpassword/:token" element={<ResetPassword />} />
           <Route path="*" element={<Landing />} />
         </Routes>
       </div>
@@ -80,6 +89,7 @@ function App() {
 
   return (
     <div className={`app ${theme} ${zenMode ? "zen-mode" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
+      <Toaster position="top-center" richColors closeButton />
       {!zenMode && (
         <Sidebar 
           theme={theme}
@@ -92,31 +102,49 @@ function App() {
       <div className="main">
         <Topbar 
           theme={theme}
+          setTheme={setTheme}
           zenMode={zenMode} 
           setZenMode={setZenMode} 
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
         />
 
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/planner" element={<Planner />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/notes/:category" element={<Notes />} />
-          <Route path="/flashcards" element={<Flashcards />} />
-          <Route path="/ai" element={<AI />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/templates" element={<Templates />} />
-          <Route path="/trash" element={<Trash />} />
-          <Route path="/reader/:id" element={<Reader zenMode={zenMode} setZenMode={setZenMode} />} />
-          <Route path="*" element={<Dashboard />} />
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+            <Route path="/planner" element={<PageTransition><Planner /></PageTransition>} />
+            <Route path="/notes" element={<PageTransition><Notes /></PageTransition>} />
+            <Route path="/notes/:category" element={<PageTransition><Notes /></PageTransition>} />
+            <Route path="/flashcards" element={<PageTransition><Flashcards /></PageTransition>} />
+            <Route path="/ai" element={<PageTransition><AI /></PageTransition>} />
+            <Route path="/settings" element={<PageTransition><Settings /></PageTransition>} />
+            <Route path="/templates" element={<PageTransition><Templates /></PageTransition>} />
+            <Route path="/trash" element={<PageTransition><Trash /></PageTransition>} />
+            <Route path="/reader/:id" element={<PageTransition><Reader zenMode={zenMode} setZenMode={setZenMode} /></PageTransition>} />
+            <Route path="*" element={<PageTransition><Dashboard /></PageTransition>} />
+          </Routes>
+        </AnimatePresence>
       </div>
 
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       
       {/* GlobalAskAI removed — AI page now has its own integrated input */}
     </div>
+  );
+}
+
+// Reusable transition wrapper
+function PageTransition({ children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", width: "100%", overflow: "hidden" }}
+    >
+      {children}
+    </motion.div>
   );
 }
 

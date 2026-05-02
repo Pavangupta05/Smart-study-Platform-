@@ -36,12 +36,19 @@
   top: calc(100% + 14px);
   right: 0;
   width: 240px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-modal);
   padding: 8px;
   z-index: 1000;
+  /* Fade-in animation */
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 body.dark .profile-dropdown {
@@ -151,5 +158,11 @@ body.dark .profile-dropdown {
 }
 
 .dropdown-logout:hover {
-  background: #fee2e2;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+body.dark .dropdown-logout:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
 }

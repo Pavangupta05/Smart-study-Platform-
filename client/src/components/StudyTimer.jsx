@@ -13,8 +13,28 @@ function StudyTimer() {
   
   const audioRef = useRef(null);
 
-  // Soundscapes (using royalty-free noise or browser generated)
-  // For now, we'll use a placeholder or simulated ambient noise
+  // Play ambient rain sound when enabled
+  useEffect(() => {
+    if (soundEnabled) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio("https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3");
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.4;
+      }
+      audioRef.current.play().catch(err => {
+        console.error("Autoplay prevented:", err);
+        setSoundEnabled(false);
+      });
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    
+    return () => {
+      if (audioRef.current && !soundEnabled) {
+        audioRef.current.pause();
+      }
+    };
+  }, [soundEnabled]);
   
   useEffect(() => {
     let interval = null;

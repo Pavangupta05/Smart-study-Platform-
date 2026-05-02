@@ -19,14 +19,16 @@ router.get("/", protect, async (req, res) => {
 
 // POST /api/tasks
 router.post("/", protect, async (req, res) => {
-  const { text, dueDate, priority } = req.body;
+  const { text, dueDate, priority, time, type } = req.body;
   if (!text) return res.status(400).json({ success: false, message: "Task text required." });
 
   if (getMockMode()) {
-    const task = await mockTasks.create({ user: req.userId, text, dueDate, priority });
+    const task = await mockTasks.create({ user: req.userId, text, dueDate, priority, time, type });
+    req.app.get("io")?.to(req.userId).emit("sync_tasks");
     return res.status(201).json({ success: true, task });
   }
-  const task = await Task.create({ user: req.userId, text, dueDate, priority });
+  const task = await Task.create({ user: req.userId, text, dueDate, priority, time, type });
+  req.app.get("io")?.to(req.userId).emit("sync_tasks");
   res.status(201).json({ success: true, task });
 });
 
@@ -38,10 +40,12 @@ router.put("/:id", protect, async (req, res) => {
   if (getMockMode()) {
     const task = await mockTasks.findOneAndUpdate({ _id: req.params.id, user: req.userId }, update);
     if (!task) return res.status(404).json({ success: false, message: "Task not found." });
+    req.app.get("io")?.to(req.userId).emit("sync_tasks");
     return res.json({ success: true, task });
   }
   const task = await Task.findOneAndUpdate({ _id: req.params.id, user: req.userId }, update, { new: true });
   if (!task) return res.status(404).json({ success: false, message: "Task not found." });
+  req.app.get("io")?.to(req.userId).emit("sync_tasks");
   res.json({ success: true, task });
 });
 
@@ -49,9 +53,11 @@ router.put("/:id", protect, async (req, res) => {
 router.delete("/:id", protect, async (req, res) => {
   if (getMockMode()) {
     await mockTasks.findOneAndDelete({ _id: req.params.id, user: req.userId });
+    req.app.get("io")?.to(req.userId).emit("sync_tasks");
     return res.json({ success: true, message: "Task deleted." });
   }
   await Task.findOneAndDelete({ _id: req.params.id, user: req.userId });
+  req.app.get("io")?.to(req.userId).emit("sync_tasks");
   res.json({ success: true, message: "Task deleted." });
 });
 

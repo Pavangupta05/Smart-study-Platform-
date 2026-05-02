@@ -1,10 +1,11 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 60000, // 60 seconds to allow large base64 file uploads
 });
 
 // Attach JWT token to every request
@@ -16,18 +17,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally — but ONLY for protected routes, not for /auth routes
-// (login/register return 401 for wrong credentials — we don't want to redirect then)
+// Handle errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthRoute = error.config?.url?.includes("/auth/");
     if (error.response?.status === 401 && !isAuthRoute) {
-      // Token expired on a protected route → force logout
+      toast.error("Session expired. Please log in again.");
       localStorage.removeItem("starNote_token");
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("starNote_user");
       window.location.href = "/landing";
+    } else if (error.response?.data?.message) {
+      toast.error(error.response.data.message);
+    } else if (error.message && error.message !== "Network Error") {
+      toast.error(`Error: ${error.message}`);
+    } else if (!isAuthRoute) {
+      toast.error("Network or unexpected error occurred. Please try again.");
     }
     return Promise.reject(error);
   }

@@ -5,6 +5,8 @@ export const authService = {
   register: (data) => api.post("/auth/register", data),
   login: (data) => api.post("/auth/login", data),
   me: () => api.get("/auth/me"),
+  forgotPassword: (data) => api.post("/auth/forgotpassword", data),
+  resetPassword: (token, data) => api.put(`/auth/resetpassword/${token}`, data),
 };
 
 // NOTES
@@ -35,7 +37,6 @@ export const settingsService = {
   updateStats: (data) => api.put("/settings/stats", data),
 };
 
-// FLASHCARDS
 export const flashcardsService = {
   getAll: () => api.get("/flashcards"),
   create: (data) => api.post("/flashcards", data),
@@ -43,4 +44,11 @@ export const flashcardsService = {
   update: (id, data) => api.put(`/flashcards/${id}`, data),
   delete: (id) => api.delete(`/flashcards/${id}`),
   markMastered: (id) => api.put(`/flashcards/${id}`, { mastered: true }),
+};
+
+// CHATS
+export const chatService = {
+  getLatest: () => api.get("/chats"),
+  sendMessage: (role, text) => api.post("/chats/message", { role, text }),
+  clear: () => api.delete("/chats"),
 };

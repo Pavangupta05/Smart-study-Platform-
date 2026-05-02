@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, Brain, Clock, ChevronRight, Sparkles, Loader2, X } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { motion, AnimatePresence } from "framer-motion";
 import StudySession from "../components/StudySession";
+import { flashcardsService } from "../services/index";
 import "../styles/flashcards.css";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
@@ -10,28 +11,62 @@ const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 function Flashcards() {
   const [activeDeck, setActiveDeck] = useState(null);
-  const [decks, setDecks] = useState([
-    { id: 1, name: "Biology 101", count: 24, lastStudied: "2 days ago", color: "#10b981" },
-    { id: 2, name: "Computer Science", count: 56, lastStudied: "Today", color: "#3b82f6" },
-    { id: 3, name: "Modern History", count: 18, lastStudied: "Yesterday", color: "#f59e0b" },
-  ]);
+  const [decks, setDecks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Group flat flashcards array into decks
+  const processFlashcards = (cards) => {
+    const grouped = {};
+    cards.forEach(c => {
+      const deckName = c.deck || "Default Deck";
+      if (!grouped[deckName]) {
+        grouped[deckName] = {
+          id: deckName,
+          name: deckName,
+          count: 0,
+          lastStudied: c.lastReviewed ? new Date(c.lastReviewed).toLocaleDateString() : "Never",
+          color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
+          cards: []
+        };
+      }
+      grouped[deckName].count++;
+      grouped[deckName].cards.push(c);
+      
+      // Update lastStudied if this card is more recent
+      if (c.lastReviewed) {
+        const lastDate = new Date(grouped[deckName].lastStudied);
+        const thisDate = new Date(c.lastReviewed);
+        if (isNaN(lastDate) || thisDate > lastDate) {
+          grouped[deckName].lastStudied = thisDate.toLocaleDateString();
+        }
+      }
+    });
+    return Object.values(grouped);
+  };
+
+  useEffect(() => {
+    flashcardsService.getAll()
+      .then(res => setDecks(processFlashcards(res.data.cards || [])))
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGenModal, setShowGenModal] = useState(false);
   const [genTopic, setGenTopic] = useState("");
   const [genCount, setGenCount] = useState(10);
 
-  const handleAddDeck = () => {
+  const handleAddDeck = async () => {
     const name = prompt("Enter Deck Name:");
     if (name) {
-      const newDeck = {
-        id: Date.now(),
-        name,
-        count: 0,
-        lastStudied: "Just now",
-        color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
-        cards: []
-      };
-      setDecks([newDeck, ...decks]);
+      // Create a dummy card to instantiate the deck in the DB since cards are flat
+      try {
+        const res = await flashcardsService.create({ front: "New Card Question?", back: "Answer here.", deck: name });
+        // Refetch to cleanly regroup
+        const allRes = await flashcardsService.getAll();
+        setDecks(processFlashcards(allRes.data.cards || []));
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -55,16 +90,13 @@ No extra text, no markdown, no code fences. Just the JSON array.`;
       
       const cards = JSON.parse(text);
 
-      const newDeck = {
-        id: Date.now(),
-        name: genTopic,
-        count: cards.length,
-        lastStudied: "Just now",
-        color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
-        cards: cards
-      };
-
-      setDecks([newDeck, ...decks]);
+      // Use backend bulk insert API to save the new cards under this deck name
+      await flashcardsService.bulkCreate(cards, genTopic);
+      
+      // Refetch and regroup
+      const allRes = await flashcardsService.getAll();
+      setDecks(processFlashcards(allRes.data.cards || []));
+      
       setShowGenModal(false);
       setGenTopic("");
     } catch (err) {

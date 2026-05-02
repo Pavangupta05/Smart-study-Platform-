@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { getMockMode } = require("../config/db");
 const { mockUsers } = require("../utils/mockStore");
 
@@ -80,6 +81,93 @@ router.post("/login", async (req, res) => {
     success: true,
     token,
     user: { id: user._id, name: user.name, email: user.email, plan: user.plan, settings: user.settings },
+  });
+});
+
+// ── POST /api/auth/forgotpassword ────────────────────────────────────────────
+router.post("/forgotpassword", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: "Please provide an email." });
+
+  let user;
+  if (getMockMode()) {
+    user = await mockUsers.findOne({ email });
+  } else {
+    user = await User.findOne({ email });
+  }
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: "There is no user with that email." });
+  }
+
+  // Generate token
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  const resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+  const resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+  if (getMockMode()) {
+    await mockUsers.findByIdAndUpdate(user._id || user.id, { resetPasswordToken, resetPasswordExpire });
+  } else {
+    user.resetPasswordToken = resetPasswordToken;
+    user.resetPasswordExpire = resetPasswordExpire;
+    await user.save();
+  }
+
+  // Create reset URL
+  const resetUrl = `http://localhost:5173/resetpassword/${resetToken}`;
+
+  // Log to console instead of sending email (since SMTP is not configured)
+  console.log("\n==================================================");
+  console.log("🔒 PASSWORD RESET REQUESTED");
+  console.log(`Email: ${user.email}`);
+  console.log(`Reset URL: ${resetUrl}`);
+  console.log("==================================================\n");
+
+  res.status(200).json({ success: true, message: "Email sent (Check server console for the reset link!)" });
+});
+
+// ── PUT /api/auth/resetpassword/:resettoken ──────────────────────────────────
+router.put("/resetpassword/:resettoken", async (req, res) => {
+  const resetPasswordToken = crypto.createHash("sha256").update(req.params.resettoken).digest("hex");
+
+  let user;
+  if (getMockMode()) {
+    user = await mockUsers.findOne({ 
+      resetPasswordToken, 
+      resetPasswordExpire: { $gt: Date.now() } 
+    });
+  } else {
+    user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+  }
+
+  if (!user) {
+    return res.status(400).json({ success: false, message: "Invalid or expired reset token." });
+  }
+
+  if (getMockMode()) {
+    const bcrypt = require("bcryptjs");
+    const hashed = await bcrypt.hash(req.body.password, 12);
+    await mockUsers.findByIdAndUpdate(user._id || user.id, { 
+      password: hashed, 
+      resetPasswordToken: undefined, 
+      resetPasswordExpire: undefined 
+    });
+    user = await mockUsers.findById(user._id || user.id);
+  } else {
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+  }
+
+  const token = signToken(user._id || user.id);
+  res.status(200).json({
+    success: true,
+    token,
+    user: { id: user._id || user.id, name: user.name, email: user.email, plan: user.plan }
   });
 });
 
