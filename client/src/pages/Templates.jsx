@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  LayoutTemplate, 
-  Plus, 
-  BookOpen, 
-  Brain, 
-  Zap, 
-  Check,
-  ChevronRight,
-  GraduationCap,
-  Calendar,
-  ListTodo
+  LayoutTemplate, Plus, BookOpen, Brain, Zap, Check,
+  ChevronRight, GraduationCap, Calendar, ListTodo
 } from "lucide-react";
+import { notesService } from "../services/index";
 import "../styles/templates.css";
 
 function Templates() {
@@ -72,19 +65,22 @@ function Templates() {
     ? templates 
     : templates.filter(t => t.cat === selectedCategory);
 
-  const useTemplate = (t) => {
-    const currentFiles = JSON.parse(localStorage.getItem("starNote_files") || "[]");
+  const useTemplate = async (t) => {
     const newFile = {
       name: `${t.title} - ${new Date().toLocaleDateString()}`,
-      size: "Template",
-      date: "Just now",
+      size: "0.1 MB",
       icon: "✨",
-      cat: "general",
-      content: t.content
+      category: "general",
+      fileType: "notebook",
+      pages: [t.content]
     };
-    const updated = [newFile, ...currentFiles];
-    localStorage.setItem("starNote_files", JSON.stringify(updated));
-    navigate("/notes");
+    try {
+      const res = await notesService.create(newFile);
+      navigate(`/reader/${res.data.note._id}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create note from template.");
+    }
   };
 
   return (

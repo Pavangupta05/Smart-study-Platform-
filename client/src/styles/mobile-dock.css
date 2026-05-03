@@ -1,0 +1,334 @@
+/* ═══════════════════════════════════════════════
+   STARNOTE — PREMIUM MOBILE DOCK V2
+   Inspired by macOS/iOS dock pill-expansion design
+   • Active tab pill with spring-animated background
+   • Separated coral FAB with radial action menu
+   • Full dark mode + iPhone safe area support
+═══════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════
+   NATIVE CSS MICRO-ANIMATIONS (GPU ACCELERATED)
+══════════════════════════════════════ */
+.animated-dock-icon svg {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animated-dock-icon .active-icon {
+  animation: springIcon 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes springIcon {
+  0%   { transform: scale(0.8) translateY(2px); opacity: 0.5; }
+  50%  { transform: scale(1.15) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.dock-pill-item:hover .animated-dock-icon svg:not(.active-icon) {
+  animation: jiggle 0.4s ease-in-out;
+}
+
+@keyframes jiggle {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(-8deg) scale(1.05); }
+  50%  { transform: rotate(8deg) scale(1.05); }
+  75%  { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* ── Only render on mobile ── */
+.mobile-dock-v2,
+.dock-fab-actions,
+.dock-fab-backdrop,
+.dock-fab-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-dock-v2  { display: flex;  }
+  .dock-fab-btn    { display: flex;  }
+  .dock-fab-actions,
+  .dock-fab-backdrop { display: flex; }
+
+  /* Hide the OLD basic dock from Sidebar.jsx */
+  .mobile-dock { display: none !important; }
+}
+
+/* ══════════════════════════════════════
+   DOCK BAR  (centered pill container)
+══════════════════════════════════════ */
+.mobile-dock-v2 {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  align-items: center;
+  gap: 14px;
+  transition: none !important; /* prevent global.css override */
+  pointer-events: all;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
+/* ── Frosted-glass pill track (Native iOS Style) ── */
+.dock-pill-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.15); /* Almost transparent, pure glass */
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+body.dark .dock-pill-wrapper {
+  background: rgba(0, 0, 0, 0.2); /* Almost transparent dark glass */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ══════════════════════════════════════
+   NAV PILL ITEMS  (each tab)
+══════════════════════════════════════ */
+.dock-pill-item {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  /* Let Framer Motion handle all movement */
+  transition: color 0.22s ease;
+}
+
+.dock-pill-item:hover  { color: var(--text); }
+.dock-pill-item.active { color: var(--text); }
+
+/* ── Inner layout container (Framer layout target) ── */
+.dock-pill-inner {
+  display: flex;
+  align-items: center;
+  padding: 10px 13px;
+  border-radius: 999px;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative; /* for pill-bg absolute positioning */
+}
+
+/* ── Animated active pill background (layoutId) ── */
+.dock-pill-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(var(--primary-rgb), 0.1);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.18);
+  z-index: 0;
+  pointer-events: none;
+}
+
+body.dark .dock-pill-bg {
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.07);
+}
+
+/* ── Icon wrapper ── */
+.dock-pill-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Expanding label ── */
+.dock-pill-label {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  overflow: hidden;
+  display: inline-block;
+  color: var(--text);
+  position: relative;
+  z-index: 1;
+}
+
+body.dark .dock-pill-label { color: #fff; }
+
+/* ══════════════════════════════════════
+   CORAL FAB  (flex sibling, fixed relative to container)
+══════════════════════════════════════ */
+.dock-fab-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-fab-btn {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1201;
+  color: #fff;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+
+  /* Coral / salmon gradient — matches reference image */
+  background: linear-gradient(140deg, #ff7070 0%, #ee5252 45%, #e84393 100%);
+  box-shadow:
+    0 6px 24px rgba(238, 82, 82, 0.48),
+    0 2px 8px  rgba(238, 82, 82, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  transition: none !important; /* Framer handles rotation */
+}
+
+/* Ambient pulse ring */
+.dock-fab-btn::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 100, 100, 0.3) 0%,
+    transparent 70%
+  );
+  animation: fab-pulse 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Closed → open: turns dark */
+.dock-fab-btn.open {
+  background: linear-gradient(140deg, #2d2d35 0%, #1a1a22 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.dock-fab-btn.open::before { animation: none; opacity: 0; }
+
+body.dark .dock-fab-btn:not(.open) {
+  box-shadow:
+    0 6px 28px rgba(238, 82, 82, 0.58),
+    0 2px 8px  rgba(238, 82, 82, 0.38);
+}
+
+@keyframes fab-pulse {
+  0%   { transform: scale(1);    opacity: 0.65; }
+  55%  { transform: scale(1.22); opacity: 0;    }
+  100% { transform: scale(1);    opacity: 0.65; }
+}
+
+/* ══════════════════════════════════════
+   BACKDROP  (blur overlay when FAB open)
+══════════════════════════════════════ */
+.dock-fab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1190;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  transition: none !important;
+}
+
+/* ══════════════════════════════════════
+   RADIAL ACTION BUTTONS
+══════════════════════════════════════ */
+.dock-fab-actions {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  right: 0;
+  z-index: 1210;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 11px;
+  pointer-events: none;
+  transition: none !important;
+}
+
+.dock-fab-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: all;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: none !important;
+}
+
+/* Coloured circle */
+.dock-fab-action-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  background: var(--action-color, #6366f1);
+  order: 2;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.22),
+    0 2px 6px  rgba(0, 0, 0, 0.14);
+}
+
+.dock-fab-action-btn:active .dock-fab-action-icon {
+  filter: brightness(0.88);
+}
+
+/* Pill label to the left */
+.dock-fab-action-label {
+  order: 1;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: #fff;
+  white-space: nowrap;
+  margin-right: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 15, 20, 0.84);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+}
+
+/* ══════════════════════════════════════
+   IPHONE SAFE AREA  (notch / home bar)
+══════════════════════════════════════ */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-dock-v2 {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ══════════════════════════════════════
+   DESKTOP — hide everything
+══════════════════════════════════════ */
+@media (min-width: 769px) {
+  .mobile-dock-v2,
+  .dock-fab-btn,
+  .dock-fab-actions,
+  .dock-fab-backdrop {
+    display: none !important;
+  }
+}

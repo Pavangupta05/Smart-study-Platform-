@@ -14,6 +14,7 @@ import {
   Layout,
   Menu,
   X,
+  Home,
   LibraryBig,
   History,
   Wrench,
@@ -102,8 +103,8 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
           {/* CORE NAV */}
           <div className="sidebar-group">
             <NavLink to="/" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
-              <LayoutGrid size={20} />
-              <span>Dashboard</span>
+              <Home size={20} />
+              <span>Home</span>
             </NavLink>
             <NavLink to="/planner" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
               <Clock3 size={20} />
@@ -257,28 +258,6 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
             </button>
           </div>
         </div>
-      </div>
-
-      {/* MOBILE FLOATING DOCK */}
-      <div className="mobile-dock mobile-only">
-        <NavLink to="/" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
-          <LayoutGrid size={20} />
-        </NavLink>
-        <NavLink to="/planner" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
-          <Clock3 size={20} />
-        </NavLink>
-        <NavLink to="/notes" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
-          <StickyNote size={20} />
-        </NavLink>
-        <NavLink to="/flashcards" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
-          <LibraryBig size={20} />
-        </NavLink>
-        <NavLink to="/ai" className={({ isActive }) => "dock-item " + (isActive ? "active" : "")}>
-          <Sparkles size={20} />
-        </NavLink>
-        <button className="dock-item" onClick={toggleMobileMenu}>
-          <Menu size={20} />
-        </button>
       </div>
 
       {/* OVERLAY FOR MOBILE MENU */}

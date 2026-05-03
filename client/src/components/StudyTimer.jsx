@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, Volume2, VolumeX, Music, Coffee, Brain } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUser } from "../context/UserContext";
 import "./StudyTimer.css";
 
 function StudyTimer() {
+  const { socket } = useUser();
   const [minutes, setMinutes] = useState(25);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
@@ -57,28 +59,56 @@ function StudyTimer() {
     return () => clearInterval(interval);
   }, [isActive, minutes, seconds]);
 
-  const toggleTimer = () => setIsActive(!isActive);
+  const toggleTimer = () => {
+    const nextActive = !isActive;
+    setIsActive(nextActive);
+    if (socket) {
+      socket.emit("timer_sync", { isActive: nextActive, minutes, seconds, mode });
+    }
+  };
   
   const resetTimer = () => {
     setIsActive(false);
-    if (mode === "study") setMinutes(25);
-    else if (mode === "shortBreak") setMinutes(5);
-    else setMinutes(15);
+    let newMins = 25;
+    if (mode === "shortBreak") newMins = 5;
+    else if (mode === "longBreak") newMins = 15;
+    
+    setMinutes(newMins);
     setSeconds(0);
-  };
-
-  const playAlarm = () => {
-    // Simple notification sound logic
+    
+    if (socket) {
+      socket.emit("timer_sync", { isActive: false, minutes: newMins, seconds: 0, mode });
+    }
   };
 
   const changeMode = (newMode) => {
     setMode(newMode);
     setIsActive(false);
-    if (newMode === "study") setMinutes(25);
-    else if (newMode === "shortBreak") setMinutes(5);
-    else setMinutes(15);
+    let newMins = 25;
+    if (newMode === "shortBreak") newMins = 5;
+    else if (newMode === "longBreak") newMins = 15;
+    
+    setMinutes(newMins);
     setSeconds(0);
+    
+    if (socket) {
+      socket.emit("timer_sync", { isActive: false, minutes: newMins, seconds: 0, mode: newMode });
+    }
   };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleSync = (data) => {
+      setMinutes(data.minutes);
+      setSeconds(data.seconds);
+      setIsActive(data.isActive);
+      setMode(data.mode);
+    };
+
+    socket.on("timer_sync", handleSync);
+    return () => socket.off("timer_sync", handleSync);
+  }, [socket]);
 
   return (
     <div className="study-timer-wrapper">

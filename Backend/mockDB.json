@@ -24,6 +24,31 @@
         "lastStudied": null
       },
       "createdAt": "2026-04-30T18:56:07.007Z"
+    },
+    {
+      "_id": "mopmadpnuuy7660kfh8",
+      "name": "Shubham ",
+      "email": "pavangupta150605@gmail.com",
+      "password": "$2b$12$Eh.k0OQJvNVM36/bXmFmY.BW4xzcq9YNLk/ZwYonoaK7TX/8rkX.6",
+      "plan": "free",
+      "avatar": "",
+      "bio": "",
+      "settings": {
+        "theme": "light",
+        "language": "English (US)",
+        "emailReports": true,
+        "studyReminders": true,
+        "hapticsEnabled": true,
+        "autoSave": true,
+        "aiDataUsage": true
+      },
+      "studyStats": {
+        "streak": 0,
+        "cardsMastered": 0,
+        "focusTime": 0,
+        "lastStudied": null
+      },
+      "createdAt": "2026-05-03T10:17:56.459Z"
     }
   ],
   "notes": [
@@ -62,6 +87,42 @@
       "trashedAt": null,
       "createdAt": "2026-05-02T19:55:02.549Z",
       "updatedAt": "2026-05-02T19:55:02.549Z"
+    },
+    {
+      "_id": "mopjhluwwv903cl9y0r",
+      "user": "moluh7bzzq6gsig5a2",
+      "name": "Untitled Note",
+      "icon": "📄",
+      "category": "general",
+      "content": "# New Note\n\nStart typing here...",
+      "blobUrl": "",
+      "fileType": "text",
+      "size": "0 KB",
+      "pages": [
+        " "
+      ],
+      "isTrashed": true,
+      "trashedAt": "2026-05-03T09:54:52.660Z",
+      "createdAt": "2026-05-03T08:59:34.761Z",
+      "updatedAt": "2026-05-03T09:54:52.661Z"
+    },
+    {
+      "_id": "mopjizgw0yvc3amc5m0i",
+      "user": "moluh7bzzq6gsig5a2",
+      "name": "Untitled Note",
+      "icon": "📄",
+      "category": "general",
+      "content": "# New Note\n\nStart typing here...",
+      "blobUrl": "",
+      "fileType": "text",
+      "size": "0 KB",
+      "pages": [
+        " "
+      ],
+      "isTrashed": true,
+      "trashedAt": "2026-05-03T09:54:45.875Z",
+      "createdAt": "2026-05-03T09:00:39.056Z",
+      "updatedAt": "2026-05-03T09:54:45.876Z"
     }
   ],
   "tasks": [],

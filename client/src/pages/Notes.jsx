@@ -13,7 +13,9 @@ import {
   MoreHorizontal,
   Trash2,
   ExternalLink,
-  Edit3
+  Edit3,
+  FolderPlus,
+  Folder
 } from "lucide-react";
 import { notesService } from "../services/index";
 import { useUser } from "../context/UserContext";
@@ -29,7 +31,6 @@ function Notes() {
   const [pageIcon, setPageIcon] = useState("📓");
   const [coverImage, setCoverImage] = useState(() => localStorage.getItem("starNote_cover") || "");
   const [hasCover, setHasCover] = useState(() => !!localStorage.getItem("starNote_cover") || false);
-  const [showComments, setShowComments] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
   
   const coverInputRef = useRef(null);
@@ -224,6 +225,24 @@ function Notes() {
     }
   };
 
+  const createNewFolder = async () => {
+    const newFolder = {
+      name: "New Folder",
+      size: "--",
+      icon: "📁",
+      category: category || "general",
+      fileType: "folder",
+    };
+    
+    try {
+      const res = await notesService.create(newFolder);
+      setUploadedFiles(prev => [res.data.note, ...prev]);
+      showToast("Folder created.");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="notes-page fade-in" onClick={() => setActiveMenuId(null)}>
       
@@ -268,24 +287,7 @@ function Notes() {
           <div className="page-meta">
             <button className="btn-meta" onClick={handleAddIcon}><Smile size={16} /> Add icon</button>
             {!hasCover && <button className="btn-meta" onClick={() => coverInputRef.current?.click()}><ImageIcon size={16} /> Add cover</button>}
-            <button className="btn-meta" onClick={() => setShowComments(!showComments)}><MessageSquare size={16} /> Add comment</button>
           </div>
-
-          {showComments && (
-            <div className="comment-input fade-in">
-              <input 
-                type="text" 
-                placeholder="Type a description or comment... (Press Enter to save)" 
-                autoFocus 
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setShowComments(false);
-                    // Could save to local storage here if needed
-                  }
-                }}
-              />
-            </div>
-          )}
         </div>
       </div>
 
@@ -427,6 +429,10 @@ function Notes() {
                 <div className="notion-card add-card" onClick={createNewNotebook}>
                   <Plus size={20} />
                   <span>New Notebook</span>
+                </div>
+                <div className="notion-card add-card" onClick={createNewFolder}>
+                  <FolderPlus size={20} />
+                  <span>New Folder</span>
                 </div>
                 <div className="notion-card add-card" onClick={() => navigate("/templates")}>
                   <Plus size={20} />

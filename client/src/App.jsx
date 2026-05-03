@@ -14,10 +14,11 @@ import Templates from "./pages/Templates";
 import Trash from "./pages/Trash";
 import Reader from "./pages/Reader";
 import Flashcards from "./pages/Flashcards";
-import SearchModal from "./components/SearchModal";
+import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
+import CommandPalette from "./components/CommandPalette";
+import MobileDock from "./components/MobileDock";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -47,10 +48,6 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    localStorage.setItem("zenMode", zenMode);
-  }, [zenMode]);
-
-  useEffect(() => {
     const syncTheme = () => setTheme(localStorage.getItem("theme") || "light");
     const syncThemeCustom = (e) => setTheme(e.detail?.theme || localStorage.getItem("theme") || "light");
     window.addEventListener("storage", syncTheme);
@@ -59,17 +56,6 @@ function App() {
       window.removeEventListener("storage", syncTheme);
       window.removeEventListener("themeChange", syncThemeCustom);
     };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsSearchOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   if (loading) return <Preloader />;
@@ -126,7 +112,8 @@ function App() {
         </AnimatePresence>
       </div>
 
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <CommandPalette />
+      <MobileDock />
       
       {/* GlobalAskAI removed — AI page now has its own integrated input */}
     </div>

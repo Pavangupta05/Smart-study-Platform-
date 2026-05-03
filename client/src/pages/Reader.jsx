@@ -34,8 +34,12 @@ import {
   Maximize,
   Share2
 } from "lucide-react";
-import { notesService } from "../services/index";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { notesService, flashcardsService } from "../services/index";
 import "../styles/reader.css";
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
+const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 import "../styles/reader-mobile.css";
 import "../styles/reader-tablet.css";
 
@@ -72,6 +76,7 @@ function Reader({ zenMode, setZenMode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [summary, setSummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isGeneratingCards, setIsGeneratingCards] = useState(false);
 
   // DRAWING STATES
   const canvasRef = useRef(null);
@@ -199,11 +204,38 @@ function Reader({ zenMode, setZenMode }) {
     if (isSummarizing) return;
     setIsSummarizing(true);
     try {
-      setSummary("This document covers the core principles of the subject, focusing on key formulas, historical context, and practical applications in modern science.");
+      const prompt = `Summarize this text in 3-4 sentences. Focus on the core principles: ${(file?.content || pages.join("\n")).substring(0, 4000)}`;
+      const result = await aiModel.generateContent(prompt);
+      setSummary(result.response.text());
     } catch (err) {
       console.error(err);
+      setSummary("Failed to generate summary. Please try again.");
     }
     setIsSummarizing(false);
+  };
+
+  const handleGenerateFlashcards = async () => {
+    if (isGeneratingCards) return;
+    setIsGeneratingCards(true);
+    try {
+      const content = (file?.content || pages.join("\n")).substring(0, 5000);
+      const prompt = `Generate exactly 5 flashcards from this text. Return ONLY a valid JSON array of objects with keys "front" and "back". Do not use markdown fences. Text: ${content}`;
+      const result = await aiModel.generateContent(prompt);
+      const text = result.response.text().trim();
+      
+      const match = text.match(/\[.*\]/s);
+      if (match) {
+        const cards = JSON.parse(match[0]);
+        await flashcardsService.bulkCreate(cards, file?.name || "Auto-Generated Deck");
+        alert("✨ Flashcards generated and saved! Go to the Flashcards page to study them.");
+      } else {
+        alert("Failed to parse AI output.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate flashcards.");
+    }
+    setIsGeneratingCards(false);
   };
 
   const toggleTool = (tool) => {
@@ -501,9 +533,9 @@ function Reader({ zenMode, setZenMode }) {
               </div>
               <div className="ai-card-modern">
                 <div className="card-header-modern"><Layers size={18} className="text-blue" /><span>Flashcard Gen</span></div>
-                <p>Turn this document into flashcards.</p>
-                <button className="card-btn-modern" onClick={() => navigate("/flashcards", { state: { sourceFile: file.name } })}>
-                  Generate Deck
+                <p>Use AI to automatically turn this document into study flashcards.</p>
+                <button className="card-btn-modern" onClick={handleGenerateFlashcards} disabled={isGeneratingCards}>
+                  {isGeneratingCards ? "Extracting Cards..." : "Generate Deck"}
                 </button>
               </div>
 

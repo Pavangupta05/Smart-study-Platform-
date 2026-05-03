@@ -220,7 +220,7 @@ function Settings() {
                       <p>Sync your study planner with Google Calendar.</p>
                     </div>
                   </div>
-                  <button className="btn-primary-sm" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)" }}>Connect</button>
+                  <button className="btn-primary-sm" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)" }} onClick={() => alert("Google Calendar integration coming soon!")}>Connect</button>
                 </div>
                 
                 <div className="setting-item" style={{ alignItems: "center" }}>
@@ -231,7 +231,7 @@ function Settings() {
                       <p>Export your notes and flashcards to Notion.</p>
                     </div>
                   </div>
-                  <button className="btn-primary-sm" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)" }}>Connect</button>
+                  <button className="btn-primary-sm" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)" }} onClick={() => alert("Notion export coming soon!")}>Connect</button>
                 </div>
               </div>
             </div>

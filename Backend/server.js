@@ -37,6 +37,15 @@ io.on("connection", (socket) => {
     console.log(`👤 User ${userId} joined room`);
   });
 
+  socket.on("timer_sync", (data) => {
+    // Get user room from socket
+    const rooms = Array.from(socket.rooms);
+    const userId = rooms.find(r => r !== socket.id);
+    if (userId) {
+      socket.to(userId).emit("timer_sync", data);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
   });

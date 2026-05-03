@@ -41,11 +41,11 @@ html, body {
   --text-secondary: #404040;
   --text-muted: #737373; /* Darker gray for better visibility */
 
-  --primary: #171717; /* Minimal deep charcoal */
+  --primary: #262626; /* Softer, premium charcoal */
   --primary-hover: #000000;
   --primary-weak: #f5f5f4;
   --primary-foreground: #ffffff;
-  --primary-rgb: 23, 23, 23;
+  --primary-rgb: 38, 38, 38;
   
   --border: #d4d4d4; /* Slightly darker border for visibility on white */
   --border-focus: #000000;
@@ -61,6 +61,8 @@ html, body {
   --radius-lg: 14px;
   --radius-xl: 24px;
   --radius-full: 9999px;
+
+  --mesh-color: transparent; /* Pure white bg in light mode */
 
   /* Global Animations */
   --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -97,6 +99,8 @@ body.dark {
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
   --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+
+  --mesh-color: rgba(255, 255, 255, 0.03); /* Subtle mesh in dark mode */
 }
 
 body::before {
@@ -108,11 +112,11 @@ body::before {
   height: 100vh;
   z-index: -1;
   background: 
-    radial-gradient(at 0% 0%, rgba(var(--primary-rgb), 0.05) 0, transparent 40%),
-    radial-gradient(at 100% 0%, rgba(var(--primary-rgb), 0.04) 0, transparent 40%),
-    radial-gradient(at 100% 100%, rgba(var(--primary-rgb), 0.03) 0, transparent 40%),
-    radial-gradient(at 0% 100%, rgba(var(--primary-rgb), 0.02) 0, transparent 40%),
-    radial-gradient(at 50% 50%, rgba(var(--primary-rgb), 0.01) 0, transparent 50%);
+    radial-gradient(at 0% 0%, var(--mesh-color) 0, transparent 40%),
+    radial-gradient(at 100% 0%, var(--mesh-color) 0, transparent 40%),
+    radial-gradient(at 100% 100%, var(--mesh-color) 0, transparent 40%),
+    radial-gradient(at 0% 100%, var(--mesh-color) 0, transparent 40%),
+    radial-gradient(at 50% 50%, var(--mesh-color) 0, transparent 50%);
   animation: meshFlow 30s ease-in-out infinite alternate;
   pointer-events: none;
 }
@@ -167,11 +171,11 @@ body {
 
 @media (max-width: 600px) {
   .dashboard-minimal {
-    padding: 24px 20px 100px 20px;
+    padding: 24px 20px 120px 20px;
     height: 100%;
   }
   .main {
-    /* Account for fixed topbar (56px) + safe area + bottom dock */
+    /* Account for fixed topbar (56px) + safe area */
     padding-top: calc(56px + env(safe-area-inset-top, 0px));
     height: 100%;
   }
@@ -299,6 +303,13 @@ body.dark code {
 .skeleton,
 .ai-thinking-dots span,
 .mobile-dock,
+.mobile-dock-v2,
+.mobile-dock-v2 *,
+.dock-fab-btn,
+.dock-fab-backdrop,
+.dock-fab-actions,
+.dock-fab-action-btn,
+.dock-pill-bg,
 .indicator,
 .chevron-toggle,
 .sidebar,

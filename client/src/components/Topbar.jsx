@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, NavLink } from "react-router-dom";
 import {
   Maximize2, Minimize2, Sun, Moon, Search,
-  LayoutGrid, Clock3, StickyNote, LibraryBig, Sparkles,
+  Home, Clock3, StickyNote, LibraryBig, Sparkles,
   Menu, ChevronRight, Bell, Settings
 } from "lucide-react";
 import StudyTimer from "./StudyTimer";
@@ -11,7 +11,7 @@ import "../styles/topbar.css";
 
 // Route → label map
 const PAGE_LABELS = {
-  "/":           { label: "Dashboard",  Icon: LayoutGrid },
+  "/":           { label: "Home",  Icon: Home },
   "/planner":    { label: "Planner",    Icon: Clock3 },
   "/notes":      { label: "Notes",      Icon: StickyNote },
   "/flashcards": { label: "Flashcards", Icon: LibraryBig },
