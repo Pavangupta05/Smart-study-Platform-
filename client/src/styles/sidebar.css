@@ -7,12 +7,10 @@
   height: calc(100vh - 32px);
   border-radius: 24px;
   
-  /* Liquid Glass Backdrop */
-  background: rgba(var(--surface-rgb), 0.6) !important;
-  backdrop-filter: blur(40px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
-  border: 1px solid rgba(120, 120, 120, 0.1) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  /* Liquid Glass Backdrop Removed - using clean solid/semi-transparent */
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-md) !important;
   
   display: flex;
   flex-direction: column;
@@ -162,7 +160,7 @@ body.dark .sidebar,
 .sidebar-search-minimal span { font-size: 13px; font-weight: 500; }
 
 /* CONTENT & GROUPS */
-.sidebar-scroll { flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 24px; }
+.sidebar-scroll { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 32px; }
 .sidebar-group { display: flex; flex-direction: column; gap: 2px; }
 
 .group-header {
@@ -179,9 +177,9 @@ body.dark .sidebar,
 /* ITEMS */
 .item { 
   display: flex; align-items: center; gap: 12px; 
-  padding: 10px 14px; color: var(--text-secondary); text-decoration: none; 
-  border-radius: 12px; transition: all 0.2s ease; margin: 2px 12px;
-  font-size: 13.5px; font-weight: 500;
+  padding: 12px 16px; color: var(--text-secondary); text-decoration: none; 
+  border-radius: 12px; transition: all 0.2s ease; margin: 4px 12px;
+  font-size: 14px; font-weight: 500;
 }
 .item svg, .nested-item svg { width: 18px; height: 18px; flex-shrink: 0; }
 .item:hover { background: rgba(120,120,120,0.08); color: var(--text); }
@@ -224,9 +222,9 @@ body.dark .item.active svg { color: #fff !important; filter: drop-shadow(0 0 8px
 .premium-user-dock {
   margin: auto 12px 12px;
   padding: 8px;
-  background: rgba(120,120,120,0.03);
-  border: 1px solid rgba(120,120,120,0.05);
-  border-radius: 16px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   display: flex; align-items: center; gap: 10px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default;
@@ -237,16 +235,36 @@ body.dark .item.active svg { color: #fff !important; filter: drop-shadow(0 0 8px
 }
 
 .user-dock-avatar {
-  width: 36px; height: 36px; border-radius: 12px;
+  width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, var(--text), var(--text-muted));
   color: var(--surface); display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 13px; flex-shrink: 0; position: relative;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.avatar-img-mini {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 .user-dock-status {
   position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px;
   background: #10b981; border: 2px solid var(--surface); border-radius: 50%;
   box-shadow: 0 0 8px #10b981;
+}
+
+.user-dock-clickable {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+.user-dock-clickable:hover .user-dock-name {
+  color: var(--primary);
 }
 
 .user-dock-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }

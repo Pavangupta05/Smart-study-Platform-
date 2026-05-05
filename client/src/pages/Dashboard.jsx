@@ -12,6 +12,7 @@ import {
   AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
+import { toast } from "sonner";
 import "../styles/dashboard.css";
 
 function Dashboard() {
@@ -69,7 +70,9 @@ function Dashboard() {
   const fetchTasks = () => {
     tasksService.getAll()
       .then(res => setTasks(res.data.tasks || []))
-      .catch(() => {
+      .catch(err => {
+        console.error("Fetch tasks error:", err);
+        toast.error("Connecting to server failed. Using local tasks.");
         const saved = localStorage.getItem("starNote_tasks");
         if (saved) setTasks(JSON.parse(saved));
       });
@@ -79,7 +82,9 @@ function Dashboard() {
   const fetchNotes = () => {
     notesService.getAll()
       .then(res => setRecentFiles(res.data.notes || []))
-      .catch(() => {
+      .catch(err => {
+        console.error("Fetch notes error:", err);
+        toast.error("Connecting to server failed. Using local materials.");
         const saved = localStorage.getItem("starNote_files");
         if (saved) setRecentFiles(JSON.parse(saved));
       })
@@ -116,7 +121,9 @@ function Dashboard() {
     try {
       const res = await tasksService.create({ text });
       setTasks(prev => [res.data.task, ...prev]);
-    } catch {
+    } catch (err) {
+      console.error("Add task error:", err);
+      toast.error("Failed to sync task with server.");
       // Optimistic fallback
       setTasks(prev => [{ _id: Date.now(), text, completed: false }, ...prev]);
     }
@@ -129,12 +136,25 @@ function Dashboard() {
     setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed } : t));
     try {
       await tasksService.toggle(id, completed);
-    } catch { /* optimistic UI already updated */ }
+    } catch (err) {
+      console.error("Toggle task error:", err);
+      toast.error("Failed to update task status.");
+      // Rollback
+      setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !completed } : t));
+    }
   };
 
   const deleteTask = async (id) => {
     setTasks(prev => prev.filter(t => (t._id || t.id) !== id));
-    try { await tasksService.delete(id); } catch { /* optimistic */ }
+    try { 
+      await tasksService.delete(id); 
+      toast.success("Task removed");
+    } catch (err) { 
+      console.error("Delete task error:", err);
+      toast.error("Failed to delete task.");
+      // Rollback
+      setTasks(prev => [task, ...prev]);
+    }
   };
 
   const completedCount = tasks.filter(t => t.completed).length;
@@ -180,28 +200,28 @@ function Dashboard() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={itemVars} className="insight-card">
+        <motion.div variants={itemVars} className="insight-card streak-card">
           <div className="insight-icon streak"><Flame size={20} /></div>
           <div className="insight-info">
-            <span className="insight-value">{user?.studyStats?.streak ?? 0} Days</span>
-            <span className="insight-label">Study Streak</span>
+            <span className="insight-value">{user?.studyStats?.streak ?? 0}</span>
+            <span className="insight-label">Day Streak</span>
           </div>
         </motion.div>
-        <motion.div variants={itemVars} className="insight-card">
+        <motion.div variants={itemVars} className="insight-card cards-card">
           <div className="insight-icon cards"><Layers size={20} /></div>
           <div className="insight-info">
             <span className="insight-value">{user?.studyStats?.cardsMastered ?? 0}</span>
             <span className="insight-label">Cards Mastered</span>
           </div>
         </motion.div>
-        <motion.div variants={itemVars} className="insight-card">
+        <motion.div variants={itemVars} className="insight-card notes-card">
           <div className="insight-icon notes"><FileText size={20} /></div>
           <div className="insight-info">
             <span className="insight-value">{recentFiles.length}</span>
             <span className="insight-label">Total Notes</span>
           </div>
         </motion.div>
-        <motion.div variants={itemVars} className="insight-card">
+        <motion.div variants={itemVars} className="insight-card time-card">
           <div className="insight-icon time"><Clock size={20} /></div>
           <div className="insight-info">
             <span className="insight-value">{user?.studyStats?.focusTime ? Math.round(user.studyStats.focusTime / 60 * 10) / 10 : 0}h</span>
@@ -360,9 +380,14 @@ function Dashboard() {
                   </div>
                 ))
               ) : (
-                <div className="empty-docs-dash" onClick={() => navigate("/notes")}>
-                  <Layout size={24} />
-                  <p>{searchQuery ? "No matching materials found." : "No materials yet. Start by uploading one."}</p>
+                <div className="empty-state-premium" onClick={() => navigate("/notes")}>
+                  <div className="empty-state-visual">
+                    <div className="blob bg-purple"></div>
+                    <Layout size={40} className="icon-main" />
+                  </div>
+                  <h3>No materials yet</h3>
+                  <p>{searchQuery ? "No matching materials found." : "Start your journey by creating or uploading your first study note."}</p>
+                  <button className="btn-primary-small">Create Note</button>
                 </div>
               )}
             </div>
@@ -401,9 +426,13 @@ function Dashboard() {
                 );
               })}
               {tasks.length === 0 && (
-                <div className="tasks-all-done">
-                  <CheckCircle2 size={32} />
-                  <p>All caught up!</p>
+                <div className="empty-state-premium small">
+                  <div className="empty-state-visual small">
+                    <div className="blob bg-green"></div>
+                    <CheckCircle2 size={32} className="icon-main" />
+                  </div>
+                  <h3>All caught up!</h3>
+                  <p>You have no pending tasks today.</p>
                 </div>
               )}
             </div>

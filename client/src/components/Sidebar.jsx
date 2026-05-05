@@ -241,13 +241,19 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
 
         {/* ULTRA-MINIMAL USER DOCK */}
         <div className="premium-user-dock">
-          <div className="user-dock-avatar">
-            {initials}
-            <div className="user-dock-status"></div>
-          </div>
-          <div className="user-dock-info">
-            <span className="user-dock-name">{user?.name || firstName}</span>
-            <span className="user-dock-plan">{user?.plan === 'pro' ? 'Pro' : 'Free'}</span>
+          <div className="user-dock-clickable" onClick={() => navigate("/profile")}>
+            <div className="user-dock-avatar">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Profile" className="avatar-img-mini" />
+              ) : (
+                initials
+              )}
+              <div className="user-dock-status"></div>
+            </div>
+            <div className="user-dock-info">
+              <span className="user-dock-name">{user?.name || firstName}</span>
+              <span className="user-dock-plan">{user?.plan === 'pro' ? 'Pro' : 'Free'}</span>
+            </div>
           </div>
           <div className="user-dock-icon-actions">
             <NavLink to="/settings" className="icon-action-btn" title="Settings" onClick={handleNavLinkClick}>

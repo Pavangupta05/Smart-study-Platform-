@@ -346,29 +346,49 @@ body.dark .chart-tooltip-glass {
 }
 
 .insight-card {
-  background: rgba(var(--surface-rgb), 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 28px 24px;
   border-radius: var(--dash-radius);
-  border: 1px solid rgba(var(--primary-rgb), 0.05);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 16px;
-  transition: var(--transition-smooth);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
 }
 
+.insight-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.08;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.insight-card:hover::after { opacity: 0.18; }
+
+.insight-card.streak-card::after { background: #ef4444; }
+.insight-card.cards-card::after { background: #3b82f6; }
+.insight-card.notes-card::after { background: #f59e0b; }
+.insight-card.time-card::after { background: #10b981; }
+
 .insight-card:hover {
-  background: rgba(var(--surface-rgb), 0.8);
-  border-color: rgba(var(--primary-rgb), 0.12);
   transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.07);
+  border-color: rgba(var(--primary-rgb), 0.15);
 }
 
 .insight-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,13 +407,16 @@ body.dark .insight-icon.time   { background: rgba(16, 185, 129, 0.15); color: #3
 .insight-info {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .insight-value {
-  font-size: 18px;
-  font-weight: 800;
+  font-family: 'Urbanist', var(--font-serif);
+  font-size: 2rem;
+  font-weight: 900;
   color: var(--text);
-  line-height: 1.2;
+  line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .insight-label {
@@ -401,7 +424,7 @@ body.dark .insight-icon.time   { background: rgba(16, 185, 129, 0.15); color: #3
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 /* MAIN CONTENT GRID */

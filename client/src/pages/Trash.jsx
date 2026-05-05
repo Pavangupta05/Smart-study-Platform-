@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Trash2, RotateCcw, X, FileText, AlertCircle } from "lucide-react";
+import { Trash2, RotateCcw, X, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { notesService } from "../services/index";
 import "../styles/trash.css";
 
@@ -8,10 +9,12 @@ function Trash() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
     notesService.getTrash()
       .then(res => setTrashItems(res.data.notes || []))
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        toast.error("Failed to load trashed items.");
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -21,6 +24,7 @@ function Trash() {
       setTrashItems(prev => prev.filter(item => item._id !== id));
     } catch (e) {
       console.error(e);
+      toast.error("Failed to restore file.");
     }
   };
 
@@ -30,6 +34,7 @@ function Trash() {
       setTrashItems(prev => prev.filter(item => item._id !== id));
     } catch (e) {
       console.error(e);
+      toast.error("Failed to delete item permanently.");
     }
   };
 
@@ -42,6 +47,7 @@ function Trash() {
         setTrashItems([]);
       } catch (e) {
         console.error(e);
+        toast.error("Failed to empty trash.");
       }
     }
   };

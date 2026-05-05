@@ -8,6 +8,7 @@ import Preloader from "./components/Preloader";
 import Dashboard from "./pages/Dashboard";
 import Notes from "./pages/Notes";
 import AI from "./pages/AI";
+import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Planner from "./pages/Planner";
 import Templates from "./pages/Templates";
@@ -103,6 +104,7 @@ function App() {
             <Route path="/notes/:category" element={<PageTransition><Notes /></PageTransition>} />
             <Route path="/flashcards" element={<PageTransition><Flashcards /></PageTransition>} />
             <Route path="/ai" element={<PageTransition><AI /></PageTransition>} />
+            <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
             <Route path="/settings" element={<PageTransition><Settings /></PageTransition>} />
             <Route path="/templates" element={<PageTransition><Templates /></PageTransition>} />
             <Route path="/trash" element={<PageTransition><Trash /></PageTransition>} />
@@ -128,7 +130,7 @@ function PageTransition({ children }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", width: "100%", overflow: "hidden" }}
+      style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden" }}
     >
       {children}
     </motion.div>

@@ -13,7 +13,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer storage
+// Configure multer storage with validation
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir);
@@ -23,13 +23,36 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage: storage });
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf|txt|markdown|md|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) return cb(null, true);
+    cb(new Error("Invalid file type. Only images, PDFs, and text/doc files are allowed."));
+  }
+});
 
 let Note;
-try { Note = require("../models/Note"); } catch (_) {}
+try { 
+  Note = require("../models/Note"); 
+} catch (_) {
+  console.warn("⚠️ Note model not found, falling back to mock mode only.");
+}
+
+// Middleware to ensure Note model exists if not in mock mode
+const ensureModel = (req, res, next) => {
+  if (!getMockMode() && !Note) {
+    return res.status(500).json({ success: false, message: "Database model 'Note' is not available." });
+  }
+  next();
+};
 
 // GET /api/notes
-router.get("/", protect, async (req, res) => {
+router.get("/", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     const notes = await mockNotes.find({ user: req.userId, isTrashed: false });
     return res.json({ success: true, notes });
@@ -39,7 +62,7 @@ router.get("/", protect, async (req, res) => {
 });
 
 // GET /api/notes/trash
-router.get("/trash", protect, async (req, res) => {
+router.get("/trash", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     const notes = await mockNotes.find({ user: req.userId, isTrashed: true });
     return res.json({ success: true, notes });
@@ -49,7 +72,7 @@ router.get("/trash", protect, async (req, res) => {
 });
 
 // GET /api/notes/:id
-router.get("/:id", protect, async (req, res) => {
+router.get("/:id", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     const note = await mockNotes.findOne({ _id: req.params.id, user: req.userId });
     if (!note) return res.status(404).json({ success: false, message: "Note not found." });
@@ -61,7 +84,7 @@ router.get("/:id", protect, async (req, res) => {
 });
 
 // POST /api/notes
-router.post("/", protect, upload.single("file"), async (req, res) => {
+router.post("/", protect, ensureModel, upload.single("file"), async (req, res) => {
   let { name, icon, category, content, blobUrl, fileType, size, pages } = req.body;
   
   if (req.file) {
@@ -100,7 +123,7 @@ router.post("/", protect, upload.single("file"), async (req, res) => {
 });
 
 // PUT /api/notes/:id
-router.put("/:id", protect, async (req, res) => {
+router.put("/:id", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     const note = await mockNotes.findOneAndUpdate({ _id: req.params.id, user: req.userId }, req.body);
     if (!note) return res.status(404).json({ success: false, message: "Note not found." });
@@ -114,7 +137,7 @@ router.put("/:id", protect, async (req, res) => {
 });
 
 // DELETE /api/notes/:id — trash
-router.delete("/:id", protect, async (req, res) => {
+router.delete("/:id", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     const note = await mockNotes.findOneAndUpdate({ _id: req.params.id, user: req.userId }, { isTrashed: true, trashedAt: new Date() });
     if (!note) return res.status(404).json({ success: false, message: "Note not found." });
@@ -128,7 +151,7 @@ router.delete("/:id", protect, async (req, res) => {
 });
 
 // DELETE /api/notes/:id/permanent
-router.delete("/:id/permanent", protect, async (req, res) => {
+router.delete("/:id/permanent", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     await mockNotes.findOneAndDelete({ _id: req.params.id, user: req.userId });
     req.app.get("io")?.to(req.userId).emit("sync_notes");
@@ -140,7 +163,7 @@ router.delete("/:id/permanent", protect, async (req, res) => {
 });
 
 // POST /api/notes/:id/restore
-router.post("/:id/restore", protect, async (req, res) => {
+router.post("/:id/restore", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
     const note = await mockNotes.findOneAndUpdate({ _id: req.params.id, user: req.userId }, { isTrashed: false, trashedAt: null });
     req.app.get("io")?.to(req.userId).emit("sync_notes");

@@ -6,11 +6,11 @@
 
 /* ── Variables (supplement global.css) ── */
 :root {
-  --tv2-h: 60px;                        /* Desktop height */
-  --tv2-h-mobile: 56px;                 /* Mobile/tablet height */
+  --tv2-h: 76px;                        /* Desktop height */
+  --tv2-h-mobile: 64px;                 /* Mobile/tablet height */
   --tv2-radius: 20px;                   /* Desktop pill radius */
-  --tv2-margin: 10px 16px;             /* Desktop margin */
-  --tv2-blur: blur(28px) saturate(180%);
+  --tv2-margin: 12px 20px;             /* Desktop margin */
+  --tv2-blur: none;
 }
 
 /* ============================================================
@@ -29,15 +29,12 @@
   padding: 0 16px;
   border-radius: var(--tv2-radius);
 
-  /* Glass morphism — light mode */
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: var(--tv2-blur);
-  -webkit-backdrop-filter: var(--tv2-blur);
-  border: 1px solid rgba(0, 0, 0, 0.07);
+  /* Glass morphism removed */
+  background: var(--surface);
+  border: 1px solid var(--border);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.04),
-    0 8px 32px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 8px 32px rgba(0, 0, 0, 0.06);
 
   /* ⚡ Instant theme switch — no transition lag */
   transition: none;
@@ -49,12 +46,11 @@
 
 /* ── Dark mode — single authoritative override ── */
 .topbar-v2.dark {
-  background: rgba(12, 12, 14, 0.78);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, 0.1);
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 12px 40px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 4px 12px rgba(0, 0, 0, 0.5),
+    0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
 /* ── Elevated state (on page scroll) ── */
@@ -110,7 +106,7 @@
   height: 36px;
   border: none;
   background: transparent;
-  border-radius: 12px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -182,10 +178,10 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px 6px 10px;
+  padding: 6px 14px 6px 10px;
   background: rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
+  border-radius: 999px;
   color: var(--text-secondary);
   transition: color 0.15s ease, background 0.15s ease;
 }
@@ -215,9 +211,9 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 10px 5px 6px;
+  padding: 5px 12px 5px 6px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+  border-radius: 999px;
   background: rgba(0, 0, 0, 0.03);
   cursor: pointer;
   color: var(--text-secondary);

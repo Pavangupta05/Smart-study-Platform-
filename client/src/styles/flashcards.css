@@ -30,7 +30,7 @@
 .btn-primary:hover {
   transform: translateY(-2px);
   filter: brightness(1.1);
-  box-shadow: 0 8px 25px var(--primary-shadow);
+  box-shadow: 0 8px 25px rgba(var(--primary-rgb), 0.25);
 }
 
 .flashcards-grid {

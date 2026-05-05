@@ -13,6 +13,7 @@ import {
   CalendarPlus,
   BookMarked,
   X,
+  User,
 } from "lucide-react";
 import { notesService } from "../services/index";
 import "../styles/mobile-dock.css";

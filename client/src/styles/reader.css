@@ -27,7 +27,7 @@ body.dark .reader-modern-desktop {
   background: var(--d-bg);
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   z-index: 2000;
   color: var(--d-text);
 }
@@ -241,18 +241,147 @@ body.dark .reader-modern-desktop {
 
 .document-wrapper-modern {
   background: var(--d-paper);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-  border-radius: 8px;
-  max-width: 1000px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+  border-radius: 12px;
+  max-width: 900px;
   width: 100%;
   color: var(--d-text);
 }
 
 .paper-body-modern {
-  padding: 60px 50px;
+  padding: 60px 80px;
   min-height: 1000px;
-  font-size: 18px;
+  font-family: var(--font-sans);
+  font-size: 16.5px;
+  line-height: 1.8;
+  color: var(--d-text);
+  max-width: 72ch; /* Optimal reading line length */
+  margin: 0 auto;
+}
+
+/* ── Rich Markdown Typography in Reader ── */
+.paper-body-modern h1 {
+  font-family: var(--font-serif);
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin: 2rem 0 1rem;
+  line-height: 1.2;
+  color: var(--d-text);
+}
+
+.paper-body-modern h2 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 1.8rem 0 0.8rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--d-border);
+  color: var(--d-text);
+}
+
+.paper-body-modern h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.6rem;
+  color: var(--d-text);
+}
+
+.paper-body-modern p {
+  margin: 0 0 1.2em;
+}
+
+.paper-body-modern a {
+  color: var(--d-blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.paper-body-modern strong {
+  font-weight: 700;
+  color: var(--d-text);
+}
+
+.paper-body-modern em {
+  font-style: italic;
+  color: var(--d-muted);
+}
+
+.paper-body-modern code {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.875em;
+  background: rgba(59, 130, 246, 0.06);
+  color: var(--d-blue);
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--d-border);
+}
+
+.paper-body-modern pre {
+  background: var(--d-bg);
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 1.5em 0;
+  font-size: 0.9em;
   line-height: 1.6;
+}
+
+.paper-body-modern pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.paper-body-modern blockquote {
+  margin: 1.5em 0;
+  padding: 12px 0 12px 20px;
+  border-left: 4px solid var(--d-blue);
+  background: var(--d-blue-weak);
+  border-radius: 0 12px 12px 0;
+  color: var(--d-muted);
+  font-style: italic;
+  font-size: 1.05em;
+}
+
+.paper-body-modern ul, .paper-body-modern ol {
+  padding-left: 1.5em;
+  margin: 0.8em 0 1.2em;
+}
+
+.paper-body-modern li {
+  margin: 0.5em 0;
+  line-height: 1.7;
+}
+
+.paper-body-modern hr {
+  border: none;
+  border-top: 1px solid var(--d-border);
+  margin: 2.5em 0;
+}
+
+.paper-body-modern table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+
+.paper-body-modern th {
+  background: var(--d-bg);
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 2px solid var(--d-border);
+}
+
+.paper-body-modern td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--d-border);
 }
 
 .modern-iframe { width: 100%; height: 85vh; border: none; }

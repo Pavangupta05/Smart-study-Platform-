@@ -30,7 +30,7 @@ body.dark .reader-modern-mobile {
   background: var(--m-bg);
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-sans);
   z-index: 2000;
   overflow: hidden;
   color: var(--m-text);

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Search, Brain, Clock, ChevronRight, Sparkles, Loader2, X } from "lucide-react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import StudySession from "../components/StudySession";
 import { flashcardsService } from "../services/index";
 import "../styles/flashcards.css";
@@ -47,7 +48,10 @@ function Flashcards() {
   useEffect(() => {
     flashcardsService.getAll()
       .then(res => setDecks(processFlashcards(res.data.cards || [])))
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        toast.error("Failed to load flashcards.");
+      })
       .finally(() => setIsLoading(false));
   }, []);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -66,6 +70,7 @@ function Flashcards() {
         setDecks(processFlashcards(allRes.data.cards || []));
       } catch (err) {
         console.error(err);
+        toast.error("Failed to create deck.");
       }
     }
   };
@@ -101,7 +106,7 @@ No extra text, no markdown, no code fences. Just the JSON array.`;
       setGenTopic("");
     } catch (err) {
       console.error("AI Flashcard Error:", err);
-      alert("Failed to generate flashcards. Please try again.");
+      toast.error("Failed to generate flashcards.");
     }
 
     setIsGenerating(false);

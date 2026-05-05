@@ -3,6 +3,7 @@ import { Plus, Clock, Coffee, Brain, ChevronRight, CheckCircle2, Wand2, Trash2 }
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { tasksService } from "../services/index";
 import { useUser } from "../context/UserContext";
+import { toast } from "sonner";
 import "../styles/planner.css";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
@@ -17,7 +18,10 @@ function Planner() {
     tasksService.getAll().then(res => {
       const plannerItems = (res.data.tasks || []).filter(t => t.time);
       setTasks(plannerItems.sort((a, b) => a.time.localeCompare(b.time)));
-    }).catch(console.error).finally(() => setIsLoading(false));
+    }).catch(err => {
+      console.error(err);
+      toast.error("Failed to load your schedule.");
+    }).finally(() => setIsLoading(false));
   };
 
   useEffect(() => {
@@ -41,12 +45,25 @@ function Planner() {
     const task = tasks.find(t => (t._id || t.id) === id);
     if (!task) return;
     setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !t.completed } : t));
-    try { await tasksService.toggle(id, !task.completed); } catch {}
+    try { 
+      await tasksService.toggle(id, !task.completed); 
+    } catch (err) {
+      toast.error("Failed to update task status.");
+      // Rollback optimistic update
+      setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: task.completed } : t));
+    }
   };
 
   const deleteTask = async (id) => {
     setTasks(prev => prev.filter(t => (t._id || t.id) !== id));
-    try { await tasksService.delete(id); } catch {}
+    try { 
+      await tasksService.delete(id); 
+      toast.success("Task deleted");
+    } catch (err) {
+      toast.error("Failed to delete task.");
+      // Rollback
+      setTasks(prev => [...prev, task].sort((a, b) => a.time.localeCompare(b.time)));
+    }
   };
 
   const handleOptimize = async () => {
@@ -98,6 +115,7 @@ TIP: Your optimization tip here`;
             newTasks.push(res.data.task);
           } catch (e) {
             console.error("Failed to save optimized task:", e);
+            toast.error(`Failed to save task: ${t.title}`);
           }
         }
         
@@ -147,6 +165,7 @@ TIP: Your optimization tip here`;
       setTasks(prev => [...prev, res.data.task].sort((a, b) => a.time.localeCompare(b.time)));
     } catch (e) {
       console.error(e);
+      toast.error("Failed to add task.");
     }
     setNewTask("");
     setNewTime("");

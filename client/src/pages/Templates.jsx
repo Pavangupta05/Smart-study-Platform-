@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  LayoutTemplate, Plus, BookOpen, Brain, Zap, Check,
-  ChevronRight, GraduationCap, Calendar, ListTodo
+  Plus, BookOpen, Brain, Zap, Check,
+  ChevronRight, GraduationCap, ListTodo
 } from "lucide-react";
 import { notesService } from "../services/index";
 import "../styles/templates.css";
@@ -65,7 +65,7 @@ function Templates() {
     ? templates 
     : templates.filter(t => t.cat === selectedCategory);
 
-  const useTemplate = async (t) => {
+  const handleUseTemplate = async (t) => {
     const newFile = {
       name: `${t.title} - ${new Date().toLocaleDateString()}`,
       size: "0.1 MB",
@@ -108,7 +108,7 @@ function Templates() {
 
           <div className="templates-grid">
             {filteredTemplates.map((t) => (
-              <div key={t.id} className="template-card-modern" onClick={() => useTemplate(t)}>
+              <div key={t.id} className="template-card-modern" onClick={() => handleUseTemplate(t)}>
                 <div className="card-top">
                   <div className="icon-box" style={{ background: `${t.color}15`, color: t.color }}>
                     {t.icon}

@@ -59,7 +59,11 @@ export function UserProvider({ children }) {
   const updateUser = useCallback((updates) => {
     setUser(prev => {
       const updated = { ...prev, ...updates };
-      localStorage.setItem("starNote_user", JSON.stringify(updated));
+      try {
+        localStorage.setItem("starNote_user", JSON.stringify(updated));
+      } catch (err) {
+        console.error("Failed to save user to localStorage:", err);
+      }
       return updated;
     });
   }, []);

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import { notesService, chatService } from "../services/index";
 import "../styles/ai.css";
 
@@ -134,7 +135,10 @@ function AI() {
       if (res.data.session && res.data.session.messages) {
         setMessages(res.data.session.messages);
       }
-    }).catch(console.error);
+    }).catch(err => {
+      console.error(err);
+      toast.error("Failed to load chat history.");
+    });
   }, []);
 
   const hasMessages = messages.length > 0;
@@ -162,8 +166,8 @@ function AI() {
         } else {
           alert("No notes found. Upload some files first!");
         }
-      } catch {
-        alert("Failed to load notes.");
+      } catch (err) {
+        toast.error("Failed to load notes.");
       }
     }},
     { icon: <ClipboardPaste size={18} />, label: "Paste Text", action: async () => {
@@ -173,8 +177,8 @@ function AI() {
           setInput((prev) => prev + text);
           textareaRef.current?.focus();
         }
-      } catch {
-        alert("Could not read clipboard. Please paste manually.");
+      } catch (err) {
+        toast.error("Could not read clipboard. Please paste manually.");
       }
     }},
   ];
@@ -419,7 +423,9 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
     setInput("");
     setLoading(true);
     
-    chatService.sendMessage("user", textToSend).catch(console.error);
+    chatService.sendMessage("user", textToSend).catch(err => {
+      console.error("Failed to save user message:", err);
+    });
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -450,7 +456,9 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
       const aiMsg = { role: "ai", text };
       setMessages((prev) => [...prev, aiMsg]);
       
-      chatService.sendMessage("ai", text).catch(console.error);
+      chatService.sendMessage("ai", text).catch(err => {
+        console.error("Failed to save AI message:", err);
+      });
     } catch (err) {
       console.error("AI Error:", err);
       setMessages((prev) => [
@@ -490,7 +498,7 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
       setTimeout(() => setSavedIndex(null), 2000);
     } catch (err) {
       console.error("Failed to save:", err);
-      alert("Failed to save AI note to your backend.");
+      toast.error("Failed to save AI note.");
     }
   };
 
@@ -602,6 +610,7 @@ ALWAYS use Markdown formatting in your responses for maximum readability.
                       <span />
                       <span />
                       <span />
+                      <span className="ai-thinking-text">Thinking...</span>
                     </div>
                   </div>
                 </div>

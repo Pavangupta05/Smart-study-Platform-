@@ -5,6 +5,14 @@ import { useUser } from "../context/UserContext";
 import { settingsService } from "../services/index";
 import "../styles/settings.css";
 
+const MinimalSwitch = ({ isOn, onToggle }) => (
+  <div className="minimal-switch" onClick={onToggle}>
+    <div className={`switch-track ${isOn ? 'on' : ''}`}>
+      <div className="switch-thumb"></div>
+    </div>
+  </div>
+);
+
 function Settings() {
   const location = useLocation();
   const { user, setUser, initials } = useUser();
@@ -69,14 +77,6 @@ function Settings() {
     { id: "privacy", label: "Privacy & Security", icon: <Lock size={18} /> },
     { id: "integrations", label: "Integrations", icon: <Puzzle size={18} /> },
   ];
-
-  const MinimalSwitch = ({ isOn, onToggle }) => (
-    <div className="minimal-switch" onClick={onToggle}>
-      <div className={`switch-track ${isOn ? 'on' : ''}`}>
-        <div className="switch-thumb"></div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="settings-page fade-in">

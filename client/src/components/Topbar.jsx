@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import StudyTimer from "./StudyTimer";
 import ProfileDropdown from "./ProfileDropdown";
+import NotificationsDropdown from "./NotificationsDropdown";
 import "../styles/topbar.css";
 
 // Route → label map
@@ -23,7 +24,6 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
   const location = useLocation();
   const topbarRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
-  const [notifCount] = useState(2); // Demo notification count
 
   // Derive page context from current route
   const currentPage = PAGE_LABELS[location.pathname] || PAGE_LABELS["/"];
@@ -81,25 +81,8 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
       <div className="tv2-right">
 
 
-        {/* Notification bell */}
-        <button className="tv2-icon-btn notif-btn" aria-label="Notifications" title="Notifications">
-          <span className="tv2-icon-btn-bg" />
-          <Bell size={17} strokeWidth={2.25} />
-          {notifCount > 0 && (
-            <span className="tv2-badge">{notifCount}</span>
-          )}
-        </button>
-
-        {/* Zen / focus mode */}
-        <button
-          className={`tv2-icon-btn zen-btn ${zenMode ? "active" : ""}`}
-          onClick={() => setZenMode(!zenMode)}
-          aria-label={zenMode ? "Exit focus mode" : "Focus mode"}
-          title={zenMode ? "Exit focus mode" : "Enter focus mode"}
-        >
-          <span className="tv2-icon-btn-bg" />
-          {zenMode ? <Minimize2 size={17} strokeWidth={2.25} /> : <Maximize2 size={17} strokeWidth={2.25} />}
-        </button>
+        {/* Functional Notifications Dropdown */}
+        <NotificationsDropdown />
 
         {/* Divider */}
         <div className="tv2-divider desktop-only" />

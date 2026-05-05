@@ -2,7 +2,7 @@
   "users": [
     {
       "_id": "moluh7bzzq6gsig5a2",
-      "name": "Pavan Gupta",
+      "name": "Pavan ",
       "email": "pavankumargupta@gmail.com",
       "password": "$2b$12$1goYnXBT0KTOY5lMPAOazeDH7XErfIv0Si2Hv5n9kIBB7cc5EWCfK",
       "plan": "free",
@@ -89,24 +89,6 @@
       "updatedAt": "2026-05-02T19:55:02.549Z"
     },
     {
-      "_id": "mopjhluwwv903cl9y0r",
-      "user": "moluh7bzzq6gsig5a2",
-      "name": "Untitled Note",
-      "icon": "📄",
-      "category": "general",
-      "content": "# New Note\n\nStart typing here...",
-      "blobUrl": "",
-      "fileType": "text",
-      "size": "0 KB",
-      "pages": [
-        " "
-      ],
-      "isTrashed": true,
-      "trashedAt": "2026-05-03T09:54:52.660Z",
-      "createdAt": "2026-05-03T08:59:34.761Z",
-      "updatedAt": "2026-05-03T09:54:52.661Z"
-    },
-    {
       "_id": "mopjizgw0yvc3amc5m0i",
       "user": "moluh7bzzq6gsig5a2",
       "name": "Untitled Note",
@@ -125,7 +107,19 @@
       "updatedAt": "2026-05-03T09:54:45.876Z"
     }
   ],
-  "tasks": [],
+  "tasks": [
+    {
+      "_id": "mosp3dp7meuqk562qkb",
+      "user": "moluh7bzzq6gsig5a2",
+      "text": "hii",
+      "priority": "Medium",
+      "time": "19:30",
+      "type": "task",
+      "completed": true,
+      "completedAt": "2026-05-05T14:51:10.372Z",
+      "createdAt": "2026-05-05T13:59:47.228Z"
+    }
+  ],
   "flashcards": [],
   "chats": []
 }

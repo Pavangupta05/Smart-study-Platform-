@@ -24,7 +24,13 @@ function ProfileDropdown() {
   return (
     <div className="profile-dropdown-container" ref={dropdownRef}>
       <button className="avatar-btn" onClick={() => setIsOpen(!isOpen)}>
-        <div className="avatar">{initials}</div>
+        <div className="avatar">
+          {user?.avatar ? (
+            <img src={user.avatar} alt="Profile" className="avatar-img-tiny" />
+          ) : (
+            initials
+          )}
+        </div>
       </button>
 
       <AnimatePresence>
@@ -37,7 +43,13 @@ function ProfileDropdown() {
             transition={{ duration: 0.2 }}
           >
             <div className="dropdown-header">
-              <div className="dropdown-avatar">{initials}</div>
+              <div className="dropdown-avatar">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Profile" className="avatar-img-tiny" />
+                ) : (
+                  initials
+                )}
+              </div>
               <div className="dropdown-user-info">
                 <span className="user-name">{user?.name || "Student"}</span>
                 <span className="user-email">{user?.email || ""}</span>
@@ -47,7 +59,7 @@ function ProfileDropdown() {
             <div className="dropdown-divider"></div>
 
             <div className="dropdown-items">
-              <button className="dropdown-item" onClick={() => { navigate("/settings", { state: { tab: "profile" } }); setIsOpen(false); }}>
+              <button className="dropdown-item" onClick={() => { navigate("/profile"); setIsOpen(false); }}>
                 <User size={16} />
                 <span>My Profile</span>
               </button>
