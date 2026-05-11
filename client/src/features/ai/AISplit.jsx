@@ -471,33 +471,7 @@ export default function AISplit() {
     <div className={`ais-root ${showSplit ? "ais-root--split" : ""}`}>
       {/* ══ LEFT PANE — Conversation ══════════════════════════════════════ */}
       <div className="ais-chat-pane">
-        {/* Chat header */}
-        <div className="ais-chat-header">
-          <div className="ais-chat-header-left">
-            <Sparkles size={15} strokeWidth={2} />
-            <span>AI Workspace</span>
-          </div>
-          <div className="ais-chat-header-right">
-            {showArtifact && (
-              <button
-                className="ais-header-btn active"
-                onClick={() => setShowArtifact(false)}
-                title="Collapse artifact pane"
-              >
-                <SplitSquareHorizontal size={15} />
-              </button>
-            )}
-            {hasMessages && (
-              <button
-                className="ais-header-btn"
-                onClick={async () => { await chatService.clear(); setMessages([]); setArtifact(null); setShowArtifact(false); }}
-                title="Clear conversation"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        </div>
+        {/* Minimal Chat Pane (No Header) */}
 
         {/* Messages */}
         <div className="ais-messages" ref={messagesEndRef}>

@@ -41,11 +41,17 @@ router.put("/:id", protect, async (req, res) => {
     const task = await mockTasks.findOneAndUpdate({ _id: req.params.id, user: req.userId }, update);
     if (!task) return res.status(404).json({ success: false, message: "Task not found." });
     req.app.get("io")?.to(req.userId).emit("sync_tasks");
+    if (update.completed) {
+      req.app.get("io")?.to(req.userId).emit("notification", { title: "Task Completed", message: `You completed '${task.text}'`, type: "streak" });
+    }
     return res.json({ success: true, task });
   }
   const task = await Task.findOneAndUpdate({ _id: req.params.id, user: req.userId }, update, { new: true });
   if (!task) return res.status(404).json({ success: false, message: "Task not found." });
   req.app.get("io")?.to(req.userId).emit("sync_tasks");
+  if (update.completed) {
+    req.app.get("io")?.to(req.userId).emit("notification", { title: "Task Completed", message: `You completed '${task.text}'`, type: "streak" });
+  }
   res.json({ success: true, task });
 });
 

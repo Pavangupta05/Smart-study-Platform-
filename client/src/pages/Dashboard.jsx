@@ -25,6 +25,7 @@ function Dashboard() {
   const [recentFiles, setRecentFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [chartTab, setChartTab] = useState("tasks");
+  const [hoveredIndex, setHoveredIndex] = useState(null);
 
   // Build last-7-days data from real tasks & notes
   const { weeklyData, weekChange } = useMemo(() => {
@@ -296,7 +297,12 @@ function Dashboard() {
               <div className="recharts-wrapper">
                 <ResponsiveContainer width="100%" height={160}>
                   <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}
-                    onMouseLeave={() => setActiveBar(null)}>
+                    onMouseMove={(e) => {
+                      if (e && e.activeTooltipIndex !== undefined) {
+                        setHoveredIndex(e.activeTooltipIndex);
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredIndex(null)}>
                     <defs>
                       <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor={CHART_COLOR[chartTab]} stopOpacity={0.25}/>
@@ -307,16 +313,22 @@ function Dashboard() {
                     <XAxis dataKey="day" tick={{ fontSize: 11, fontWeight: 700, fill: "var(--text-muted)" }} axisLine={false} tickLine={false}/>
                     <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false}/>
                     <Tooltip
-                      content={({ active, payload, label }) => {
+                      cursor={{ stroke: CHART_COLOR[chartTab], strokeWidth: 1, strokeDasharray: "3 3", opacity: 0.5 }}
+                      content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         const d = payload[0]?.payload;
                         return (
-                          <div className="chart-tooltip-glass">
+                          <motion.div 
+                            initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.2 }}
+                            className="chart-tooltip-glass"
+                          >
                             <div className="chart-tooltip-date">{d?.date}{d?.isToday ? " · Today" : ""}</div>
                             <div className="chart-tooltip-val" style={{ color: CHART_COLOR[chartTab] }}>
                               {payload[0]?.value} <span>{CHART_LABEL[chartTab]}</span>
                             </div>
-                          </div>
+                          </motion.div>
                         );
                       }}
                     />
@@ -324,14 +336,27 @@ function Dashboard() {
                       type="monotone"
                       dataKey={chartTab}
                       stroke={CHART_COLOR[chartTab]}
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fill="url(#chartGrad)"
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
                       dot={(props) => {
-                        const { cx, cy, payload } = props;
-                        if (!payload.isToday) return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={0} fill="none"/>;
-                        return <circle key={`dot-today-${cx}`} cx={cx} cy={cy} r={5} fill={CHART_COLOR[chartTab]} stroke="#fff" strokeWidth={2}/>;
+                        const { cx, cy, payload, index } = props;
+                        const isActive = hoveredIndex === index;
+                        if (!payload.isToday && !isActive) return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={0} fill="none"/>;
+                        return (
+                          <circle 
+                            key={`dot-${cx}`} 
+                            cx={cx} cy={cy} 
+                            r={isActive ? 6 : 5} 
+                            fill={CHART_COLOR[chartTab]} 
+                            stroke="var(--bg)" 
+                            strokeWidth={2}
+                            style={{ transition: 'all 0.3s ease' }}
+                          />
+                        );
                       }}
-                      activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
+                      activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--bg)", fill: CHART_COLOR[chartTab] }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -339,13 +364,29 @@ function Dashboard() {
 
               {/* Day mini-pills */}
               <div className="chart-day-pills">
-                {weeklyData.map((d, i) => (
-                  <div key={i} className={`chart-day-pill ${d.isToday ? "today" : ""}`}
-                    style={d.isToday ? { borderColor: CHART_COLOR[chartTab], color: CHART_COLOR[chartTab] } : {}}>
-                    <span className="cdp-day">{d.day}</span>
-                    <span className="cdp-val">{d[chartTab]}</span>
-                  </div>
-                ))}
+                {weeklyData.map((d, i) => {
+                  const isHovered = hoveredIndex === i;
+                  const isToday = d.isToday;
+                  const activeStyle = (isHovered || isToday) ? { 
+                    borderColor: CHART_COLOR[chartTab], 
+                    color: CHART_COLOR[chartTab],
+                    background: isHovered ? `rgba(${chartTab === 'tasks' ? '139, 92, 246' : chartTab === 'notes' ? '245, 158, 11' : '16, 185, 129'}, 0.1)` : 'transparent',
+                    transform: isHovered ? 'translateY(-2px)' : 'none'
+                  } : {};
+                  
+                  return (
+                    <div 
+                      key={i} 
+                      className={`chart-day-pill ${isToday ? "today" : ""} ${isHovered ? "hovered" : ""}`}
+                      style={{ ...activeStyle, transition: 'all 0.2s ease', cursor: 'default' }}
+                      onMouseEnter={() => setHoveredIndex(i)}
+                      onMouseLeave={() => setHoveredIndex(null)}
+                    >
+                      <span className="cdp-day">{d.day}</span>
+                      <span className="cdp-val">{d[chartTab]}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>

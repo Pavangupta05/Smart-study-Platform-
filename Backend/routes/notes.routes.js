@@ -115,10 +115,12 @@ router.post("/", protect, ensureModel, upload.single("file"), async (req, res) =
   if (getMockMode()) {
     const note = await mockNotes.create(data);
     req.app.get("io")?.to(req.userId).emit("sync_notes");
+    req.app.get("io")?.to(req.userId).emit("notification", { title: "Note Created", message: `Successfully saved '${note.name}'`, type: "success" });
     return res.status(201).json({ success: true, note });
   }
   const note = await Note.create(data);
   req.app.get("io")?.to(req.userId).emit("sync_notes");
+  req.app.get("io")?.to(req.userId).emit("notification", { title: "Note Created", message: `Successfully saved '${note.name}'`, type: "success" });
   res.status(201).json({ success: true, note });
 });
 

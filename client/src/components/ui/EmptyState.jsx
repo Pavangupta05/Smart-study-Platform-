@@ -2,14 +2,13 @@ import { motion } from "framer-motion";
 
 /**
  * EmptyState — Reusable calm empty state component.
- * Inspired by Linear/Notion's intentional, non-intrusive empty screens.
- *
+
  * @param {React.ReactNode} icon       - Lucide icon element
  * @param {string}          title      - Short, human headline
  * @param {string}          description - Calm, helpful description
- * @param {string}          [ctaLabel]  - Button label (optional)
- * @param {Function}        [onCta]     - Button action (optional)
- * @param {React.ReactNode} [secondary] - Secondary action (optional)
+ * @param {string}          [ctaLabel]  - Button label 
+ * @param {Function}        [onCta]     - Button action 
+ * @param {React.ReactNode} [secondary] - Secondary action 
  */
 function EmptyState({ icon, title, description, ctaLabel, onCta, secondary }) {
   return (

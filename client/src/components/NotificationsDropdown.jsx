@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Check, Trash2, Info, Flame, Sparkles } from "lucide-react";
+import { Bell, Check, Trash2, Info, Flame, Sparkles, CheckCircle2 } from "lucide-react";
+import { useUser } from "../context/UserContext";
+import { toast } from "sonner";
 import "../styles/notifications.css";
 
 const MOCK_NOTIFICATIONS = [
@@ -21,15 +23,6 @@ const MOCK_NOTIFICATIONS = [
     type: "streak",
     read: false,
     Icon: Flame
-  },
-  {
-    id: 3,
-    title: "Note Updated",
-    text: "Organic Chemistry notes were synchronized.",
-    time: "3h ago",
-    type: "info",
-    read: true,
-    Icon: Info
   }
 ];
 
@@ -37,9 +30,11 @@ export default function NotificationsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
   const dropdownRef = useRef(null);
+  const { socket } = useUser();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Handle clicking outside to close
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -49,6 +44,46 @@ export default function NotificationsDropdown() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Listen for LIVE notifications via Socket.io
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (data) => {
+      // Create a unified icon mapper
+      const icons = {
+        ai: Sparkles,
+        streak: Flame,
+        info: Info,
+        success: CheckCircle2
+      };
+      
+      const newNotif = {
+        id: Date.now(),
+        title: data.title || "New Notification",
+        text: data.message || "",
+        time: "Just now",
+        type: data.type || "info",
+        read: false,
+        Icon: icons[data.type] || Info
+      };
+
+      setNotifications((prev) => [newNotif, ...prev]);
+
+      // Trigger a beautiful rich toast
+      toast(newNotif.title, {
+        description: newNotif.text,
+        icon: <newNotif.Icon size={16} className={newNotif.type} />,
+        duration: 4000
+      });
+    };
+
+    socket.on("notification", handleNewNotification);
+
+    return () => {
+      socket.off("notification", handleNewNotification);
+    };
+  }, [socket]);
 
   const markAllRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
@@ -124,7 +159,7 @@ export default function NotificationsDropdown() {
 
             {notifications.length > 0 && (
               <div className="notif-footer">
-                <button>View all activity</button>
+                <button onClick={clearAll}>Clear all activity</button>
               </div>
             )}
           </motion.div>
