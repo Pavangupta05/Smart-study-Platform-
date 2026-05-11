@@ -1,14 +1,11 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Brain, Clock, ChevronRight, Sparkles, Loader2, X } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import StudySession from "../components/StudySession";
-import { flashcardsService } from "../services/index";
+import EmptyState from "../components/ui/EmptyState";
+import { flashcardsService, aiService } from "../services/index";
 import "../styles/flashcards.css";
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
-const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 function Flashcards() {
   const [activeDeck, setActiveDeck] = useState(null);
@@ -80,20 +77,8 @@ function Flashcards() {
     setIsGenerating(true);
 
     try {
-      const prompt = `Generate exactly ${genCount} flashcards for the topic: "${genTopic}".
-Return ONLY a valid JSON array. Each object must have "question" and "answer" keys.
-Example format:
-[{"question": "What is X?", "answer": "X is..."}]
-No extra text, no markdown, no code fences. Just the JSON array.`;
-
-      const result = await aiModel.generateContent(prompt);
-      const response = await result.response;
-      let text = response.text().trim();
-      
-      // Clean up response - remove markdown code fences if present
-      text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      const cards = JSON.parse(text);
+      const res = await aiService.generateFlashcards(genTopic, genCount);
+      const cards = res.data.data.cards;
 
       // Use backend bulk insert API to save the new cards under this deck name
       await flashcardsService.bulkCreate(cards, genTopic);
@@ -104,9 +89,10 @@ No extra text, no markdown, no code fences. Just the JSON array.`;
       
       setShowGenModal(false);
       setGenTopic("");
+      toast.success(`Generated ${cards.length} flashcards for "${genTopic}"`);
     } catch (err) {
       console.error("AI Flashcard Error:", err);
-      toast.error("Failed to generate flashcards.");
+      toast.error("Failed to generate flashcards. Please try again.");
     }
 
     setIsGenerating(false);
@@ -211,43 +197,70 @@ No extra text, no markdown, no code fences. Just the JSON array.`;
       </div>
 
       <div className="flashcards-grid">
-        {decks.map(deck => (
-          <motion.div 
-            key={deck.id}
-            className="deck-card"
-            whileHover={{ y: -5 }}
-          >
-            <div className="deck-color" style={{ backgroundColor: deck.color }}></div>
-            <div className="deck-info">
-              <h3>{deck.name}</h3>
-              <div className="deck-stats">
-                <div className="stat">
-                  <Brain size={14} />
-                  <span>{deck.count} cards</span>
-                </div>
-                <div className="stat">
-                  <Clock size={14} />
-                  <span>{deck.lastStudied}</span>
+        {isLoading ? (
+          [1, 2, 3].map(i => (
+            <div key={i} className="deck-card skeleton" style={{ minHeight: 120 }} />
+          ))
+        ) : decks.length === 0 ? (
+          <div style={{ gridColumn: "1 / -1" }}>
+            <EmptyState
+              icon={<Brain size={48} strokeWidth={1.2} />}
+              title="No flashcard decks yet"
+              description="Create your first deck manually or let AI generate one from any topic in seconds."
+              ctaLabel="+ New Deck"
+              onCta={handleAddDeck}
+              secondary={
+                <button
+                  className="empty-state-cta"
+                  style={{ background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+                  onClick={() => setShowGenModal(true)}
+                >
+                  ✨ Generate with AI
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          decks.map(deck => (
+            <motion.div
+              key={deck.id}
+              className="deck-card"
+              whileHover={{ y: -5 }}
+            >
+              <div className="deck-color" style={{ backgroundColor: deck.color }}></div>
+              <div className="deck-info">
+                <h3>{deck.name}</h3>
+                <div className="deck-stats">
+                  <div className="stat">
+                    <Brain size={14} />
+                    <span>{deck.count} cards</span>
+                  </div>
+                  <div className="stat">
+                    <Clock size={14} />
+                    <span>{deck.lastStudied}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <button className="btn-study" onClick={() => setActiveDeck(deck)}>
-              <span>Study</span>
-              <ChevronRight size={16} />
+              <button className="btn-study" onClick={() => setActiveDeck(deck)}>
+                <span>Study</span>
+                <ChevronRight size={16} />
+              </button>
+            </motion.div>
+          ))
+        )}
+
+        {/* AI Generator Teaser — only shown when decks exist */}
+        {!isLoading && decks.length > 0 && (
+          <div className="deck-card ai-teaser" onClick={() => setShowGenModal(true)}>
+            <div className="ai-badge">AI POWERED</div>
+            <h3>Generate from AI</h3>
+            <p>Give a topic and AI will create flashcards instantly.</p>
+            <button className="btn-generate" onClick={(e) => { e.stopPropagation(); setShowGenModal(true); }}>
+              <Sparkles size={14} />
+              Generate Deck
             </button>
-          </motion.div>
-        ))}
-        
-        {/* AI Generator Teaser */}
-        <div className="deck-card ai-teaser" onClick={() => setShowGenModal(true)}>
-          <div className="ai-badge">AI POWERED</div>
-          <h3>Generate from AI</h3>
-          <p>Give a topic and AI will create flashcards instantly.</p>
-          <button className="btn-generate" onClick={(e) => { e.stopPropagation(); setShowGenModal(true); }}>
-            <Sparkles size={14} />
-            Generate Deck
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

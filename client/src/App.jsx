@@ -1,25 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Preloader from "./components/Preloader";
-import Dashboard from "./pages/Dashboard";
-import Notes from "./pages/Notes";
-import AI from "./pages/AI";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import Planner from "./pages/Planner";
-import Templates from "./pages/Templates";
-import Trash from "./pages/Trash";
-import Reader from "./pages/Reader";
-import Flashcards from "./pages/Flashcards";
-import ResetPassword from "./pages/ResetPassword";
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
 import CommandPalette from "./components/CommandPalette";
 import MobileDock from "./components/MobileDock";
+
+// Lazy-loaded pages — code split for faster initial load
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Notes = lazy(() => import("./pages/Notes"));
+const AI = lazy(() => import("./pages/AI"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Planner = lazy(() => import("./pages/Planner"));
+const Templates = lazy(() => import("./pages/Templates"));
+const Trash = lazy(() => import("./pages/Trash"));
+const Reader = lazy(() => import("./pages/Reader"));
+const Flashcards = lazy(() => import("./pages/Flashcards"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Landing = lazy(() => import("./pages/Landing"));
+const Auth = lazy(() => import("./pages/Auth"));
+
+// Minimal page skeleton shown while lazy chunks load
+function PageSkeleton() {
+  return (
+    <div style={{ padding: "40px 32px", display: "flex", flexDirection: "column", gap: "16px", flex: 1 }}>
+      <div className="skeleton skeleton-text" style={{ width: "180px", height: "28px", borderRadius: "8px" }} />
+      <div className="skeleton skeleton-text" style={{ width: "280px", height: "16px", borderRadius: "6px" }} />
+      <div style={{ display: "grid", gap: "12px", marginTop: "8px" }}>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="skeleton" style={{ height: "80px", borderRadius: "12px", background: "var(--border)" }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -64,12 +82,14 @@ function App() {
   if (!isAuthenticated) {
     return (
       <div className={theme}>
-        <Routes>
-          <Route path="/landing" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/resetpassword/:token" element={<ResetPassword />} />
-          <Route path="*" element={<Landing />} />
-        </Routes>
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/landing" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/resetpassword/:token" element={<ResetPassword />} />
+            <Route path="*" element={<Landing />} />
+          </Routes>
+        </Suspense>
       </div>
     );
   }
@@ -97,20 +117,22 @@ function App() {
         />
 
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
-            <Route path="/planner" element={<PageTransition><Planner /></PageTransition>} />
-            <Route path="/notes" element={<PageTransition><Notes /></PageTransition>} />
-            <Route path="/notes/:category" element={<PageTransition><Notes /></PageTransition>} />
-            <Route path="/flashcards" element={<PageTransition><Flashcards /></PageTransition>} />
-            <Route path="/ai" element={<PageTransition><AI /></PageTransition>} />
-            <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
-            <Route path="/settings" element={<PageTransition><Settings /></PageTransition>} />
-            <Route path="/templates" element={<PageTransition><Templates /></PageTransition>} />
-            <Route path="/trash" element={<PageTransition><Trash /></PageTransition>} />
-            <Route path="/reader/:id" element={<PageTransition><Reader zenMode={zenMode} setZenMode={setZenMode} /></PageTransition>} />
-            <Route path="*" element={<PageTransition><Dashboard /></PageTransition>} />
-          </Routes>
+          <Suspense fallback={<PageSkeleton />}>
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+              <Route path="/planner" element={<PageTransition><Planner /></PageTransition>} />
+              <Route path="/notes" element={<PageTransition><Notes /></PageTransition>} />
+              <Route path="/notes/:category" element={<PageTransition><Notes /></PageTransition>} />
+              <Route path="/flashcards" element={<PageTransition><Flashcards /></PageTransition>} />
+              <Route path="/ai" element={<PageTransition><AI /></PageTransition>} />
+              <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
+              <Route path="/settings" element={<PageTransition><Settings /></PageTransition>} />
+              <Route path="/templates" element={<PageTransition><Templates /></PageTransition>} />
+              <Route path="/trash" element={<PageTransition><Trash /></PageTransition>} />
+              <Route path="/reader/:id" element={<PageTransition><Reader zenMode={zenMode} setZenMode={setZenMode} /></PageTransition>} />
+              <Route path="*" element={<PageTransition><Dashboard /></PageTransition>} />
+            </Routes>
+          </Suspense>
         </AnimatePresence>
       </div>
 

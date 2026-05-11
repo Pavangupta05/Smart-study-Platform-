@@ -15,6 +15,7 @@ const tasksRoutes = require("./routes/tasks.routes");
 const settingsRoutes = require("./routes/settings.routes");
 const flashcardsRoutes = require("./routes/flashcards.routes");
 const chatRoutes = require("./routes/chat.routes");
+const aiRoutes = require("./routes/ai.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -76,6 +77,7 @@ app.use("/api/tasks", tasksRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/flashcards", flashcardsRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

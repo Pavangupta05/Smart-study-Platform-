@@ -23,7 +23,14 @@
         "focusTime": 0,
         "lastStudied": null
       },
-      "createdAt": "2026-04-30T18:56:07.007Z"
+      "createdAt": "2026-04-30T18:56:07.007Z",
+      "settings.theme": "light",
+      "settings.language": "English (US)",
+      "settings.emailReports": true,
+      "settings.studyReminders": true,
+      "settings.hapticsEnabled": true,
+      "settings.autoSave": true,
+      "settings.aiDataUsage": true
     },
     {
       "_id": "mopmadpnuuy7660kfh8",
@@ -65,10 +72,10 @@
       "pages": [
         " "
       ],
-      "isTrashed": false,
-      "trashedAt": null,
+      "isTrashed": true,
+      "trashedAt": "2026-05-11T18:13:38.479Z",
       "createdAt": "2026-05-02T19:25:17.930Z",
-      "updatedAt": "2026-05-02T19:27:56.441Z"
+      "updatedAt": "2026-05-11T18:13:38.480Z"
     },
     {
       "_id": "moorgophbo8hkv1jugd",
@@ -105,21 +112,45 @@
       "trashedAt": "2026-05-03T09:54:45.875Z",
       "createdAt": "2026-05-03T09:00:39.056Z",
       "updatedAt": "2026-05-03T09:54:45.876Z"
-    }
-  ],
-  "tasks": [
+    },
     {
-      "_id": "mosp3dp7meuqk562qkb",
+      "_id": "mosqzj25l2t189nb6tg",
       "user": "moluh7bzzq6gsig5a2",
-      "text": "hii",
-      "priority": "Medium",
-      "time": "19:30",
-      "type": "task",
-      "completed": true,
-      "completedAt": "2026-05-05T14:51:10.372Z",
-      "createdAt": "2026-05-05T13:59:47.228Z"
+      "name": "ISS unit4.pdf",
+      "icon": "📕",
+      "category": "general",
+      "content": "",
+      "blobUrl": "/uploads/1777992766430-41776215.pdf",
+      "fileType": "application/pdf",
+      "size": "4.7 MB",
+      "pages": [
+        " "
+      ],
+      "isTrashed": true,
+      "trashedAt": "2026-05-05T14:52:52.626Z",
+      "createdAt": "2026-05-05T14:52:46.782Z",
+      "updatedAt": "2026-05-05T14:52:52.627Z"
+    },
+    {
+      "_id": "mosr00tvmx42kempbij",
+      "user": "moluh7bzzq6gsig5a2",
+      "name": "ISS unit5.pdf",
+      "icon": "📕",
+      "category": "general",
+      "content": "",
+      "blobUrl": "/uploads/1777992789477-343150232.pdf",
+      "fileType": "application/pdf",
+      "size": "6.2 MB",
+      "pages": [
+        " "
+      ],
+      "isTrashed": false,
+      "trashedAt": null,
+      "createdAt": "2026-05-05T14:53:09.811Z",
+      "updatedAt": "2026-05-05T14:53:09.811Z"
     }
   ],
+  "tasks": [],
   "flashcards": [],
   "chats": []
 }

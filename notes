@@ -1,1 +1,129 @@
 //  "dev": "nodemon server.js"
+
+
+client/src/
+│   App.css
+│   App.jsx
+│   main.jsx
+│
+├───assets/
+│       hero.png
+│       react.svg
+│       vite.svg
+│
+├───components/
+│   │   Card.jsx
+│   │   CommandPalette.css
+│   │   CommandPalette.jsx
+│   │   GlobalAskAI.css
+│   │   GlobalAskAI.jsx
+│   │   MobileDock.jsx
+│   │   NotificationsDropdown.jsx
+│   │   Preloader.jsx
+│   │   ProfileDropdown.jsx
+│   │   SearchModal.css
+│   │   SearchModal.jsx
+│   │   Sidebar.jsx
+│   │   StudySession.css
+│   │   StudySession.jsx
+│   │   StudyTimer.css
+│   │   StudyTimer.jsx
+│   │   Topbar.jsx
+│   │
+│   └───ui/
+│           EmptyState.jsx
+│
+├───context/
+│       AIContext.jsx
+│       UserContext.jsx
+│
+├───features/
+│   └───ai/
+│           AISplit.jsx
+│           artifactDetector.js
+│           ArtifactRenderer.jsx
+│
+├───pages/
+│       AI.jsx
+│       Auth.jsx
+│       Dashboard.jsx
+│       Flashcards.jsx
+│       Landing.jsx
+│       Notes.jsx
+│       Planner.jsx
+│       Profile.jsx
+│       Reader.jsx
+│       ResetPassword.jsx
+│       Settings.jsx
+│       Templates.jsx
+│       Trash.jsx
+│
+├───services/
+│       api.js
+│       index.js
+│
+├───styles/
+│       ai-split.css
+│       ai.css
+│       auth.css
+│       dashboard.css
+│       flashcards.css
+│       global.css
+│       landing.css
+│       mobile-dock.css
+│       notes.css
+│       notifications.css
+│       planner.css
+│       preloader.css
+│       profile-dropdown.css
+│       profile.css
+│       reader-mobile.css
+│       reader-tablet.css
+│       reader.css
+│       settings.css
+│       sidebar.css
+│       templates.css
+│       topbar.css
+│       trash.css
+│
+└───utils/
+        hapticHelper.js
+
+Backend/
+│   .env
+│   mockDB.json
+│   package.json
+│   server.js
+│
+├───config/
+│       db.js
+│
+├───middleware/
+│       auth.middleware.js
+│
+├───models/
+│       ChatSession.js
+│       Flashcard.js
+│       Note.js
+│       Task.js
+│       User.js
+│
+├───routes/
+│       ai.routes.js
+│       auth.routes.js
+│       chat.routes.js
+│       flashcards.routes.js
+│       notes.routes.js
+│       settings.routes.js
+│       tasks.routes.js
+│
+├───services/
+│   └───ai/
+│           ai.provider.js
+│           gemini.service.js
+│
+├───uploads/
+│       (User uploaded PDFs/Images)
+│
+└───utils/
+        mockStore.js

@@ -52,3 +52,50 @@ export const chatService = {
   sendMessage: (role, text) => api.post("/chats/message", { role, text }),
   clear: () => api.delete("/chats"),
 };
+
+// AI SERVICE — all AI calls go through the backend (API key is secure)
+export const aiService = {
+  /**
+   * Standard chat — returns full response at once
+   * @param {Array} messages - [{role, text}]
+   * @param {Object} context - {currentPage, currentNote, selection, document}
+   */
+  chat: (messages, context = {}) =>
+    api.post("/ai/chat", { messages, context }),
+
+  /**
+   * Generate flashcards for a topic
+   * @param {string} topic
+   * @param {number} count
+   */
+  generateFlashcards: (topic, count = 10) =>
+    api.post("/ai/flashcards", { topic, count }),
+
+  /**
+   * Optimize a study schedule
+   * @param {Array} tasks
+   */
+  optimizeSchedule: (tasks) =>
+    api.post("/ai/optimize-schedule", { tasks }),
+
+  /**
+   * Streaming chat — returns a fetch ReadableStream for SSE
+   * Use this for the typewriter effect in the AI chat page.
+   * @param {Array} messages
+   * @param {Object} context
+   */
+  streamChat: async (messages, context = {}) => {
+    const token = localStorage.getItem("starNote_token");
+    const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ messages, context }),
+    });
+    return response;
+  },
+};
+

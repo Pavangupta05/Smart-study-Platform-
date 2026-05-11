@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Clock, Coffee, Brain, ChevronRight, CheckCircle2, Wand2, Trash2 } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { tasksService } from "../services/index";
+import { Plus, Clock, Coffee, Brain, CheckCircle2, Wand2, Trash2, CalendarDays } from "lucide-react";
+import { tasksService, aiService } from "../services/index";
 import { useUser } from "../context/UserContext";
 import { toast } from "sonner";
+import EmptyState from "../components/ui/EmptyState";
 import "../styles/planner.css";
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
-const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 function Planner() {
   const { socket } = useUser();
@@ -71,36 +69,10 @@ function Planner() {
     setOptimizeTip("");
 
     try {
-      const taskList = tasks.map(t => `${t.time} - ${t.text || t.title} (${t.priority || t.load} difficulty, type: ${t.type})`).join("\n");
+      const res = await aiService.optimizeSchedule(tasks);
+      const { tasks: optimizedTasks, tip } = res.data.data;
 
-      const prompt = `You are a study schedule optimizer. Given this student's study plan:
-
-${taskList}
-
-Optimize the schedule by:
-1. Placing high-difficulty tasks during peak focus hours (8AM-11AM)
-2. Adding strategic breaks after intense sessions
-3. Grouping related subjects together
-4. Ensuring proper rest periods
-
-Return TWO things:
-1. A JSON array of the optimized tasks with keys: "time" (HH:MM 24h), "title", "load" (High/Medium/Low/None), "type" (task/break)
-2. A short 1-line tip explaining the optimization
-
-Format your response EXACTLY like this (no markdown, no code fences):
-TASKS: [{"time":"08:00","title":"...","load":"High","type":"task"}]
-TIP: Your optimization tip here`;
-
-      const result = await aiModel.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
-
-      // Parse TASKS line
-      const tasksMatch = text.match(/TASKS:\s*(\[.*\])/s);
-      const tipMatch = text.match(/TIP:\s*(.*)/);
-
-      if (tasksMatch) {
-        const optimizedTasks = JSON.parse(tasksMatch[1]);
+      if (optimizedTasks?.length) {
         const newTasks = [];
         for (const t of optimizedTasks) {
           const payload = {
@@ -111,25 +83,18 @@ TIP: Your optimization tip here`;
             completed: false
           };
           try {
-            const res = await tasksService.create(payload);
-            newTasks.push(res.data.task);
+            const taskRes = await tasksService.create(payload);
+            newTasks.push(taskRes.data.task);
           } catch (e) {
             console.error("Failed to save optimized task:", e);
-            toast.error(`Failed to save task: ${t.title}`);
           }
         }
-        
-        // Refetch to cleanly update list with new ones (clear out old ones? Wait, optimize might just append. Let's just set the new ones)
-        // If optimizing completely overwrites the day, we should probably delete old ones first. 
-        // For now, let's just append to be safe or overwrite UI.
         const allRes = await tasksService.getAll();
         const plannerItems = (allRes.data.tasks || []).filter(item => item.time);
         setTasks(plannerItems.sort((a, b) => a.time.localeCompare(b.time)));
       }
 
-      if (tipMatch) {
-        setOptimizeTip(tipMatch[1]);
-      }
+      if (tip) setOptimizeTip(tip);
     } catch (err) {
       console.error("AI Optimize Error:", err);
       setOptimizeTip("Could not optimize right now. Try again in a moment.");
@@ -200,6 +165,14 @@ TIP: Your optimization tip here`;
               [1, 2, 3].map(i => (
                 <div key={i} className="timeline-block skeleton" style={{ minHeight: "80px", marginBottom: "16px", borderRadius: "16px", background: "rgba(120, 120, 120, 0.1)" }}></div>
               ))
+            ) : tasks.length === 0 ? (
+              <EmptyState
+                icon={<CalendarDays size={44} strokeWidth={1.2} />}
+                title="Your schedule is clear"
+                description="Add your first task to start planning your study session, or let AI build you an optimized schedule."
+                ctaLabel="+ Add a task"
+                onCta={() => document.querySelector(".input-group input")?.focus()}
+              />
             ) : tasks.map((item, index) => (
               <div 
                 key={item._id || item.id} 
