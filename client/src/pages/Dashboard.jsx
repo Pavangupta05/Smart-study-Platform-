@@ -13,6 +13,8 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 import { toast } from "sonner";
+import PomodoroWidget from "../components/PomodoroWidget";
+import HeatmapWidget from "../components/HeatmapWidget";
 import "../styles/dashboard.css";
 
 function Dashboard() {
@@ -238,32 +240,14 @@ function Dashboard() {
         animate="show"
       >
         <motion.div variants={itemVars} className="dash-main">
-          {/* FOCUS CARD */}
-          <section className="dash-section">
-            <div className="section-header">
-              <h2>Current Focus</h2>
-              <span className="badge">{progress}% Goal Completed</span>
-            </div>
-            <div className="focus-card">
-              <div className="focus-info">
-                <h3>Daily Study Progress</h3>
-                <p>{completedCount} of {tasks.length} tasks finished</p>
-                <div className="progress-track-large">
-                  <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-                </div>
-              </div>
-              <button className="btn-start-session" onClick={() => {
-                const last = localStorage.getItem("starNote_lastActive");
-                if (last && last !== "undefined" && last !== "null") navigate(`/reader/${last}`);
-                else navigate("/notes");
-              }}>
-                <Play size={18} fill="currentColor" />
-              </button>
-            </div>
+          {/* FOCUS CARD & POMODORO */}
+          <section className="dash-section dash-widgets-grid">
+            <PomodoroWidget />
+            <HeatmapWidget />
           </section>
 
           {/* WEEKLY ANALYTICS — INTERACTIVE */}
-          <section className="dash-section">
+          <section className="dash-section" style={{ marginTop: '32px' }}>
             <div className="section-header">
               <h2>Weekly Activity</h2>
               <div className="chart-tab-group">
@@ -309,9 +293,9 @@ function Dashboard() {
                         <stop offset="95%" stopColor={CHART_COLOR[chartTab]} stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.1)" vertical={false}/>
-                    <XAxis dataKey="day" tick={{ fontSize: 11, fontWeight: 700, fill: "var(--text-muted)" }} axisLine={false} tickLine={false}/>
-                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false}/>
+                    <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} strokeOpacity={0.4} />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fontWeight: 600, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} dy={10} />
+                    <YAxis hide domain={["dataMin - 2", "dataMax + 2"]} />
                     <Tooltip
                       cursor={{ stroke: CHART_COLOR[chartTab], strokeWidth: 1, strokeDasharray: "3 3", opacity: 0.5 }}
                       content={({ active, payload }) => {

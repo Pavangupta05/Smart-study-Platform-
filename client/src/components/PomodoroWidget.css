@@ -1,0 +1,160 @@
+.pomodoro-widget {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+}
+
+.pomo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pomo-tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--primary-weak);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.pomo-tabs button {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pomo-tabs button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.btn-lofi {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-lofi:hover {
+  background: var(--primary-weak);
+  color: var(--text);
+}
+
+.pomo-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+}
+
+.pomo-circle {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomo-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.pomo-bg {
+  fill: none;
+  stroke: var(--primary-weak);
+  stroke-width: 4;
+}
+
+.pomo-progress {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.pomo-time {
+  font-family: var(--font-serif);
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.04em;
+  z-index: 2;
+}
+
+.pomo-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pomo-btn-main {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.pomo-btn-main:active {
+  transform: scale(0.94);
+}
+
+.pomo-btn-main:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.15);
+}
+
+.pomo-btn-sub {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pomo-btn-sub:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}

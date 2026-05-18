@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const rateLimit = require("express-rate-limit");
 const { getMockMode } = require("../config/db");
 const { mockUsers } = require("../utils/mockStore");
 
@@ -12,8 +13,27 @@ try { User = require("../models/User"); } catch (_) {}
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
 
+// ── Rate Limiters ─────────────────────────────────────────────────────────────
+// Brute-force protection: max 10 login attempts per 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: "Too many login attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Spam protection: max 5 registrations per hour per IP
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: "Too many accounts created from this IP. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ── POST /api/auth/register ──────────────────────────────────────────────────
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ success: false, message: "All fields are required." });
@@ -48,7 +68,7 @@ router.post("/register", async (req, res) => {
 });
 
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ success: false, message: "Email and password required." });

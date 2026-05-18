@@ -1,5 +1,5 @@
 /* ===== RESET & FONTS ===== */
-@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Urbanist:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 * {
   margin: 0;
@@ -36,28 +36,32 @@ html, body {
 /* ===== THEME VARIABLES ===== */
 :root {
   /* LIGHT MODE (Zen Study) */
-  --bg: #ffffff; /* Pure white */
-  --bg-rgb: 255, 255, 255;
+  --bg: #fafafa;
+  --bg-rgb: 250, 250, 250;
   --surface: #ffffff;
   --surface-rgb: 255, 255, 255;
-  --surface-hover: #f0f0f0;
-  --text: #000000; /* Pure black for high contrast */
-  --text-secondary: #404040;
-  --text-muted: #737373; /* Darker gray for better visibility */
+  --surface-hover: #f4f4f5;
+  --text: #09090b; /* Pure black for high contrast */
+  --text-secondary: #3f3f46;
+  --text-muted: #71717a; /* Darker gray for better visibility */
 
-  --primary: #262626; /* Softer, premium charcoal */
+  --primary: #18181b; /* Sleek obsidian/carbon */
   --primary-hover: #000000;
-  --primary-weak: #f5f5f4;
+  --primary-weak: #f4f4f5;
   --primary-foreground: #ffffff;
-  --primary-rgb: 38, 38, 38;
+  --primary-rgb: 24, 24, 27;
   
-  --border: #d4d4d4; /* Slightly darker border for visibility on white */
-  --border-focus: #000000;
-  --ring: rgba(27, 67, 50, 0.2);
+  --accent-blue: #2563eb;
+  --accent-amber: #d97706;
+  --accent-emerald: #059669;
+  
+  --border: rgba(0, 0, 0, 0.08); /* Slightly darker border for visibility on white */
+  --border-focus: #18181b;
+  --ring: rgba(24, 24, 27, 0.2);
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.03), 0 2px 4px rgba(28, 25, 23, 0.02);
-  --shadow-lg: 0 12px 24px -4px rgba(28, 25, 23, 0.04), 0 4px 8px -4px rgba(28, 25, 23, 0.03);
+  --shadow-md: 0 4px 12px rgba(24, 24, 27, 0.03), 0 2px 4px rgba(24, 24, 27, 0.02);
+  --shadow-lg: 0 12px 30px -4px rgba(24, 24, 27, 0.04), 0 4px 8px -4px rgba(24, 24, 27, 0.03);
   --shadow-modal: 0 24px 48px -12px rgba(28, 25, 23, 0.08);
   
   --radius-sm: 6px;
@@ -71,8 +75,8 @@ html, body {
   /* Global Animations */
   --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   
-  --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: "Urbanist", sans-serif;
+  --font-sans: "Inter", "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Lora", "Urbanist", Georgia, serif;
   
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -115,24 +119,28 @@ html, body {
 
 body.dark {
   /* DARK MODE (Athenaeum Nightfall) */
-  --bg: #0a0a0a;
-  --bg-rgb: 10, 10, 10;
-  --surface: #131313; /* Deep charcoal surface */
-  --surface-rgb: 19, 19, 19;
-  --surface-hover: #1c1c1c;
-  --text: #f5f5f4;
-  --text-secondary: #a8a29e;
-  --text-muted: #57534e;
+  --bg: #09090b;
+  --bg-rgb: 9, 9, 11;
+  --surface: #18181b; /* Deep charcoal surface */
+  --surface-rgb: 24, 24, 27;
+  --surface-hover: #27272a;
+  --text: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  --primary: #f5f5f4; /* Minimal off-white */
+  --primary: #fafafa; /* Minimal off-white */
   --primary-hover: #ffffff;
-  --primary-weak: #1c1c1c;
-  --primary-foreground: #0a0a0a;
-  --primary-rgb: 245, 245, 244;
+  --primary-weak: #27272a;
+  --primary-foreground: #09090b;
+  --primary-rgb: 250, 250, 250;
   
-  --border: #262626;
-  --border-focus: #f5f5f4;
-  --ring: rgba(245, 245, 244, 0.2);
+  --accent-blue: #3b82f6;
+  --accent-amber: #f59e0b;
+  --accent-emerald: #10b981;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --border-focus: #fafafa;
+  --ring: rgba(250, 250, 250, 0.2);
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);

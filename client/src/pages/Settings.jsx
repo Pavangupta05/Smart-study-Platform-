@@ -144,7 +144,13 @@ function Settings() {
               <h2>My Profile</h2>
               <div className="setting-card">
                 <div className="profile-edit">
-                  <div className="profile-avatar-large">{initials}</div>
+                  <div className="profile-avatar-large">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                    ) : (
+                      initials
+                    )}
+                  </div>
                   <div className="profile-form">
                     <div className="form-group">
                       <label>Full Name</label>

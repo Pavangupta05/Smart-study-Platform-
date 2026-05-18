@@ -8,6 +8,7 @@ import {
 import { motion } from "framer-motion";
 import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
+import { settingsService } from "../services/index";
 import "../styles/profile.css";
 
 function Profile() {
@@ -49,6 +50,11 @@ function Profile() {
           const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
           setPhotoPreview(compressedBase64);
           setUser({ avatar: compressedBase64 });
+          
+          // Persist to backend
+          settingsService.update({ avatar: compressedBase64 }).catch((err) => {
+            console.error("Failed to upload avatar", err);
+          });
         };
         img.src = event.target.result;
       };

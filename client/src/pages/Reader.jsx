@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
@@ -32,16 +32,19 @@ import {
   StickyNote,
   X,
   Maximize,
-  Share2
+  Share2,
+  BrainCircuit
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { notesService, flashcardsService } from "../services/index";
 import "../styles/reader.css";
+import "../styles/reader-mobile.css";
+import "../styles/reader-tablet.css";
+import SlashEditor from "../components/SlashEditor";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
 const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-import "../styles/reader-mobile.css";
-import "../styles/reader-tablet.css";
 
 function Reader({ zenMode, setZenMode }) {
   const { id } = useParams();
@@ -87,12 +90,52 @@ function Reader({ zenMode, setZenMode }) {
   const [penColor, setPenColor] = useState("#3b82f6");
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [notes, setNotes] = useState([]);
+  // Tool options panel visibility decoupled from active tool
+  const [showToolOptions, setShowToolOptions] = useState(false);
+  // Debounce timer ref for sticky notes
+  const noteDebounceRef = useRef({});
+
+  // CONTEXTUAL TOOLBAR STATE
+  const [selection, setSelection] = useState({ text: "", x: 0, y: 0, show: false });
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Text Selection Listener
+  useEffect(() => {
+    const handleSelection = () => {
+      const sel = window.getSelection();
+      const text = sel.toString().trim();
+      
+      // Don't show if active tool is not select
+      if (text.length > 0 && activeTool === "select") {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        setSelection({
+          text,
+          x: rect.left + (rect.width / 2),
+          y: rect.top - 8,
+          show: true
+        });
+      } else {
+        if (selection.show) {
+          setSelection(s => ({ ...s, show: false }));
+        }
+      }
+    };
+
+    document.addEventListener("mouseup", handleSelection);
+    document.addEventListener("touchend", handleSelection);
+    
+    return () => {
+      document.removeEventListener("mouseup", handleSelection);
+      document.removeEventListener("touchend", handleSelection);
+    };
+  }, [activeTool, selection.show]);
 
   useEffect(() => {
     notesService.getById(id)
@@ -158,19 +201,47 @@ function Reader({ zenMode, setZenMode }) {
 
   // FEATURE HANDLERS
   const addNote = () => {
-    const newNote = { id: Date.now(), text: "New sticky note...", page: currentPage, date: new Date().toLocaleTimeString() };
+    const newNote = { id: Date.now(), text: "", page: currentPage, date: new Date().toLocaleTimeString() };
     const updated = [...notes, newNote];
     setNotes(updated);
     saveFileChanges({ notes: updated });
   };
 
-  const updateNote = (noteId, newText) => {
-    const updated = notes.map(n => n.id === noteId ? { ...n, text: newText } : n);
-    setNotes(updated);
-    saveFileChanges({ notes: updated });
-  };
+  // Debounced note update — only fires save 600ms after user stops typing
+  const updateNote = useCallback((noteId, newText) => {
+    // Optimistic UI update immediately
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText } : n));
+
+    // Clear existing debounce for this note
+    if (noteDebounceRef.current[noteId]) {
+      clearTimeout(noteDebounceRef.current[noteId]);
+    }
+    // Schedule save after 600ms of inactivity
+    noteDebounceRef.current[noteId] = setTimeout(() => {
+      setNotes(current => {
+        saveFileChanges({ notes: current });
+        return current;
+      });
+    }, 600);
+  }, []);
+
+  // Flush note saves immediately on blur
+  const flushNoteOnBlur = useCallback((noteId) => {
+    if (noteDebounceRef.current[noteId]) {
+      clearTimeout(noteDebounceRef.current[noteId]);
+      delete noteDebounceRef.current[noteId];
+    }
+    setNotes(current => {
+      saveFileChanges({ notes: current });
+      return current;
+    });
+  }, []);
 
   const deleteNote = (noteId) => {
+    if (noteDebounceRef.current[noteId]) {
+      clearTimeout(noteDebounceRef.current[noteId]);
+      delete noteDebounceRef.current[noteId];
+    }
     const updated = notes.filter(n => n.id !== noteId);
     setNotes(updated);
     saveFileChanges({ notes: updated });
@@ -238,8 +309,58 @@ function Reader({ zenMode, setZenMode }) {
     setIsGeneratingCards(false);
   };
 
+  const handleContextAction = async (action) => {
+    const text = selection.text;
+    setSelection(s => ({ ...s, show: false }));
+    window.getSelection().removeAllRanges();
+
+    if (action === "summarize" || action === "explain") {
+      setShowSidebar(true);
+      setIsSummarizing(true);
+      try {
+        const isExplain = action === "explain";
+        const prompt = isExplain 
+          ? `Explain this concept simply like I am a beginner. Use bullet points if necessary:\n\n"${text}"`
+          : `Summarize this specific text concisely in 2-3 sentences:\n\n"${text}"`;
+        
+        const result = await aiModel.generateContent(prompt);
+        setSummary(result.response.text());
+      } catch (err) {
+        setSummary("Failed to generate response. Please try again.");
+      }
+      setIsSummarizing(false);
+    } else if (action === "flashcard") {
+      setIsGeneratingCards(true);
+      try {
+        const prompt = `Create exactly 1 flashcard from this text. Return ONLY a valid JSON array with 1 object containing keys "front" and "back". Text: "${text}"`;
+        const result = await aiModel.generateContent(prompt);
+        const match = result.response.text().match(/\[.*\]/s);
+        if (match) {
+          const cards = JSON.parse(match[0]);
+          await flashcardsService.bulkCreate(cards, file?.name || "Contextual Cards");
+          alert("✨ Flashcard generated and saved!");
+        }
+      } catch (err) {
+        alert("Failed to generate flashcard.");
+      }
+      setIsGeneratingCards(false);
+    }
+  };
+
   const toggleTool = (tool) => {
-    setActiveTool(prev => prev === tool ? "select" : tool);
+    setActiveTool(prev => {
+      if (prev === tool) {
+        setShowToolOptions(false);
+        return "select";
+      }
+      // Show options panel if it's a drawing tool
+      if (['pen', 'highlighter', 'shape', 'circle', 'line'].includes(tool)) {
+        setShowToolOptions(true);
+      } else {
+        setShowToolOptions(false);
+      }
+      return tool;
+    });
   };
 
   const startDrawing = (e) => {
@@ -264,6 +385,8 @@ function Reader({ zenMode, setZenMode }) {
     if (activeTool === "eraser") {
       ctx.globalCompositeOperation = "destination-out";
       ctx.lineWidth = 20;
+    } else if (activeTool === "highlighter") {
+      ctx.globalCompositeOperation = "multiply";
     } else {
       ctx.globalCompositeOperation = "source-over";
     }
@@ -353,7 +476,14 @@ function Reader({ zenMode, setZenMode }) {
     });
   };
 
-  if (error) return <div className="reader-error"><AlertCircle size={48} /><h2>Error Loading</h2><button onClick={() => navigate("/notes")}>Back</button></div>;
+  if (error) return (
+    <div className="reader-error">
+      <AlertCircle size={48} />
+      <h2>Could not load document</h2>
+      <p>This note may have been deleted or moved.</p>
+      <button onClick={() => navigate("/notes")}>← Back to Notes</button>
+    </div>
+  );
   if (!file) return (
     <div className="reader-modern-desktop">
       <header className="reader-header-modern" style={{ padding: '0 24px' }}>
@@ -377,10 +507,41 @@ function Reader({ zenMode, setZenMode }) {
     </div>
   );
 
+  const ContextualToolbar = () => (
+    <AnimatePresence>
+      {selection.show && (
+        <motion.div 
+          className="contextual-toolbar glass-card"
+          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          style={{ 
+            left: selection.x, 
+            top: selection.y,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          <button onClick={() => handleContextAction("summarize")}>
+            <Sparkles size={14} /> <span>Summarize</span>
+          </button>
+          <button onClick={() => handleContextAction("explain")}>
+            <BrainCircuit size={14} /> <span>Explain</span>
+          </button>
+          <div className="toolbar-divider" />
+          <button onClick={() => handleContextAction("flashcard")}>
+            <Layers size={14} /> <span>Flashcard</span>
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   // --- DESKTOP VIEW ---
   if (isDesktop) {
     return (
       <div className={`reader-modern-desktop ${isFocusMode ? 'zen-mode-active' : ''}`}>
+        <ContextualToolbar />
         <header className="reader-header-modern">
           <div className="header-left">
             <button className="btn-icon-modern" onClick={() => navigate("/notes")}><ChevronLeft size={20} /></button>
@@ -400,28 +561,28 @@ function Reader({ zenMode, setZenMode }) {
           <aside className="left-toolbar-modern">
             <div className="tool-group">
               <button className={`tool-item ${activeTool === 'pages' ? 'active' : ''}`}><Layers size={20} /><span>Pages</span></button>
-              <button className="tool-item"><Bookmark size={20} /><span>Bookmarks</span></button>
-              <button className="tool-item"><StickyNote size={20} /><span>Notes</span></button>
+              <button className="tool-item" onClick={() => setShowSidebar(true)}><StickyNote size={20} /><span>Notes</span></button>
             </div>
             <div className="tool-divider-modern"></div>
             <div className="tool-group">
-              <button className={`tool-item ${activeTool === 'highlighter' ? 'active' : ''}`} onClick={() => setActiveTool('highlighter')}><Highlighter size={20} /><span>Highlight</span></button>
-              <button className={`tool-item ${activeTool === 'pen' ? 'active' : ''}`} onClick={() => setActiveTool('pen')}><PenTool size={20} /><span>Draw</span></button>
-              <button className={`tool-item ${activeTool === 'text' ? 'active' : ''}`} onClick={() => setActiveTool('text')}><Type size={20} /><span>Text</span></button>
-              <button className={`tool-item ${activeTool === 'shape' ? 'active' : ''}`} onClick={() => setActiveTool('shape')}><Square size={20} /><span>Shapes</span></button>
-              <button className={`tool-item ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => setActiveTool('eraser')}><Eraser size={20} /><span>Eraser</span></button>
+              <button className={`tool-item ${activeTool === 'highlighter' ? 'active' : ''}`} onClick={() => toggleTool('highlighter')}><Highlighter size={20} /><span>Highlight</span></button>
+              <button className={`tool-item ${activeTool === 'pen' ? 'active' : ''}`} onClick={() => toggleTool('pen')}><PenTool size={20} /><span>Draw</span></button>
+              <button className={`tool-item ${activeTool === 'text' ? 'active' : ''}`} onClick={() => toggleTool('text')}><Type size={20} /><span>Text</span></button>
+              <button className={`tool-item ${['shape','circle','line'].includes(activeTool) ? 'active' : ''}`} onClick={() => toggleTool('shape')}><Square size={20} /><span>Shapes</span></button>
+              <button className={`tool-item ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => toggleTool('eraser')}><Eraser size={20} /><span>Eraser</span></button>
               <div className="tool-divider-modern" style={{ margin: '8px 0', height: '1px' }}></div>
               <button className="tool-item" onClick={undo}><RotateCcw size={20} /><span>Undo</span></button>
               {activeTool === 'eraser' && <button className="tool-item danger-text" onClick={clearCanvas}><Trash2 size={20} /><span>Clear</span></button>}
             </div>
 
             
-            {/* Tool Options Sub-Panel */}
-            {['pen', 'highlighter', 'shape', 'circle', 'line'].includes(activeTool) && (
+            {/* Tool Options Sub-Panel — visibility decoupled from active tool so drawing continues after closing */}
+            {showToolOptions && ['pen', 'highlighter', 'shape', 'circle', 'line'].includes(activeTool) && (
               <div className="tool-options-panel">
                 <div className="tool-options-header">
-                  <span>Settings</span>
-                  <button className="close-options-btn" onClick={() => setActiveTool('select')}><X size={14} /></button>
+                  <span>Tool Settings</span>
+                  {/* Close panel WITHOUT deactivating the tool */}
+                  <button className="close-options-btn" onClick={() => setShowToolOptions(false)}><X size={14} /></button>
                 </div>
                 <div className="color-swatches">
                   {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(c => (
@@ -478,7 +639,10 @@ function Reader({ zenMode, setZenMode }) {
                   ref={canvasRef}
                   style={{ 
                     position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                    zIndex: 10, pointerEvents: ['pen', 'highlighter', 'eraser', 'text', 'shape', 'circle', 'line'].includes(activeTool) ? 'auto' : 'none' 
+                    zIndex: 10,
+                    pointerEvents: ['pen', 'highlighter', 'eraser', 'text', 'shape', 'circle', 'line'].includes(activeTool) ? 'auto' : 'none',
+                    touchAction: ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line'].includes(activeTool) ? 'none' : 'auto',
+                    cursor: activeTool === 'pen' || activeTool === 'highlighter' ? 'crosshair' : activeTool === 'eraser' ? 'cell' : 'default',
                   }}
                   width={1000} height={1414}
                   onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
@@ -492,7 +656,17 @@ function Reader({ zenMode, setZenMode }) {
                 ) : (
                   <div className="paper-a4-modern">
                     <div className="paper-body-modern">
-                      {(pages[currentPage] || "").split('\n').map((l, i) => <p key={i}>{l}</p>)}
+                      <SlashEditor 
+                        initialContent={pages[currentPage] || ""}
+                        onChange={(val) => {
+                          const updated = [...pages];
+                          updated[currentPage] = val;
+                          setPages(updated);
+                        }}
+                        onBlur={() => saveFileChanges({ pages })}
+                        onSummarize={handleSummarize}
+                        onFlashcard={handleGenerateFlashcards}
+                      />
                     </div>
                   </div>
                 )}
@@ -569,7 +743,9 @@ function Reader({ zenMode, setZenMode }) {
                         <textarea 
                           value={note.text || ""} 
                           onChange={(e) => updateNote(note.id, e.target.value)}
+                          onBlur={() => flushNoteOnBlur(note.id)}
                           placeholder="Type something..."
+                          autoFocus={note.text === ""}
                         />
                       </div>
                     ))
@@ -586,6 +762,7 @@ function Reader({ zenMode, setZenMode }) {
   // --- TABLET & MOBILE VIEW ---
   return (
     <div className={`reader-modern-mobile ${isFocusMode ? 'focus-mode' : ''}`}>
+      <ContextualToolbar />
       <header className="mobile-reader-header">
         <div className="m-header-left">
           <button className="m-btn-back" onClick={() => navigate("/notes")}><ChevronLeft size={24} /></button>
@@ -622,11 +799,17 @@ function Reader({ zenMode, setZenMode }) {
             ref={canvasRef}
             style={{ 
               position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-              zIndex: 10, pointerEvents: ['pen', 'highlighter', 'eraser', 'text', 'shape', 'circle', 'line'].includes(activeTool) ? 'auto' : 'none' 
+              zIndex: 10,
+              pointerEvents: ['pen', 'highlighter', 'eraser', 'text', 'shape', 'circle', 'line'].includes(activeTool) ? 'auto' : 'none',
+              // Prevent page scroll while drawing on touch devices
+              touchAction: ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line'].includes(activeTool) ? 'none' : 'auto',
+              cursor: activeTool === 'pen' || activeTool === 'highlighter' ? 'crosshair' : activeTool === 'eraser' ? 'cell' : 'default',
             }}
             width={1000} height={1414}
             onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={(e) => { e.preventDefault(); draw(e); }}
+            onTouchEnd={stopDrawing}
           />
           {file.blobUrl ? (
             <div className="m-iframe-container">
@@ -639,7 +822,17 @@ function Reader({ zenMode, setZenMode }) {
           ) : (
             <div className="m-paper-a4">
               <div className="m-paper-body">
-                {(pages[currentPage] || "").split('\n').map((l, i) => <p key={i}>{l}</p>)}
+                <SlashEditor 
+                  initialContent={pages[currentPage] || ""}
+                  onChange={(val) => {
+                    const updated = [...pages];
+                    updated[currentPage] = val;
+                    setPages(updated);
+                  }}
+                  onBlur={() => saveFileChanges({ pages })}
+                  onSummarize={handleSummarize}
+                  onFlashcard={handleGenerateFlashcards}
+                />
               </div>
             </div>
           )}
@@ -679,6 +872,9 @@ function Reader({ zenMode, setZenMode }) {
                     <textarea 
                       value={note.text || ""} 
                       onChange={(e) => updateNote(note.id, e.target.value)}
+                      onBlur={() => flushNoteOnBlur(note.id)}
+                      placeholder="Type a note..."
+                      autoFocus={note.text === ""}
                     />
                   </div>
                 ))
@@ -699,8 +895,11 @@ function Reader({ zenMode, setZenMode }) {
         </div>
       </nav>
 
-      {['pen', 'highlighter', 'shape', 'circle', 'line'].includes(activeTool) && (
+      {showToolOptions && ['pen', 'highlighter', 'shape', 'circle', 'line'].includes(activeTool) && (
         <div className="m-tool-options-panel">
+          <button className="m-close-options" onClick={() => setShowToolOptions(false)}>
+            <X size={16} />
+          </button>
           <div className="color-swatches">
             {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(c => (
               <button key={c} className={`swatch ${penColor === c ? 'active' : ''}`} style={{ backgroundColor: c }} onClick={() => setPenColor(c)} />
@@ -708,9 +907,9 @@ function Reader({ zenMode, setZenMode }) {
           </div>
           {['shape', 'circle', 'line'].includes(activeTool) ? (
             <div className="shape-variants">
-              <button className={`variant-btn ${activeTool === 'shape' ? 'active' : ''}`} onClick={() => toggleTool('shape')}>⬛</button>
-              <button className={`variant-btn ${activeTool === 'circle' ? 'active' : ''}`} onClick={() => toggleTool('circle')}>⚫</button>
-              <button className={`variant-btn ${activeTool === 'line' ? 'active' : ''}`} onClick={() => toggleTool('line')}>➖</button>
+              <button className={`variant-btn ${activeTool === 'shape' ? 'active' : ''}`} onClick={() => setActiveTool('shape')}>⬛</button>
+              <button className={`variant-btn ${activeTool === 'circle' ? 'active' : ''}`} onClick={() => setActiveTool('circle')}>⚫</button>
+              <button className={`variant-btn ${activeTool === 'line' ? 'active' : ''}`} onClick={() => setActiveTool('line')}>➖</button>
             </div>
           ) : (
             <div className="stroke-widths">

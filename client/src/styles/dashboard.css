@@ -482,11 +482,18 @@ body.dark .insight-icon.time   { background: rgba(16, 185, 129, 0.15); color: #3
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
 }
 
+.dash-widgets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
 /* --- RESPONSIVENESS OVERHAUL --- */
 @media (max-width: 1024px) {
   .dashboard-minimal { padding: 32px; }
   .dash-content { grid-template-columns: 1fr; gap: 32px; }
   .study-insights { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .dash-widgets-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {

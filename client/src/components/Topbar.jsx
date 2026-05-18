@@ -5,7 +5,6 @@ import {
   Home, Clock3, StickyNote, LibraryBig, Sparkles,
   Menu, ChevronRight, Bell, Settings
 } from "lucide-react";
-import StudyTimer from "./StudyTimer";
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationsDropdown from "./NotificationsDropdown";
 import "../styles/topbar.css";
@@ -72,9 +71,8 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
         </div>
       </div>
 
-      {/* ── CENTER: study timer ── */}
+      {/* ── CENTER: empty ── */}
       <div className="tv2-center">
-        <StudyTimer />
       </div>
 
       {/* ── RIGHT: actions cluster ── */}

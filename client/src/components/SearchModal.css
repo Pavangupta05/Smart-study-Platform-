@@ -1,115 +1,171 @@
-.search-overlay {
+/* Command Palette Styles */
+.cmd-palette-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(4px);
+  z-index: 10000;
   display: flex;
-  align-items: flex-start;
   justify-content: center;
-  padding-top: 10vh;
-  z-index: 1000;
+  align-items: flex-start;
+  padding-top: 12vh;
 }
 
-.search-modal {
+.cmd-palette {
   width: 100%;
   max-width: 600px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal);
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  animation: cmdSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
 }
 
-.search-input-wrapper {
+@keyframes cmdSlideDown {
+  0% { transform: translateY(-20px) scale(0.98); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.cmd-header {
   display: flex;
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  gap: 12px;
 }
 
-.search-icon {
+.cmd-search-icon {
   color: var(--text-muted);
+  margin-right: 12px;
 }
 
-.search-input-wrapper input {
+.cmd-input {
   flex: 1;
   background: transparent;
   border: none;
   outline: none;
   font-size: 16px;
   color: var(--text);
+  font-family: var(--font-sans);
 }
 
-.search-shortcut {
-  font-size: 10px;
-  padding: 4px 6px;
-  background: var(--surface-hover);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+.cmd-input::placeholder {
   color: var(--text-muted);
+  opacity: 0.7;
 }
 
-.search-results {
+.cmd-badge {
+  background: var(--primary-weak);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.cmd-body {
   max-height: 400px;
   overflow-y: auto;
+  padding: 12px;
 }
 
-.group-label {
-  padding: 12px 20px 8px 20px;
-  font-size: 11px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.search-item {
+.cmd-list {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cmd-item {
+  display: flex;
   justify-content: space-between;
-  padding: 10px 20px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.1s ease;
 }
 
-.search-item:hover {
-  background: var(--surface-hover);
+.cmd-item.selected {
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
-.item-left {
+.cmd-item-left {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--text);
 }
 
-.item-meta {
+.cmd-item-icon {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cmd-item.selected .cmd-item-icon {
+  color: var(--primary-foreground);
+  opacity: 0.8;
+}
+
+.cmd-item-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cmd-item-hint {
   font-size: 12px;
   color: var(--text-muted);
+  margin-left: auto;
+  margin-right: 12px;
 }
 
-.search-footer {
+.cmd-item.selected .cmd-item-hint {
+  color: var(--primary-foreground);
+  opacity: 0.6;
+}
+
+.cmd-item-arrow {
+  color: var(--primary-foreground);
+  opacity: 0.8;
+}
+
+.cmd-no-results {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.cmd-footer {
   padding: 12px 20px;
-  background: var(--surface-hover);
   border-top: 1px solid var(--border);
+  background: var(--surface-hover);
+}
+
+.cmd-shortcuts {
+  display: flex;
+  gap: 16px;
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.footer-tip span {
-  font-weight: 600;
-  color: var(--text-secondary);
+.cmd-shortcuts kbd {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+  font-size: 10px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
 }
 
-/* ANIMATIONS */
-.slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+body.dark .cmd-shortcuts kbd {
+  background: #2a2a2a;
 }

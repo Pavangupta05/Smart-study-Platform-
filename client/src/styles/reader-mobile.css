@@ -243,7 +243,7 @@ body.dark .reader-modern-mobile {
   transform: translateX(-50%);
   width: 90%;
   max-width: 400px;
-  padding: 16px;
+  padding: 24px 16px 16px 16px;
   background: var(--m-surface);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
@@ -255,6 +255,27 @@ body.dark .reader-modern-mobile {
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   z-index: 9999;
   animation: springUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.m-close-options {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.m-close-options:hover {
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 @keyframes springUp {
