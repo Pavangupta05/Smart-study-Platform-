@@ -1,47 +1,55 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
-  Download, 
   Sparkles, 
   ZoomIn, 
   ZoomOut,
-  FileText,
   PenTool,
   Highlighter,
   RotateCcw,
+  Sliders,
+  PanelLeft,
   MousePointer2,
   AlertCircle,
-  Save,
   ChevronRight,
-  Plus,
   Trash2,
   MessageSquare,
-  Wand2,
-  MoreVertical,
   Maximize2,
   Minimize2,
-  PanelRightClose,
-  PanelRight,
-  Printer,
   Type,
   Square,
+  Circle,
+  Image as ImageIcon,
+  ArrowUpRight,
   Eraser,
-  Bookmark,
-  Layers,
   StickyNote,
   X,
-  Maximize,
   Share2,
-  BrainCircuit
+  BrainCircuit,
+  HelpCircle,
+  Link2,
+  Minus,
+  Printer,
+  Layers,
+  Plus,
+  Play,
+  Pause,
+  Headphones,
+  Volume2,
+  Sun,
+  Moon,
+  BookOpen,
+  Cloud
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { notesService, flashcardsService } from "../services/index";
+import { notesService, flashcardsService, tasksService } from "../services/index";
 import "../styles/reader.css";
 import "../styles/reader-mobile.css";
 import "../styles/reader-tablet.css";
 import SlashEditor from "../components/SlashEditor";
+import NotebookPagePanel from "../components/NotebookPagePanel";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
 const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -55,62 +63,202 @@ function Reader({ zenMode, setZenMode }) {
   const [error, setError] = useState(false);
   
   const [pages, setPages] = useState([""]);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0); // Tracks visible page index in viewport
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showPagePanel, setShowPagePanel] = useState(false);
+  const [showLeftRail, setShowLeftRail] = useState(true);
   const [objectUrl, setObjectUrl] = useState(null);
+  // Per-page template overrides (key: pageIdx, value: templateId)
+  const [pageTemplates, setPageTemplates] = useState({});
   
-  // SYNC WITH GLOBAL ZEN MODE
-  useEffect(() => {
-    if (zenMode !== undefined) {
-      // Local state isFocusMode is effectively zenMode
-    }
-  }, [zenMode]);
+  // Reading presets
+  const [readingTheme, setReadingTheme] = useState("light"); // light, sepia, dark
+  const [fontFamily, setFontFamily] = useState("serif"); // serif, sans
+  const [fontSize, setFontSize] = useState(16); // px
+  const [paperStyle, setPaperStyle] = useState("blank"); // blank, ruled, grid, dotted
 
-  const isFocusMode = zenMode;
-  const setIsFocusMode = setZenMode;
-  
-  // BREAKPOINT STATES
+  // Breakpoints
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const isMobile = windowWidth < 768;
-  const isTablet = windowWidth >= 768 && windowWidth < 1024;
-  const isDesktop = windowWidth >= 1024;
 
-  // FEATURE STATES
+  // Features
   const [isSaving, setIsSaving] = useState(false);
+  const [aiWorkspaceMode, setAiWorkspaceMode] = useState("chat"); // chat, summary
   const [summary, setSummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const [isGeneratingCards, setIsGeneratingCards] = useState(false);
-
-  // DRAWING STATES
-  const canvasRef = useRef(null);
+  
+  // Drawing states (Supports vertical multi-canvas layouts)
+  const canvasRefs = useRef({});
+  const fileInputRef = useRef(null);
+  const lastPageAddedRef = useRef(0);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [activeDrawingPageIndex, setActiveDrawingPageIndex] = useState(null);
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
   const [drawHistory, setDrawHistory] = useState({});
-  const [penColor, setPenColor] = useState("#3b82f6");
-  const [strokeWidth, setStrokeWidth] = useState(2);
+  const [penColor, setPenColor] = useState("#000000");
+  const [strokeWidth, setStrokeWidth] = useState(3);
+  
+  // GoodNotes features: Pen presets, snap shapes
+  const [penStyle, setPenStyle] = useState("ballpoint"); // ballpoint, fountain, brush, autosnap
+  const [strokePoints, setStrokePoints] = useState([]);
+  const [canvasSnapshot, setCanvasSnapshot] = useState(null);
+  
+  // Annotation states
   const [notes, setNotes] = useState([]);
-  // Tool options panel visibility decoupled from active tool
-  const [showToolOptions, setShowToolOptions] = useState(false);
-  // Debounce timer ref for sticky notes
-  const noteDebounceRef = useRef({});
+  const [connectors, setConnectors] = useState([]);
+  const [canvasImages, setCanvasImages] = useState([]);
+  const [conceptSourceNoteId, setConceptSourceNoteId] = useState(null);
+  const [activeStickyColor, setActiveStickyColor] = useState("#fef08a");
+  const [textInput, setTextInput] = useState({ show: false, page: 0, x: 0, y: 0, value: "" });
 
-  // CONTEXTUAL TOOLBAR STATE
+  // Custom Pointer Capture drag values
+  const [activeDragNote, setActiveDragNote] = useState(null);
+  const [activeDragImage, setActiveDragImage] = useState(null);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const [noteStartPos, setNoteStartPos] = useState({ x: 0, y: 0 });
+  const [imgStartPos, setImgStartPos] = useState({ x: 0, y: 0 });
+  
+  // Context states for AI Sidebar
+  const [plannerTasks, setPlannerTasks] = useState([]);
+  const [totalFlashcards, setTotalFlashcards] = useState(0);
+  const [aiMessages, setAiMessages] = useState([
+    { role: "assistant", text: "Welcome to your Deep Reading space. Highlight any text to explain/summarize, or ask me questions about this document." }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isAiResponding, setIsAiResponding] = useState(false);
+  const [currentResponseChunk, setCurrentResponseChunk] = useState("");
+
   const [selection, setSelection] = useState({ text: "", x: 0, y: 0, show: false });
+  const [stickyContextMenu, setStickyContextMenu] = useState(null);
 
+  const notesRef = useRef([]);
+  const canvasImagesRef = useRef([]);
+
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
+
+  useEffect(() => {
+    canvasImagesRef.current = canvasImages;
+  }, [canvasImages]);
+
+  // Ambient Focus Mode (Zen Reading)
+  const [zenTimer, setZenTimer] = useState(25 * 60);
+  const [zenTimerActive, setZenTimerActive] = useState(false);
+  const [ambientAudioActive, setAmbientAudioActive] = useState(false);
+  
+  useEffect(() => {
+    let interval = null;
+    if (zenMode && zenTimerActive && zenTimer > 0) {
+      interval = setInterval(() => setZenTimer(t => t - 1), 1000);
+    } else if (zenTimer === 0) {
+      setZenTimerActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [zenMode, zenTimerActive, zenTimer]);
+
+  const audioContextRef = useRef(null);
+  const audioSourceRef = useRef(null);
+
+  useEffect(() => {
+    if (ambientAudioActive && zenMode) {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContextClass();
+        audioContextRef.current = ctx;
+
+        const bufferSize = 2 * ctx.sampleRate;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        const whiteNoise = ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        whiteNoise.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 350; 
+
+        const bandpass = ctx.createBiquadFilter();
+        bandpass.type = "bandpass";
+        bandpass.frequency.value = 900;
+        bandpass.Q.value = 1.2;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = 0.12; 
+
+        const gainBP = ctx.createGain();
+        gainBP.gain.value = 0.03;
+
+        whiteNoise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        whiteNoise.connect(bandpass);
+        bandpass.connect(gainBP);
+        gainBP.connect(ctx.destination);
+
+        whiteNoise.start();
+        audioSourceRef.current = whiteNoise;
+      } catch (err) {
+        console.error("Failed to play synthesized rain sound", err);
+      }
+    } else {
+      if (audioSourceRef.current) {
+        try { audioSourceRef.current.stop(); } catch(e){}
+        audioSourceRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch(e){}
+        audioContextRef.current = null;
+      }
+    }
+
+    return () => {
+      if (audioSourceRef.current) {
+        try { audioSourceRef.current.stop(); } catch(e){}
+        audioSourceRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch(e){}
+        audioContextRef.current = null;
+      }
+    };
+  }, [ambientAudioActive, zenMode]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Resize listener
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Text Selection Listener
+  // Fetch planners
+  useEffect(() => {
+    tasksService.getAll()
+      .then(res => setPlannerTasks(res.data?.tasks || []))
+      .catch(() => {});
+    flashcardsService.getAll()
+      .then(res => setTotalFlashcards(res.data?.flashcards?.length || 0))
+      .catch(() => {});
+  }, []);
+
+  // Highlight selection listener
   useEffect(() => {
     const handleSelection = () => {
       const sel = window.getSelection();
       const text = sel.toString().trim();
       
-      // Don't show if active tool is not select
       if (text.length > 0 && activeTool === "select") {
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
@@ -118,7 +266,7 @@ function Reader({ zenMode, setZenMode }) {
         setSelection({
           text,
           x: rect.left + (rect.width / 2),
-          y: rect.top - 8,
+          y: rect.top - 12 + window.scrollY,
           show: true
         });
       } else {
@@ -130,13 +278,13 @@ function Reader({ zenMode, setZenMode }) {
 
     document.addEventListener("mouseup", handleSelection);
     document.addEventListener("touchend", handleSelection);
-    
     return () => {
       document.removeEventListener("mouseup", handleSelection);
       document.removeEventListener("touchend", handleSelection);
     };
   }, [activeTool, selection.show]);
 
+  // Load Note contents
   useEffect(() => {
     notesService.getById(id)
       .then(res => {
@@ -147,21 +295,24 @@ function Reader({ zenMode, setZenMode }) {
           else setPages([found.content || ""]);
           setDrawHistory(found.drawHistory || {});
           setNotes(found.notes || []);
+          setConnectors(found.connectors || []);
+          setCanvasImages(found.canvasImages || []);
         } else {
           setError(true);
         }
       })
-      .catch(err => {
-        // Fallback for mock IDs like "0" if in mock mode
+      .catch(() => {
         const saved = localStorage.getItem("starNote_files");
         if (saved) {
           const files = JSON.parse(saved);
-          const found = files[parseInt(id)] || files.find(f => f._id === id || f.id === id);
+          const found = files.find(f => f._id === id || f.id === id);
           if (found) {
             setFile(found);
             setPages(found.pages || [found.content || ""]);
             setDrawHistory(found.drawHistory || {});
             setNotes(found.notes || []);
+            setConnectors(found.connectors || []);
+            setCanvasImages(found.canvasImages || []);
             return;
           }
         }
@@ -169,12 +320,11 @@ function Reader({ zenMode, setZenMode }) {
       });
   }, [id]);
 
-  // Convert Base64 blobUrl to Object URL or use static backend URL
+  // PDF blob fetcher
   useEffect(() => {
     if (file && file.blobUrl) {
       if (file.blobUrl.startsWith("data:")) {
         try {
-          // Fetch API can parse data URIs into Blobs
           fetch(file.blobUrl)
             .then(res => res.blob())
             .then(blob => {
@@ -185,7 +335,6 @@ function Reader({ zenMode, setZenMode }) {
           console.error("Failed to convert base64 to blob:", e);
         }
       } else if (file.blobUrl.startsWith("/uploads/")) {
-        // Build the backend URL dynamically
         const backendUrl = import.meta.env.VITE_API_URL 
           ? import.meta.env.VITE_API_URL.replace("/api", "") 
           : "http://localhost:5000";
@@ -199,212 +348,620 @@ function Reader({ zenMode, setZenMode }) {
     };
   }, [file]);
 
-  // FEATURE HANDLERS
-  const addNote = () => {
-    const newNote = { id: Date.now(), text: "", page: currentPage, date: new Date().toLocaleTimeString() };
-    const updated = [...notes, newNote];
-    setNotes(updated);
-    saveFileChanges({ notes: updated });
-  };
-
-  // Debounced note update — only fires save 600ms after user stops typing
-  const updateNote = useCallback((noteId, newText) => {
-    // Optimistic UI update immediately
-    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: newText } : n));
-
-    // Clear existing debounce for this note
-    if (noteDebounceRef.current[noteId]) {
-      clearTimeout(noteDebounceRef.current[noteId]);
-    }
-    // Schedule save after 600ms of inactivity
-    noteDebounceRef.current[noteId] = setTimeout(() => {
-      setNotes(current => {
-        saveFileChanges({ notes: current });
-        return current;
-      });
-    }, 600);
-  }, []);
-
-  // Flush note saves immediately on blur
-  const flushNoteOnBlur = useCallback((noteId) => {
-    if (noteDebounceRef.current[noteId]) {
-      clearTimeout(noteDebounceRef.current[noteId]);
-      delete noteDebounceRef.current[noteId];
-    }
-    setNotes(current => {
-      saveFileChanges({ notes: current });
-      return current;
-    });
-  }, []);
-
-  const deleteNote = (noteId) => {
-    if (noteDebounceRef.current[noteId]) {
-      clearTimeout(noteDebounceRef.current[noteId]);
-      delete noteDebounceRef.current[noteId];
-    }
-    const updated = notes.filter(n => n.id !== noteId);
-    setNotes(updated);
-    saveFileChanges({ notes: updated });
-  };
+  // Redraw Canvas content for all canvases when drawHistory is updated or mounted
   useEffect(() => {
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const historyStack = drawHistory[currentPage] || [];
-      if (historyStack.length > 0) {
-        const img = new Image();
-        img.src = historyStack[historyStack.length - 1];
-        img.onload = () => ctx.drawImage(img, 0, 0);
+    pages.forEach((_, idx) => {
+      const canvas = canvasRefs.current[idx];
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const historyStack = drawHistory[idx] || [];
+        if (historyStack.length > 0) {
+          const img = new Image();
+          img.src = historyStack[historyStack.length - 1];
+          img.onload = () => ctx.drawImage(img, 0, 0);
+        }
       }
-    }
-  }, [currentPage, drawHistory]);
+    });
+  }, [pages, drawHistory]);
 
   const saveFileChanges = async (updates) => {
+    setIsSaving(true);
     try {
       const res = await notesService.update(id, updates);
       setFile(res.data.note);
     } catch (e) {
-      console.error("Failed to save changes:", e);
-      // Fallback optimistic update for local
       setFile(prev => ({ ...prev, ...updates }));
     }
+    setIsSaving(false);
   };
 
-  const handleSummarize = async () => {
-    if (isSummarizing) return;
-    setIsSummarizing(true);
-    try {
-      const prompt = `Summarize this text in 3-4 sentences. Focus on the core principles: ${(file?.content || pages.join("\n")).substring(0, 4000)}`;
-      const result = await aiModel.generateContent(prompt);
-      setSummary(result.response.text());
-    } catch (err) {
-      console.error(err);
-      setSummary("Failed to generate summary. Please try again.");
+  // Sticky Note Pointer Down
+  const handleStickyPointerDown = (note, e) => {
+    if (activeTool !== 'select') return;
+    e.stopPropagation();
+    e.target.setPointerCapture(e.pointerId);
+    setActiveDragNote(note.id);
+    setDragStartPos({ x: e.clientX, y: e.clientY });
+    setNoteStartPos({ x: note.x, y: note.y });
+  };
+
+  // Sticky Note Pointer Move
+  const handleStickyPointerMove = (noteId, e) => {
+    if (activeDragNote !== noteId) return;
+    e.stopPropagation();
+    
+    // Find parent page wrapper to get bounding dimensions
+    const pageWrapper = e.currentTarget.closest(".document-wrapper-modern");
+    if (!pageWrapper) return;
+    
+    const rect = pageWrapper.getBoundingClientRect();
+    const deltaX = e.clientX - dragStartPos.x;
+    const deltaY = e.clientY - dragStartPos.y;
+    
+    const deltaPercentX = (deltaX / rect.width) * 100;
+    const deltaPercentY = (deltaY / rect.height) * 100;
+    
+    let newX = noteStartPos.x + deltaPercentX;
+    let newY = noteStartPos.y + deltaPercentY;
+    
+    newX = Math.max(0, Math.min(100 - 15, newX));
+    newY = Math.max(0, Math.min(100 - 10, newY));
+    
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, x: newX, y: newY } : n));
+  };
+
+  // Sticky Note Pointer Up
+  const handleStickyPointerUp = (noteId, e) => {
+    if (activeDragNote !== noteId) return;
+    e.stopPropagation();
+    e.target.releasePointerCapture(e.pointerId);
+    setActiveDragNote(null);
+    saveFileChanges({ notes: notesRef.current });
+  };
+
+  // Image Dragging Handlers
+  const handleImagePointerDown = (img, e) => {
+    if (activeTool !== 'select') return;
+    e.stopPropagation();
+    e.target.setPointerCapture(e.pointerId);
+    setActiveDragImage(img.id);
+    setDragStartPos({ x: e.clientX, y: e.clientY });
+    setImgStartPos({ x: img.x, y: img.y });
+  };
+
+  const handleImagePointerMove = (imgId, e) => {
+    if (activeDragImage !== imgId) return;
+    e.stopPropagation();
+
+    const pageWrapper = e.currentTarget.closest(".document-wrapper-modern");
+    if (!pageWrapper) return;
+
+    const rect = pageWrapper.getBoundingClientRect();
+    const deltaX = e.clientX - dragStartPos.x;
+    const deltaY = e.clientY - dragStartPos.y;
+
+    const deltaPercentX = (deltaX / rect.width) * 100;
+    const deltaPercentY = (deltaY / rect.height) * 100;
+
+    let newX = imgStartPos.x + deltaPercentX;
+    let newY = imgStartPos.y + deltaPercentY;
+
+    newX = Math.max(0, Math.min(80, newX));
+    newY = Math.max(0, Math.min(85, newY));
+
+    setCanvasImages(prev => prev.map(img => img.id === imgId ? { ...img, x: newX, y: newY } : img));
+  };
+
+  const handleImagePointerUp = (imgId, e) => {
+    if (activeDragImage !== imgId) return;
+    e.stopPropagation();
+    e.target.releasePointerCapture(e.pointerId);
+    setActiveDragImage(null);
+    saveFileChanges({ canvasImages: canvasImagesRef.current });
+  };
+
+  const handleImageUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
-    setIsSummarizing(false);
   };
 
-  const handleGenerateFlashcards = async () => {
-    if (isGeneratingCards) return;
-    setIsGeneratingCards(true);
-    try {
-      const content = (file?.content || pages.join("\n")).substring(0, 5000);
-      const prompt = `Generate exactly 5 flashcards from this text. Return ONLY a valid JSON array of objects with keys "front" and "back". Do not use markdown fences. Text: ${content}`;
-      const result = await aiModel.generateContent(prompt);
-      const text = result.response.text().trim();
-      
-      const match = text.match(/\[.*\]/s);
-      if (match) {
-        const cards = JSON.parse(match[0]);
-        await flashcardsService.bulkCreate(cards, file?.name || "Auto-Generated Deck");
-        alert("✨ Flashcards generated and saved! Go to the Flashcards page to study them.");
-      } else {
-        alert("Failed to parse AI output.");
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const newImg = {
+        id: Date.now(),
+        url: reader.result,
+        page: currentPage,
+        x: 35,
+        y: 30,
+        width: 180,
+        height: 140
+      };
+      const updated = [...canvasImages, newImg];
+      setCanvasImages(updated);
+      saveFileChanges({ canvasImages: updated });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = null;
+  };
+
+  const handleDeleteCanvasImage = (imgId) => {
+    const updated = canvasImages.filter(img => img.id !== imgId);
+    setCanvasImages(updated);
+    saveFileChanges({ canvasImages: updated });
+  };
+
+  // Concept Mapping Connections & Context Menu
+  const handleStickyNoteClick = (note, e) => {
+    if (activeTool === "select") {
+      if (e && e.currentTarget) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setStickyContextMenu({
+          noteId: note.id,
+          x: rect.left + (rect.width / 2),
+          y: rect.top - 40,
+          text: note.text,
+          page: note.page,
+          color: note.color,
+          noteX: note.x,
+          noteY: note.y
+        });
       }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to generate flashcards.");
+      return;
     }
-    setIsGeneratingCards(false);
+
+    if (activeTool !== "concept") return;
+
+    if (!conceptSourceNoteId) {
+      setConceptSourceNoteId(note.id);
+    } else {
+      if (conceptSourceNoteId !== note.id) {
+        const newConnector = {
+          id: Date.now(),
+          fromId: conceptSourceNoteId,
+          toId: note.id,
+          color: penColor,
+          page: currentPage
+        };
+        const updatedConnectors = [...connectors, newConnector];
+        setConnectors(updatedConnectors);
+        saveFileChanges({ connectors: updatedConnectors });
+      }
+      setConceptSourceNoteId(null);
+    }
   };
 
-  const handleContextAction = async (action) => {
+  const handleClearConnectors = () => {
+    setConnectors([]);
+    saveFileChanges({ connectors: [] });
+  };
+
+  // Page Navigation scrolling
+  const jumpToPage = (index) => {
+    const el = document.getElementById(`reader-page-container-${index}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setCurrentPage(index);
+    }
+  };
+
+  // Scroll viewport observer (updates currentPage header dynamically)
+  const handleViewportScroll = (e) => {
+    const viewport = e.target;
+    const pageElements = viewport.querySelectorAll(".document-wrapper-modern");
+    let currentVisible = 0;
+    let minDistance = Infinity;
+    
+    pageElements.forEach((el, index) => {
+      const rect = el.getBoundingClientRect();
+      const distance = Math.abs(rect.top - 80); // 80px top header offset
+      if (distance < minDistance) {
+        minDistance = distance;
+        currentVisible = index;
+      }
+    });
+    
+    
+    setCurrentPage(currentVisible);
+  };
+
+  // ── Advanced Page Operations (GoodNotes/Notion style) ────────────────────
+
+  // Add a page at position ("before" | "after") a given index, with a template
+  const handleAddPage = (afterIdx, position = "after", templateId = "blank") => {
+    if (file?.blobUrl) return;
+    
+    // Default to the last page if not provided by simple buttons
+    const targetIdx = typeof afterIdx === 'number' && !isNaN(afterIdx) ? afterIdx : pages.length - 1;
+    const insertAt = position === "after" ? targetIdx + 1 : targetIdx;
+    const newPage = { __template: templateId, __title: `Page ${pages.length + 1}` };
+    const newPages = [...pages];
+    newPages.splice(insertAt, 0, newPage);
+    setPages(newPages);
+
+    // Shift drawHistory, notes, connectors at/after insertAt
+    const newDH = {};
+    Object.keys(drawHistory).forEach(k => {
+      const i = parseInt(k);
+      newDH[i < insertAt ? i : i + 1] = drawHistory[k];
+    });
+    setDrawHistory(newDH);
+
+    const shiftedNotes = notes.map(n => n.page >= insertAt ? { ...n, page: n.page + 1 } : n);
+    const shiftedConns = connectors.map(c => c.page >= insertAt ? { ...c, page: c.page + 1 } : c);
+    setNotes(shiftedNotes);
+    setConnectors(shiftedConns);
+
+    saveFileChanges({ pages: newPages, drawHistory: newDH, notes: shiftedNotes, connectors: shiftedConns });
+    setTimeout(() => jumpToPage(insertAt), 120);
+  };
+
+  // Duplicate a page (copies text content and drawings)
+  const handleDuplicatePage = (pageIdx) => {
+    if (file?.blobUrl) return;
+    const srcPage = pages[pageIdx];
+    const insertAt = pageIdx + 1;
+    const newPage = typeof srcPage === 'object'
+      ? { ...srcPage, __title: `${srcPage.__title || 'Page'} (copy)` }
+      : srcPage;
+    const newPages = [...pages];
+    newPages.splice(insertAt, 0, newPage);
+    setPages(newPages);
+
+    const newDH = {};
+    Object.keys(drawHistory).forEach(k => {
+      const i = parseInt(k);
+      if (i < insertAt) newDH[i] = drawHistory[k];
+      else newDH[i + 1] = drawHistory[k];
+    });
+    if (drawHistory[pageIdx]) newDH[insertAt] = drawHistory[pageIdx];
+    setDrawHistory(newDH);
+
+    const shiftedNotes = notes.map(n => n.page >= insertAt ? { ...n, page: n.page + 1 } : n);
+    const clonedNotes = notes.filter(n => n.page === pageIdx).map(n => ({ ...n, id: Date.now() + Math.random(), page: insertAt }));
+    const allNotes = [...shiftedNotes, ...clonedNotes];
+    setNotes(allNotes);
+
+    const shiftedConns = connectors.map(c => c.page >= insertAt ? { ...c, page: c.page + 1 } : c);
+    setConnectors(shiftedConns);
+
+    saveFileChanges({ pages: newPages, drawHistory: newDH, notes: allNotes, connectors: shiftedConns });
+    setTimeout(() => jumpToPage(insertAt), 120);
+  };
+
+  // Move page from one index to another (drag-to-reorder)
+  const handleMovePage = (fromIdx, toIdx) => {
+    if (fromIdx === toIdx || file?.blobUrl) return;
+    const newPages = [...pages];
+    const [moved] = newPages.splice(fromIdx, 1);
+    newPages.splice(toIdx, 0, moved);
+    setPages(newPages);
+
+    // Re-map draw history
+    const reorder = (arr) => {
+      const copy = { ...arr };
+      const moved = copy[fromIdx];
+      const newMap = {};
+      Object.keys(copy).forEach(k => {
+        let i = parseInt(k);
+        if (i === fromIdx) return;
+        if (fromIdx < toIdx) { if (i > fromIdx && i <= toIdx) i--; }
+        else { if (i >= toIdx && i < fromIdx) i++; }
+        newMap[i] = copy[k];
+      });
+      if (moved) newMap[toIdx] = moved;
+      return newMap;
+    };
+    const newDH = reorder(drawHistory);
+    setDrawHistory(newDH);
+
+    const reIdx = (page) => {
+      if (page === fromIdx) return toIdx;
+      if (fromIdx < toIdx && page > fromIdx && page <= toIdx) return page - 1;
+      if (fromIdx > toIdx && page >= toIdx && page < fromIdx) return page + 1;
+      return page;
+    };
+    const reNotes = notes.map(n => ({ ...n, page: reIdx(n.page) }));
+    const reConns = connectors.map(c => ({ ...c, page: reIdx(c.page) }));
+    setNotes(reNotes);
+    setConnectors(reConns);
+
+    saveFileChanges({ pages: newPages, drawHistory: newDH, notes: reNotes, connectors: reConns });
+    setCurrentPage(toIdx);
+  };
+
+  // Change template of an existing page
+  const handleSetPageTemplate = (pageIdx, templateId) => {
+    if (file?.blobUrl) return;
+    const newPages = pages.map((p, i) => {
+      if (i !== pageIdx) return p;
+      return typeof p === 'object' ? { ...p, __template: templateId } : { __template: templateId, __title: `Page ${i + 1}` };
+    });
+    setPages(newPages);
+    setPageTemplates(prev => ({ ...prev, [pageIdx]: templateId }));
+    saveFileChanges({ pages: newPages });
+  };
+
+  // Delete specific page (index-shifted)
+  const handleDeletePage = (pageIdx) => {
+    if (file?.blobUrl || pages.length <= 1) return;
+    const newPages = pages.filter((_, i) => i !== pageIdx);
+    setPages(newPages);
+    const newDH = {};
+    Object.keys(drawHistory).forEach(k => {
+      const i = parseInt(k);
+      if (i < pageIdx) newDH[i] = drawHistory[k];
+      else if (i > pageIdx) newDH[i - 1] = drawHistory[k];
+    });
+    setDrawHistory(newDH);
+    const newNotes = notes.filter(n => n.page !== pageIdx).map(n => n.page > pageIdx ? { ...n, page: n.page - 1 } : n);
+    const newConns = connectors.filter(c => c.page !== pageIdx).map(c => c.page > pageIdx ? { ...c, page: c.page - 1 } : c);
+    setNotes(newNotes); setConnectors(newConns);
+    saveFileChanges({ pages: newPages, drawHistory: newDH, notes: newNotes, connectors: newConns });
+    setCurrentPage(Math.max(0, pageIdx - 1));
+  };
+
+  // Sticky Note Operations
+  const handleAddStickyClick = (pageIdx, e) => {
+    if (activeTool !== "sticky" && activeTool !== "text") return;
+
+    // Find bounding box coordinates of the specific clicked page
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    if (activeTool === "sticky") {
+      const newNote = {
+        id: Date.now(),
+        text: "",
+        page: pageIdx,
+        x,
+        y,
+        color: activeStickyColor,
+        date: new Date().toLocaleTimeString()
+      };
+
+      const updatedNotes = [...notes, newNote];
+      setNotes(updatedNotes);
+      saveFileChanges({ notes: updatedNotes });
+      setActiveTool("select"); 
+    } else if (activeTool === "text") {
+      setTextInput({
+        show: true,
+        page: pageIdx,
+        x,
+        y,
+        value: ""
+      });
+    }
+  };
+
+  const handleUpdateStickyText = (noteId, text) => {
+    const updatedNotes = notes.map(n => n.id === noteId ? { ...n, text } : n);
+    setNotes(updatedNotes);
+  };
+
+  const handleDeleteSticky = (noteId) => {
+    const updatedNotes = notes.filter(n => n.id !== noteId);
+    const updatedConnectors = connectors.filter(c => c.fromId !== noteId && c.toId !== noteId);
+    setNotes(updatedNotes);
+    setConnectors(updatedConnectors);
+    saveFileChanges({ notes: updatedNotes, connectors: updatedConnectors });
+  };
+
+  const handleContextMenuAction = (action, color = null) => {
+    if (!stickyContextMenu) return;
+    const { noteId, text, page, noteX, noteY, color: currColor } = stickyContextMenu;
+
+    if (action === "copy") {
+      navigator.clipboard.writeText(text);
+    } else if (action === "cut") {
+      navigator.clipboard.writeText(text);
+      handleDeleteSticky(noteId);
+    } else if (action === "duplicate") {
+      const newNote = {
+        id: Date.now(),
+        text,
+        page,
+        x: noteX + 2,
+        y: noteY + 2,
+        color: currColor,
+        date: new Date().toLocaleTimeString()
+      };
+      const updatedNotes = [...notes, newNote];
+      setNotes(updatedNotes);
+      saveFileChanges({ notes: updatedNotes });
+    } else if (action === "delete") {
+      handleDeleteSticky(noteId);
+    } else if (action === "color" && color) {
+      const updatedNotes = notes.map(n => n.id === noteId ? { ...n, color } : n);
+      setNotes(updatedNotes);
+      saveFileChanges({ notes: updatedNotes });
+      setActiveStickyColor(color);
+    }
+    
+    setStickyContextMenu(null);
+  };
+
+  // Text Tool Canvas committer
+  const commitCanvasText = () => {
+    if (!textInput.value.trim() || textInput.page === undefined) {
+      setTextInput({ show: false, page: 0, x: 0, y: 0, value: "" });
+      return;
+    }
+
+    const pageIdx = textInput.page;
+    const canvas = canvasRefs.current[pageIdx];
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    const x = (textInput.x / 100) * canvas.width;
+    const y = (textInput.y / 100) * canvas.height;
+
+    ctx.font = "bold 20px Inter, system-ui, sans-serif";
+    ctx.fillStyle = penColor;
+    ctx.fillText(textInput.value, x, y);
+
+    const dataUrl = canvas.toDataURL();
+    setDrawHistory(prev => {
+      const pageHistory = prev[pageIdx] || [];
+      const newHistory = { ...prev, [pageIdx]: [...pageHistory, dataUrl] };
+      saveFileChanges({ drawHistory: newHistory });
+      return newHistory;
+    });
+
+    setTextInput({ show: false, page: 0, x: 0, y: 0, value: "" });
+  };
+
+  // AI completions
+  const handleAiQuery = async (queryText, forceSystemContext = "") => {
+    if (isAiResponding || !queryText.trim()) return;
+    
+    setIsAiResponding(true);
+    setCurrentResponseChunk("");
+    
+    const newUserMessage = { role: "user", text: queryText };
+    setAiMessages(prev => [...prev, newUserMessage]);
+    setChatInput("");
+
+    try {
+      const selectionContext = selection.text ? `User selected text: "${selection.text}"` : "";
+      const docContext = file?.content || pages[currentPage] || "";
+      const pageInfo = `Reading page ${currentPage + 1} of ${pages.length}.`;
+      const tasksInfo = plannerTasks.length ? `Planner tasks today: ${plannerTasks.slice(0, 3).map(t => t.title).join(", ")}` : "";
+      
+      const systemPrompt = `You are a calm, highly capable AI tutor assisting a student in a focused study session.
+Context info:
+- Active Document: "${file?.name || 'StarNote study note'}"
+- Location: ${pageInfo}
+- Document Text (current page context): "${docContext.substring(0, 2000)}"
+${selectionContext ? `- Highlighted Text: "${selectionContext}"` : ""}
+${tasksInfo ? `- Current Study Agenda: "${tasksInfo}"` : ""}
+${forceSystemContext ? `- Special Instruction: ${forceSystemContext}` : ""}
+
+Be precise, highly informative, use clean formatting with bold headings and bullet points. Stream your output.`;
+
+      const messagesForGemini = [
+        { role: "user", parts: [{ text: `${systemPrompt}\n\nUser Question: ${queryText}` }] }
+      ];
+
+      const result = await aiModel.generateContentStream({
+        contents: messagesForGemini,
+      });
+
+      let fullText = "";
+      for await (const chunk of result.stream) {
+        const text = chunk.text();
+        fullText += text;
+        setCurrentResponseChunk(fullText);
+      }
+
+      setAiMessages(prev => [...prev, { role: "assistant", text: fullText }]);
+      setCurrentResponseChunk("");
+    } catch (err) {
+      setAiMessages(prev => [...prev, { role: "assistant", text: "I encountered an error preparing the contextual response. Please try again." }]);
+    }
+    setIsAiResponding(false);
+  };
+
+  const handleFloatingToolbarAction = (action) => {
     const text = selection.text;
     setSelection(s => ({ ...s, show: false }));
     window.getSelection().removeAllRanges();
 
-    if (action === "summarize" || action === "explain") {
+    if (action === "explain") {
+      setAiWorkspaceMode("chat");
       setShowSidebar(true);
-      setIsSummarizing(true);
-      try {
-        const isExplain = action === "explain";
-        const prompt = isExplain 
-          ? `Explain this concept simply like I am a beginner. Use bullet points if necessary:\n\n"${text}"`
-          : `Summarize this specific text concisely in 2-3 sentences:\n\n"${text}"`;
-        
-        const result = await aiModel.generateContent(prompt);
-        setSummary(result.response.text());
-      } catch (err) {
-        setSummary("Failed to generate response. Please try again.");
-      }
-      setIsSummarizing(false);
-    } else if (action === "flashcard") {
-      setIsGeneratingCards(true);
-      try {
-        const prompt = `Create exactly 1 flashcard from this text. Return ONLY a valid JSON array with 1 object containing keys "front" and "back". Text: "${text}"`;
-        const result = await aiModel.generateContent(prompt);
-        const match = result.response.text().match(/\[.*\]/s);
-        if (match) {
-          const cards = JSON.parse(match[0]);
-          await flashcardsService.bulkCreate(cards, file?.name || "Contextual Cards");
-          alert("✨ Flashcard generated and saved!");
-        }
-      } catch (err) {
-        alert("Failed to generate flashcard.");
-      }
-      setIsGeneratingCards(false);
+      handleAiQuery(`Explain this concept in details: "${text}"`, "Explain this clearly with structural breakdown.");
+    } else if (action === "summarize") {
+      setAiWorkspaceMode("chat");
+      setShowSidebar(true);
+      handleAiQuery(`Summarize this text: "${text}"`, "Create a concise summary in bullet points.");
+    } else if (action === "quiz") {
+      setAiWorkspaceMode("chat");
+      setShowSidebar(true);
+      handleAiQuery(`Create a quick practice question about: "${text}"`, "Ask a quiz question, then offer the solution under a hidden spoiler format.");
+    } else if (action === "notes") {
+      const newSticky = {
+        id: Date.now(),
+        text: `Highlight:\n"${text}"`,
+        page: currentPage,
+        x: 40,
+        y: 40,
+        color: "#bfdbfe", 
+        date: new Date().toLocaleTimeString()
+      };
+      const updated = [...notes, newSticky];
+      setNotes(updated);
+      saveFileChanges({ notes: updated });
     }
   };
 
-  const toggleTool = (tool) => {
-    setActiveTool(prev => {
-      if (prev === tool) {
-        setShowToolOptions(false);
-        return "select";
-      }
-      // Show options panel if it's a drawing tool
-      if (['pen', 'highlighter', 'shape', 'circle', 'line'].includes(tool)) {
-        setShowToolOptions(true);
-      } else {
-        setShowToolOptions(false);
-      }
-      return tool;
-    });
-  };
-
-  const startDrawing = (e) => {
-    if (activeTool === "select") return;
-    setIsDrawing(true);
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+  // Drawing Engine helpers
+  const getCoordinates = (pageIdx, e) => {
+    const canvas = canvasRefs.current[pageIdx];
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = (clientX - rect.left) * (canvas.width / rect.width);
-    const y = (clientY - rect.top) * (canvas.height / rect.height);
     
+    return {
+      x: ((clientX - rect.left) / rect.width) * canvas.width,
+      y: ((clientY - rect.top) / rect.height) * canvas.height
+    };
+  };
+
+  const startDrawing = (pageIdx, e) => {
+    const drawTools = ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'];
+    if (!drawTools.includes(activeTool)) return;
+    setIsDrawing(true);
+    setActiveDrawingPageIndex(pageIdx);
+    
+    const canvas = canvasRefs.current[pageIdx];
+    if (!canvas) return;
+    
+    const { x, y } = getCoordinates(pageIdx, e);
     setStartX(x);
     setStartY(y);
+    setStrokePoints([{ x, y }]);
+    setCanvasSnapshot(canvas.toDataURL());
+
+    const ctx = canvas.getContext("2d");
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.strokeStyle = activeTool === "highlighter" ? `${penColor}44` : penColor;
-    ctx.lineWidth = activeTool === "highlighter" ? strokeWidth * 4 : strokeWidth;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    if (activeTool === "eraser") {
+
+    if (activeTool === "highlighter") {
+      ctx.strokeStyle = `${penColor}33`; 
+      ctx.lineWidth = strokeWidth * 4;
+      ctx.globalCompositeOperation = "source-over";
+    } else if (activeTool === "eraser") {
       ctx.globalCompositeOperation = "destination-out";
-      ctx.lineWidth = 20;
-    } else if (activeTool === "highlighter") {
-      ctx.globalCompositeOperation = "multiply";
+      ctx.lineWidth = strokeWidth * 6;
     } else {
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = strokeWidth;
       ctx.globalCompositeOperation = "source-over";
     }
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
   };
 
   const draw = (e) => {
-    if (!isDrawing || activeTool === "select" || activeTool === "text") return;
-    const canvas = canvasRef.current;
+    if (!isDrawing || activeDrawingPageIndex === null) return;
+    const canvas = canvasRefs.current[activeDrawingPageIndex];
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = (clientX - rect.left) * (canvas.width / rect.width);
-    const y = (clientY - rect.top) * (canvas.height / rect.height);
-    
-    const isShape = ["shape", "circle", "line"].includes(activeTool);
+    const { x, y } = getCoordinates(activeDrawingPageIndex, e);
+
+    const isShape = ["shape", "circle", "line", "arrow"].includes(activeTool);
     if (isShape) {
-      const historyStack = drawHistory[currentPage] || [];
+      const historyStack = drawHistory[activeDrawingPageIndex] || [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (historyStack.length > 0) {
         const img = new Image();
@@ -415,28 +972,181 @@ function Reader({ zenMode, setZenMode }) {
       ctx.lineWidth = strokeWidth;
       ctx.strokeStyle = penColor;
 
-      if (activeTool === "shape") ctx.strokeRect(startX, startY, x - startX, y - startY);
-      else if (activeTool === "circle") {
+      if (activeTool === "shape") {
+        ctx.strokeRect(startX, startY, x - startX, y - startY);
+      } else if (activeTool === "circle") {
         const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
         ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
         ctx.stroke();
+      } else if (activeTool === "line") {
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      } else if (activeTool === "arrow") {
+        drawArrow(ctx, startX, startY, x, y);
       }
-      else if (activeTool === "line") { ctx.moveTo(startX, startY); ctx.lineTo(x, y); ctx.stroke(); }
     } else {
-      ctx.lineTo(x, y);
+      if (activeTool === "highlighter") {
+        ctx.strokeStyle = `${penColor}33`;
+        ctx.lineWidth = strokeWidth * 4;
+        ctx.globalCompositeOperation = "source-over";
+      } else if (activeTool === "eraser") {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.lineWidth = strokeWidth * 6;
+      } else {
+        ctx.strokeStyle = penColor;
+        ctx.globalCompositeOperation = "source-over";
+        if (penStyle !== "ballpoint" && penStyle !== "autosnap") {
+          let currentWidth = strokeWidth;
+          const pressure = e.pressure !== undefined && e.pressure > 0 ? e.pressure : 0.5;
+          if (penStyle === "fountain") {
+            currentWidth = strokeWidth * (0.6 + pressure * 0.8);
+          } else if (penStyle === "brush") {
+            currentWidth = strokeWidth * (0.3 + pressure * 1.5);
+          }
+          ctx.lineWidth = currentWidth;
+        } else {
+          ctx.lineWidth = strokeWidth;
+        }
+      }
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Smooth path using midpoints between consecutive points
+      const points = [...strokePoints, { x, y }];
+      setStrokePoints(points);
+
+      if (points.length >= 2) {
+        const p1 = points[points.length - 2];
+        const p2 = points[points.length - 1];
+        
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        
+        // Use midpoint to smooth line transition
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        
+        ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
+        ctx.stroke();
+      } else {
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+    }
+  };
+
+  const drawArrow = (ctx, fromX, fromY, toX, toY) => {
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - 15 * Math.cos(angle - Math.PI / 6), toY - 15 * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(toX - 15 * Math.cos(angle + Math.PI / 6), toY - 15 * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fillStyle = penColor;
+    ctx.fill();
+  };
+
+  // Snaps freehand stroke shape outlines into geometrical shapes
+  const detectAndDrawShape = (ctx, points) => {
+    if (points.length < 6) return;
+    const start = points[0];
+    const end = points[points.length - 1];
+    
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    points.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    });
+    
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const cx = minX + width / 2;
+    const cy = minY + height / 2;
+    
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const endDist = Math.sqrt(dx * dx + dy * dy);
+    
+    let sumRadius = 0;
+    points.forEach(p => {
+      const rx = p.x - cx;
+      const ry = p.y - cy;
+      sumRadius += Math.sqrt(rx * rx + ry * ry);
+    });
+    const avgRadius = sumRadius / points.length;
+    
+    let varRadius = 0;
+    points.forEach(p => {
+      const rx = p.x - cx;
+      const ry = p.y - cy;
+      const r = Math.sqrt(rx * rx + ry * ry);
+      varRadius += Math.pow(r - avgRadius, 2);
+    });
+    const stdDevRadius = Math.sqrt(varRadius / points.length);
+    const circularity = stdDevRadius / avgRadius; 
+    
+    ctx.beginPath();
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = strokeWidth;
+
+    if (endDist < 60) {
+      if (circularity < 0.18) {
+        ctx.arc(cx, cy, avgRadius, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(minX, minY, width, height);
+      }
+    } else {
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
       ctx.stroke();
     }
   };
 
   const stopDrawing = () => {
-    if (!isDrawing) return;
+    if (!isDrawing || activeDrawingPageIndex === null) return;
     setIsDrawing(false);
-    const canvas = canvasRef.current;
+    const canvas = canvasRefs.current[activeDrawingPageIndex];
+    if (!canvas) {
+      setActiveDrawingPageIndex(null);
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+
+    if (activeTool === "pen" && penStyle === "autosnap") {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (canvasSnapshot) {
+        const img = new Image();
+        img.src = canvasSnapshot;
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0);
+          detectAndDrawShape(ctx, strokePoints);
+          commitCanvasState(activeDrawingPageIndex);
+          setActiveDrawingPageIndex(null);
+        };
+      } else {
+        setActiveDrawingPageIndex(null);
+      }
+    } else {
+      commitCanvasState(activeDrawingPageIndex);
+      setActiveDrawingPageIndex(null);
+    }
+  };
+
+  const commitCanvasState = (pageIdx) => {
+    const canvas = canvasRefs.current[pageIdx];
     if (!canvas) return;
     const dataUrl = canvas.toDataURL();
     setDrawHistory(prev => {
-      const pageHistory = prev[currentPage] || [];
-      const newHistory = { ...prev, [currentPage]: [...pageHistory, dataUrl] };
+      const pageHistory = prev[pageIdx] || [];
+      const newHistory = { ...prev, [pageIdx]: [...pageHistory, dataUrl] };
       saveFileChanges({ drawHistory: newHistory });
       return newHistory;
     });
@@ -448,7 +1158,7 @@ function Reader({ zenMode, setZenMode }) {
       if (pageHistory.length === 0) return prev;
       const newPageHistory = pageHistory.slice(0, -1);
       const newHistory = { ...prev, [currentPage]: newPageHistory };
-      const canvas = canvasRef.current;
+      const canvas = canvasRefs.current[currentPage];
       if (canvas) {
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -466,13 +1176,25 @@ function Reader({ zenMode, setZenMode }) {
   const clearCanvas = () => {
     setDrawHistory(prev => {
       const newHistory = { ...prev, [currentPage]: [] };
-      const canvas = canvasRef.current;
+      const canvas = canvasRefs.current[currentPage];
       if (canvas) {
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       saveFileChanges({ drawHistory: newHistory });
       return newHistory;
+    });
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const toggleMobileTheme = () => {
+    setReadingTheme(prev => {
+      if (prev === "light") return "sepia";
+      if (prev === "sepia") return "dark";
+      return "light";
     });
   };
 
@@ -484,444 +1206,1009 @@ function Reader({ zenMode, setZenMode }) {
       <button onClick={() => navigate("/notes")}>← Back to Notes</button>
     </div>
   );
-  if (!file) return (
-    <div className="reader-modern-desktop">
-      <header className="reader-header-modern" style={{ padding: '0 24px' }}>
-        <div className="header-left">
-          <div className="skeleton-icon" style={{ width: 40, height: 40, margin: 0 }}></div>
-          <div className="skeleton-text short" style={{ width: 150, height: 16, margin: 0, borderRadius: 8 }}></div>
+
+  return (
+    <div className={`deep-reader-workspace ${zenMode ? 'zen-focus-active' : ''} theme-${readingTheme}`}>
+      
+      {/* Floating Highlight Toolbar */}
+      <AnimatePresence>
+        {selection.show && (
+          <motion.div 
+            className="premium-highlight-toolbar"
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            style={{ left: selection.x, top: selection.y }}
+          >
+            <button onClick={() => handleFloatingToolbarAction("explain")}>
+              <BrainCircuit size={14} /> <span>Explain</span>
+            </button>
+            <button onClick={() => handleFloatingToolbarAction("summarize")}>
+              <Sparkles size={14} /> <span>Summarize</span>
+            </button>
+            <button onClick={() => handleFloatingToolbarAction("quiz")}>
+              <HelpCircle size={14} /> <span>Quiz</span>
+            </button>
+            <button onClick={() => handleFloatingToolbarAction("notes")}>
+              <StickyNote size={14} /> <span>Save</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Concept Mapping Floating Status Assist */}
+      {activeTool === 'concept' && (
+        <div className="concept-mapping-helper-bar">
+          <span>
+            {conceptSourceNoteId 
+              ? "🔗 Select target sticky note to create connector link" 
+              : "🔗 Click source sticky note to start mapping connection"}
+          </span>
+          {conceptSourceNoteId && (
+            <button onClick={() => setConceptSourceNoteId(null)}>Cancel</button>
+          )}
+          {connectors.length > 0 && (
+            <button className="clear-concept-btn" onClick={handleClearConnectors}>Clear Map</button>
+          )}
         </div>
-      </header>
-      <div className="reader-layout-modern">
-        <aside className="left-toolbar-modern" style={{ paddingTop: 20 }}>
-           {[1,2,3].map(i => <div key={i} className="skeleton-icon" style={{ width: 40, height: 40, margin: '10px auto' }}></div>)}
-        </aside>
-        <main className="main-workspace-modern" style={{ padding: '40px 80px' }}>
-           <div className="skeleton-text" style={{ width: '80%', height: 40, marginBottom: 30, borderRadius: 12 }}></div>
-           <div className="skeleton-text" style={{ width: '100%', height: 20, marginBottom: 16, borderRadius: 8 }}></div>
-           <div className="skeleton-text" style={{ width: '90%', height: 20, marginBottom: 16, borderRadius: 8 }}></div>
-           <div className="skeleton-text" style={{ width: '95%', height: 20, marginBottom: 16, borderRadius: 8 }}></div>
-           <div className="skeleton-text" style={{ width: '60%', height: 20, marginBottom: 40, borderRadius: 8 }}></div>
-        </main>
-      </div>
-    </div>
-  );
-
-  const ContextualToolbar = () => (
-    <AnimatePresence>
-      {selection.show && (
-        <motion.div 
-          className="contextual-toolbar glass-card"
-          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          style={{ 
-            left: selection.x, 
-            top: selection.y,
-            transform: 'translate(-50%, -100%)',
-          }}
-        >
-          <button onClick={() => handleContextAction("summarize")}>
-            <Sparkles size={14} /> <span>Summarize</span>
-          </button>
-          <button onClick={() => handleContextAction("explain")}>
-            <BrainCircuit size={14} /> <span>Explain</span>
-          </button>
-          <div className="toolbar-divider" />
-          <button onClick={() => handleContextAction("flashcard")}>
-            <Layers size={14} /> <span>Flashcard</span>
-          </button>
-        </motion.div>
       )}
-    </AnimatePresence>
-  );
 
-  // --- DESKTOP VIEW ---
-  if (isDesktop) {
-    return (
-      <div className={`reader-modern-desktop ${isFocusMode ? 'zen-mode-active' : ''}`}>
-        <ContextualToolbar />
+      {/* 1. Header (Premium, Minimal) */}
+      {!zenMode && (
         <header className="reader-header-modern">
           <div className="header-left">
-            <button className="btn-icon-modern" onClick={() => navigate("/notes")}><ChevronLeft size={20} /></button>
-            <span className="file-name-modern">{file.name}</span>
-          </div>
-          <div className="header-right">
-            <button className="btn-ai-modern primary" onClick={() => setShowSidebar(true)}>
-              <Sparkles size={16} /> <span>AI Summarizer</span>
+            <button className="back-btn" onClick={() => navigate("/notes")}><ChevronLeft size={20} /></button>
+            
+            <button 
+              className={`thumbnail-toggle-btn ${showPagePanel ? 'active' : ''}`}
+              onClick={() => setShowPagePanel(!showPagePanel)}
+              title="Manage notebook pages"
+            >
+              <Layers size={18} />
             </button>
-            <button className="btn-ai-modern blue" onClick={() => navigate("/ai")}>
-              <MessageSquare size={16} /> <span>AI Tutor</span>
+
+            {!isMobile && (
+              <button 
+                className={`thumbnail-toggle-btn tool-rail-toggle-btn ${showLeftRail ? 'active' : ''}`}
+                onClick={() => setShowLeftRail(!showLeftRail)}
+                title={showLeftRail ? "Hide toolbar" : "Show toolbar"}
+              >
+                <Sliders size={18} />
+              </button>
+            )}
+
+            <span className="file-name">{file?.name}</span>
+            <div className="autosave-indicator" style={{ display: 'flex', alignItems: 'center', marginLeft: '12px', gap: '6px' }}>
+              {isSaving ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--reader-accent)', fontSize: '11px', fontWeight: '600' }}>
+                  <Cloud size={15} className="cloud-pulse" />
+                  <span className="m-hide-mobile">Saving...</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#10b981', fontSize: '11px', fontWeight: '600' }}>
+                  <Cloud size={15} />
+                  <span className="m-hide-mobile">Saved</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="header-actions">
+            {/* Mobile Theme Cycle Toggle */}
+            {isMobile && (
+              <button 
+                className="m-theme-toggle-btn" 
+                onClick={toggleMobileTheme}
+                title="Change display theme"
+                style={{
+                  background: 'var(--reader-accent-weak)',
+                  border: '1px solid var(--reader-border)',
+                  color: 'var(--reader-text)',
+                  padding: '8px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  marginRight: '8px'
+                }}
+              >
+                {readingTheme === "light" && <Sun size={18} />}
+                {readingTheme === "sepia" && <BookOpen size={18} />}
+                {readingTheme === "dark" && <Moon size={18} />}
+              </button>
+            )}
+
+            {/* Custom display settings */}
+            <div className="display-pill-selector">
+              <button className={readingTheme === "light" ? "active" : ""} onClick={() => setReadingTheme("light")}>Light</button>
+              <button className={readingTheme === "sepia" ? "active" : ""} onClick={() => setReadingTheme("sepia")}>Sepia</button>
+              <button className={readingTheme === "dark" ? "active" : ""} onClick={() => setReadingTheme("dark")}>Dark</button>
+            </div>
+            
+            <div className="font-pill-selector">
+              <button className={fontFamily === "serif" ? "active" : ""} onClick={() => setFontFamily("serif")}>Serif</button>
+              <button className={fontFamily === "sans" ? "active" : ""} onClick={() => setFontFamily("sans")}>Sans</button>
+            </div>
+
+            <div className="size-selector">
+              <button onClick={() => setFontSize(Math.max(12, fontSize - 2))}>A-</button>
+              <span>{fontSize}px</span>
+              <button onClick={() => setFontSize(Math.min(24, fontSize + 2))}>A+</button>
+            </div>
+
+            <button className="focus-mode-toggle" onClick={() => setZenMode(true)}>
+              <Maximize2 size={16} /> <span>Focus</span>
             </button>
           </div>
         </header>
+      )}
 
-        <div className="reader-layout-modern">
-          <aside className="left-toolbar-modern">
-            <div className="tool-group">
-              <button className={`tool-item ${activeTool === 'pages' ? 'active' : ''}`}><Layers size={20} /><span>Pages</span></button>
-              <button className="tool-item" onClick={() => setShowSidebar(true)}><StickyNote size={20} /><span>Notes</span></button>
-            </div>
-            <div className="tool-divider-modern"></div>
-            <div className="tool-group">
-              <button className={`tool-item ${activeTool === 'highlighter' ? 'active' : ''}`} onClick={() => toggleTool('highlighter')}><Highlighter size={20} /><span>Highlight</span></button>
-              <button className={`tool-item ${activeTool === 'pen' ? 'active' : ''}`} onClick={() => toggleTool('pen')}><PenTool size={20} /><span>Draw</span></button>
-              <button className={`tool-item ${activeTool === 'text' ? 'active' : ''}`} onClick={() => toggleTool('text')}><Type size={20} /><span>Text</span></button>
-              <button className={`tool-item ${['shape','circle','line'].includes(activeTool) ? 'active' : ''}`} onClick={() => toggleTool('shape')}><Square size={20} /><span>Shapes</span></button>
-              <button className={`tool-item ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => toggleTool('eraser')}><Eraser size={20} /><span>Eraser</span></button>
-              <div className="tool-divider-modern" style={{ margin: '8px 0', height: '1px' }}></div>
-              <button className="tool-item" onClick={undo}><RotateCcw size={20} /><span>Undo</span></button>
-              {activeTool === 'eraser' && <button className="tool-item danger-text" onClick={clearCanvas}><Trash2 size={20} /><span>Clear</span></button>}
+      {/* Main layout: left rail, page panel, reading workspace, right AI workspace */}
+      <div className="reader-layout-modern">
+        
+        {/* 2. Left Floating Tool Rail */}
+        {!zenMode && showLeftRail && (
+          <aside className="left-tool-rail-premium">
+
+            <div className="tool-category-title">Select</div>
+            <button 
+              className={`tool-icon ${activeTool === 'select' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('select')}
+              title="Select / Drag sticky notes"
+            >
+              <MousePointer2 size={18} /> <span>Select</span>
+            </button>
+
+            <div className="tool-divider"></div>
+            <div className="tool-category-title">Draw</div>
+
+            <button 
+              className={`tool-icon ${activeTool === 'pen' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('pen')}
+              title="Pen & Brush presets"
+            >
+              <PenTool size={18} /> <span>Pen</span>
+            </button>
+
+            <button 
+              className={`tool-icon ${activeTool === 'highlighter' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('highlighter')}
+              title="Highlighter"
+            >
+              <Highlighter size={18} /> <span>Highlighter</span>
+            </button>
+
+            <button 
+              className={`tool-icon ${activeTool === 'arrow' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('arrow')}
+              title="Draw Arrows"
+            >
+              <ArrowUpRight size={18} /> <span>Arrow</span>
+            </button>
+
+            <button 
+              className={`tool-icon ${activeTool === 'line' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('line')}
+              title="Draw Lines"
+            >
+              <Minus size={18} /> <span>Line</span>
+            </button>
+
+            <div className="tool-divider"></div>
+            <div className="tool-category-title">Shapes</div>
+
+            <button 
+              className={`tool-icon ${activeTool === 'shape' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('shape')}
+              title="Rectangle Shape"
+            >
+              <Square size={18} /> <span>Rectangle</span>
+            </button>
+
+            <button 
+              className={`tool-icon ${activeTool === 'circle' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('circle')}
+              title="Circle Shape"
+            >
+              <Circle size={18} /> <span>Circle</span>
+            </button>
+
+            <div className="tool-divider"></div>
+            <div className="tool-category-title">Notes</div>
+
+            <button 
+              className={`tool-icon ${activeTool === 'sticky' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('sticky')}
+              title="Place Sticky Note"
+            >
+              <StickyNote size={18} /> <span>Sticky Note</span>
+            </button>
+
+            <button 
+              className="tool-icon" 
+              onClick={handleImageUploadClick}
+              title="Add Image / Sticker"
+            >
+              <ImageIcon size={18} /> <span>Add Sticker</span>
+            </button>
+
+            <button 
+              className={`tool-icon ${activeTool === 'text' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('text')}
+              title="Add Canvas Text Label"
+            >
+              <Type size={18} /> <span>Text Label</span>
+            </button>
+
+            <button 
+              className={`tool-icon ${activeTool === 'concept' ? 'active' : ''}`} 
+              onClick={() => setActiveTool('concept')}
+              title="Concept Map Connector Link"
+            >
+              <Link2 size={18} /> <span>Connector</span>
+            </button>
+
+            <div className="tool-divider"></div>
+            <div className="tool-category-title">Edit</div>
+
+            <button className="tool-icon" onClick={undo} title="Undo last draw">
+              <RotateCcw size={18} /> <span>Undo Ink</span>
+            </button>
+
+            <button className={`tool-icon ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => setActiveTool('eraser')} title="Eraser">
+              <Eraser size={18} /> <span>Eraser</span>
+            </button>
+
+            <button className="tool-icon" onClick={clearCanvas} title="Clear visible page drawing">
+              <Trash2 size={18} /> <span>Clear Page</span>
+            </button>
+
+          </aside>
+        )}
+
+        {/* Expanded Tool Palette options (Rendered outside aside to prevent overflow clipping) */}
+        {!zenMode && showLeftRail && !isMobile && activeTool !== 'select' && activeTool !== 'sticky' && activeTool !== 'concept' && (
+          <div className="floating-stroke-options animate-slide-up">
+            <div className="palette-section">
+              <span>Color</span>
+              <div className="color-dots">
+                {["#000000", "#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#7c3aed", "#ec4899", "#14b8a6"].map(c => (
+                  <button 
+                    key={c} 
+                    className={`color-dot ${penColor === c ? 'active' : ''}`} 
+                    style={{ backgroundColor: c }} 
+                    onClick={() => setPenColor(c)}
+                  />
+                ))}
+              </div>
             </div>
 
-            
-            {/* Tool Options Sub-Panel — visibility decoupled from active tool so drawing continues after closing */}
-            {showToolOptions && ['pen', 'highlighter', 'shape', 'circle', 'line'].includes(activeTool) && (
-              <div className="tool-options-panel">
-                <div className="tool-options-header">
-                  <span>Tool Settings</span>
-                  {/* Close panel WITHOUT deactivating the tool */}
-                  <button className="close-options-btn" onClick={() => setShowToolOptions(false)}><X size={14} /></button>
+            <div className="palette-section">
+              <span>Stroke Size</span>
+              <div className="size-pills">
+                {[1.5, 3, 6, 10].map(s => (
+                  <button 
+                    key={s} 
+                    className={strokeWidth === s ? 'active' : ''} 
+                    onClick={() => setStrokeWidth(s)}
+                  >
+                    {s}px
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeTool === 'pen' && (
+              <div className="palette-section">
+                <span>Pen Type</span>
+                <div className="pen-type-grid">
+                  <button className={penStyle === "ballpoint" ? "active" : ""} onClick={() => setPenStyle("ballpoint")}>Ballpoint</button>
+                  <button className={penStyle === "fountain" ? "active" : ""} onClick={() => setPenStyle("fountain")}>Fountain</button>
+                  <button className={penStyle === "brush" ? "active" : ""} onClick={() => setPenStyle("brush")}>Brush Pen</button>
+                  <button className={penStyle === "autosnap" ? "active" : ""} onClick={() => setPenStyle("autosnap")} title="Snaps drawings to shapes">Smart Shape</button>
                 </div>
-                <div className="color-swatches">
-                  {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(c => (
-                    <button key={c} className={`swatch ${penColor === c ? 'active' : ''}`} style={{ backgroundColor: c }} onClick={() => setPenColor(c)} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Color selection for Sticky Notes (Rendered outside aside to prevent overflow clipping) */}
+        {!zenMode && showLeftRail && !isMobile && activeTool === 'sticky' && (
+          <div className="floating-stroke-options">
+            <div className="palette-section">
+              <span>Sticky Color</span>
+              <div className="color-dots">
+                {["#fef08a", "#bfdbfe", "#bbf7d0", "#fbcfe8", "#e9d5ff", "#e4e4e7"].map(c => (
+                  <button 
+                    key={c} 
+                    className={`color-dot ${activeStickyColor === c ? 'active' : ''}`} 
+                    style={{ backgroundColor: c }} 
+                    onClick={() => setActiveStickyColor(c)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {/* GoodNotes-style Page Organizer Panel */}
+        {showPagePanel && !zenMode && (
+          <NotebookPagePanel
+            pages={pages}
+            currentPage={currentPage}
+            drawHistory={drawHistory}
+            notes={notes}
+            connectors={connectors}
+            paperStyle={paperStyle}
+            onClose={() => setShowPagePanel(false)}
+            onJumpToPage={jumpToPage}
+            onAddPage={(idx, position, templateId) => handleAddPage(idx, position, templateId)}
+            onDuplicatePage={handleDuplicatePage}
+            onMovePage={handleMovePage}
+            onDeletePage={handleDeletePage}
+            onSetTemplate={handleSetPageTemplate}
+          />
+        )}
+
+
+        {/* 3. Immersive Center Reading Canvas (Dynamic Vertical Page Stack) */}
+        <main className="immersive-center-reading-canvas">
+          
+          {/* Document and zoom controls */}
+          {!zenMode && (
+            <div className="canvas-header-controls">
+              <div className="page-navigation-pill">
+                <button onClick={() => jumpToPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0}>
+                  <ChevronLeft size={16} />
+                </button>
+                <span>Page {currentPage + 1} of {pages.length}</span>
+                <button onClick={() => jumpToPage(Math.min(pages.length - 1, currentPage + 1))} disabled={currentPage === pages.length - 1}>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* GoodNotes Paper Selector (hidden for PDFs) */}
+              {!file?.blobUrl && (
+                <div className="paper-style-pill">
+                  <button className={paperStyle === "blank" ? "active" : ""} onClick={() => setPaperStyle("blank")}>Blank</button>
+                  <button className={paperStyle === "ruled" ? "active" : ""} onClick={() => setPaperStyle("ruled")}>Ruled</button>
+                  <button className={paperStyle === "grid" ? "active" : ""} onClick={() => setPaperStyle("grid")}>Grid</button>
+                  <button className={paperStyle === "dotted" ? "active" : ""} onClick={() => setPaperStyle("dotted")}>Dotted</button>
+                </div>
+              )}
+
+              <div className="zoom-pill">
+                <button onClick={() => setZoom(Math.max(50, zoom - 10))}><ZoomOut size={14} /></button>
+                <span>{zoom}%</span>
+                <button onClick={() => setZoom(Math.min(200, zoom + 10))}><ZoomIn size={14} /></button>
+              </div>
+
+              <div className="utility-buttons">
+                {!file?.blobUrl && (
+                  <button className="utility-btn btn-accent" onClick={handleAddPage}>
+                    <Plus size={14} /> <span>Add Page</span>
+                  </button>
+                )}
+                <button className="utility-btn" onClick={handlePrint}><Printer size={16} /> <span>Print/Export</span></button>
+                <button className="utility-btn" onClick={() => alert("Deep Link copied! Share to study group.")}><Share2 size={16} /> <span>Share</span></button>
+              </div>
+            </div>
+          )}
+
+          {/* Reading Canvas viewport - Stacks all notebook pages vertically */}
+          <div 
+            className="document-viewport-modern"
+            onScroll={handleViewportScroll}
+            onClick={() => setStickyContextMenu(null)}
+          >
+            {pages.map((pageTextContent, idx) => (
+              <div 
+                key={idx}
+                id={`reader-page-container-${idx}`}
+                className="document-wrapper-modern" 
+                style={{ 
+                  width: isMobile ? '100%' : `${800 * (zoom / 100)}px`,
+                  minHeight: isMobile ? '110vw' : `${1100 * (zoom / 100)}px`,
+                  position: 'relative',
+                  marginBottom: '40px',
+                  cursor: ['sticky', 'text'].includes(activeTool) ? 'cell' : (activeTool === 'concept' ? 'crosshair' : 'default')
+                }}
+                onClick={(e) => handleAddStickyClick(idx, e)}
+              >
+                {/* Concept Connector Links SVG Layer */}
+                <svg 
+                  className="connectors-svg" 
+                  viewBox="0 0 100 100" 
+                  preserveAspectRatio="none" 
+                  style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    width: '100%', 
+                    height: '100%', 
+                    pointerEvents: 'none', 
+                    zIndex: 15 
+                  }}
+                >
+                  <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed" />
+                    </marker>
+                  </defs>
+                  {connectors
+                    .filter(c => c.page === idx)
+                    .map(c => {
+                      const from = notes.find(n => n.id === c.fromId);
+                      const to = notes.find(n => n.id === c.toId);
+                      if (!from || !to) return null;
+                      const x1 = from.x + 8;
+                      const y1 = from.y + 7;
+                      const x2 = to.x + 8;
+                      const y2 = to.y + 7;
+                      return (
+                        <line 
+                          key={c.id} 
+                          x1={x1} 
+                          y1={y1} 
+                          x2={x2} 
+                          y2={y2} 
+                          stroke={c.color || "#7c3aed"} 
+                          strokeWidth="0.4" 
+                          markerEnd="url(#arrow)" 
+                        />
+                      );
+                    })}
+                </svg>
+
+                {/* Whiteboard Overlay Canvas for current page */}
+                <canvas 
+                  ref={el => canvasRefs.current[idx] = el}
+                  style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    width: '100%', 
+                    height: '100%', 
+                    zIndex: 5,
+                    pointerEvents: ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'].includes(activeTool) ? 'auto' : 'none',
+                    touchAction: 'none'
+                  }}
+                  width={900} 
+                  height={1200}
+                  onPointerDown={(e) => startDrawing(idx, e)}
+                  onPointerMove={draw}
+                  onPointerUp={stopDrawing}
+                  onPointerLeave={stopDrawing}
+                />
+
+                {/* Canvas Text Input Overlay (for direct text annotations) */}
+                {textInput.show && textInput.page === idx && (
+                  <div 
+                    className="canvas-text-input-wrapper"
+                    style={{
+                      position: 'absolute',
+                      left: `${textInput.x}%`,
+                      top: `${textInput.y}%`,
+                      zIndex: 25
+                    }}
+                  >
+                    <input 
+                      type="text"
+                      autoFocus
+                      placeholder="Type label..."
+                      value={textInput.value}
+                      onChange={(e) => setTextInput(prev => ({ ...prev, value: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          commitCanvasText();
+                        } else if (e.key === 'Escape') {
+                          setTextInput({ show: false, page: 0, x: 0, y: 0, value: "" });
+                        }
+                      }}
+                      onBlur={commitCanvasText}
+                      className="canvas-text-input-overlay"
+                    />
+                  </div>
+                )}
+
+                {/* Floating Post-it Sticky Notes on current page */}
+                {notes
+                  .filter(note => note.page === idx)
+                  .map(note => (
+                    <div 
+                      key={note.id}
+                      className={`floating-sticky-note ${conceptSourceNoteId === note.id ? 'active-concept-source' : ''}`}
+                      style={{
+                        left: `${note.x}%`,
+                        top: `${note.y}%`,
+                        backgroundColor: note.color,
+                        touchAction: 'none'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStickyNoteClick(note, e);
+                      }}
+                    >
+                      <div 
+                        className="sticky-header"
+                        onPointerDown={(e) => handleStickyPointerDown(note, e)}
+                        onPointerMove={(e) => handleStickyPointerMove(note.id, e)}
+                        onPointerUp={(e) => handleStickyPointerUp(note.id, e)}
+                        style={{ cursor: activeTool === 'select' ? 'grab' : 'default' }}
+                      >
+                        <span className="sticky-time">{note.date}</span>
+                        <button onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSticky(note.id);
+                        }}><X size={12} /></button>
+                      </div>
+                      <textarea 
+                        value={note.text} 
+                        onChange={(e) => handleUpdateStickyText(note.id, e.target.value)}
+                        onBlur={() => saveFileChanges({ notes: notesRef.current })}
+                        placeholder="Take a note..."
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  ))}
+
+                {/* Floating Canvas Uploaded Images (Stickers/Photos) */}
+                {canvasImages && canvasImages
+                  .filter(img => img.page === idx)
+                  .map(img => (
+                    <div 
+                      key={img.id}
+                      className="floating-canvas-image-wrapper"
+                      style={{
+                        position: 'absolute',
+                        left: `${img.x}%`,
+                        top: `${img.y}%`,
+                        width: `${img.width}px`,
+                        height: `${img.height}px`,
+                        touchAction: 'none',
+                        zIndex: 20
+                      }}
+                      onPointerDown={(e) => handleImagePointerDown(img, e)}
+                      onPointerMove={(e) => handleImagePointerMove(img.id, e)}
+                      onPointerUp={(e) => handleImagePointerUp(img.id, e)}
+                    >
+                      <img 
+                        src={img.url} 
+                        alt="Sticker" 
+                        style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          objectFit: 'contain',
+                          pointerEvents: 'none',
+                          borderRadius: '8px',
+                          border: activeTool === 'select' ? '2px dashed var(--reader-text)' : 'none'
+                        }} 
+                      />
+                      {activeTool === 'select' && (
+                        <button 
+                          className="delete-img-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCanvasImage(img.id);
+                          }}
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                {/* Document Source rendering (PDF / Rich Text editor) */}
+                {file?.blobUrl ? (
+                  file.fileType && file.fileType.startsWith("image/") ? (
+                    <img src={file.blobUrl} alt={file.name} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                  ) : (
+                    <iframe src={objectUrl || file.blobUrl} title={file.name} className="pdf-iframe-view" />
+                  )
+                ) : (
+                  <div 
+                    className={`paper-body-modern paper-${paperStyle}`}
+                    style={{ fontFamily: fontFamily === 'serif' ? 'var(--font-serif)' : 'var(--font-sans)', fontSize: `${fontSize}px` }}
+                  >
+                    <SlashEditor 
+                      initialContent={pageTextContent || ""}
+                      onChange={(val) => {
+                        const updated = [...pages];
+                        updated[idx] = val;
+                        setPages(updated);
+                      }}
+                      onBlur={() => saveFileChanges({ pages })}
+                      onSummarize={() => {
+                        setAiWorkspaceMode("chat");
+                        handleAiQuery(`Summarize page ${idx + 1}`, `Provide a strict summary of page ${idx + 1} content.`);
+                      }}
+                      onFlashcard={async () => {
+                        setAiWorkspaceMode("chat");
+                        handleAiQuery(`Generate flashcards from page ${idx + 1}`, "Output exactly 3 flashcards in question & answer structure.");
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Sticky Note Context Menu */}
+          <AnimatePresence>
+            {stickyContextMenu && (
+              <motion.div 
+                className="premium-context-menu"
+                initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                style={{
+                  position: 'absolute',
+                  left: stickyContextMenu.x,
+                  top: stickyContextMenu.y,
+                  transform: 'translate(-50%, -100%)',
+                  zIndex: 3000
+                }}
+              >
+                <div className="context-menu-actions">
+                  <button onClick={() => handleContextMenuAction('cut')}>Cut</button>
+                  <button onClick={() => handleContextMenuAction('copy')}>Copy</button>
+                  <button onClick={() => handleContextMenuAction('duplicate')}>Duplicate</button>
+                  <button className="danger" onClick={() => handleContextMenuAction('delete')}>Delete</button>
+                </div>
+                <div className="context-menu-colors">
+                  {['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff'].map(color => (
+                    <button 
+                      key={color} 
+                      className={`color-swatch ${stickyContextMenu.color === color ? 'active' : ''}`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => handleContextMenuAction('color', color)}
+                    />
                   ))}
                 </div>
-                {['shape', 'circle', 'line'].includes(activeTool) ? (
-                  <div className="shape-variants">
-                    <button className={`variant-btn ${activeTool === 'shape' ? 'active' : ''}`} onClick={() => setActiveTool('shape')}>⬛</button>
-                    <button className={`variant-btn ${activeTool === 'circle' ? 'active' : ''}`} onClick={() => setActiveTool('circle')}>⚫</button>
-                    <button className={`variant-btn ${activeTool === 'line' ? 'active' : ''}`} onClick={() => setActiveTool('line')}>➖</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Ambient Focus Mode Bar */}
+          {zenMode && (
+            <motion.div 
+              className="ambient-focus-bar"
+              initial={{ y: -50, opacity: 0, x: "-50%" }}
+              animate={{ y: 0, opacity: 1, x: "-50%" }}
+            >
+              <div className="focus-timer">
+                <span className="time-display">{formatTime(zenTimer)}</span>
+                <button className="timer-btn" onClick={() => setZenTimerActive(!zenTimerActive)}>
+                  {zenTimerActive ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button className="timer-btn" onClick={() => { setZenTimer(25 * 60); setZenTimerActive(false); }}>
+                  <RotateCcw size={14} />
+                </button>
+              </div>
+
+              <div className="focus-divider"></div>
+
+              <div className="focus-audio">
+                <button 
+                  className={`audio-btn ${ambientAudioActive ? 'active' : ''}`} 
+                  onClick={() => setAmbientAudioActive(!ambientAudioActive)}
+                >
+                  {ambientAudioActive ? <Volume2 size={16} /> : <Headphones size={16} />} 
+                  <span>{ambientAudioActive ? 'Rain Focus' : 'Focus Audio'}</span>
+                </button>
+              </div>
+
+              <div className="focus-divider"></div>
+
+              <div className="focus-exit">
+                <button className="exit-btn" onClick={() => setZenMode(false)}>
+                  <Minimize2 size={16} /> <span>Exit</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Mobile Floating Bottom Dock (Beautiful, necessary features only) */}
+          {isMobile && !zenMode && (
+            <div className="m-bottom-toolbar floating-pill">
+              <div className="m-tools-row">
+                <button 
+                  className={`m-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
+                  onClick={() => setActiveTool('select')}
+                >
+                  <MousePointer2 size={18} /> <span>Select</span>
+                </button>
+                <button 
+                  className={`m-tool-btn ${activeTool === 'pen' ? 'active' : ''}`}
+                  onClick={() => setActiveTool('pen')}
+                >
+                  <PenTool size={18} /> <span>Pen</span>
+                </button>
+                <button 
+                  className={`m-tool-btn ${activeTool === 'highlighter' ? 'active' : ''}`}
+                  onClick={() => setActiveTool('highlighter')}
+                >
+                  <Highlighter size={18} /> <span>Highlight</span>
+                </button>
+                <button 
+                  className={`m-tool-btn ${activeTool === 'text' ? 'active' : ''}`}
+                  onClick={() => setActiveTool('text')}
+                >
+                  <Type size={18} /> <span>Text</span>
+                </button>
+                <button 
+                  className={`m-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
+                  onClick={() => setActiveTool('eraser')}
+                >
+                  <Eraser size={18} /> <span>Eraser</span>
+                </button>
+                <button 
+                  className={`m-tool-btn ${activeTool === 'sticky' ? 'active' : ''}`}
+                  onClick={() => setActiveTool('sticky')}
+                >
+                  <StickyNote size={18} /> <span>Note</span>
+                </button>
+                <button 
+                  className={`m-tool-btn ${showSidebar ? 'active' : ''}`}
+                  onClick={() => setShowSidebar(!showSidebar)}
+                >
+                  <MessageSquare size={18} /> <span>AI Tutor</span>
+                </button>
+              </div>
+            </div>
+          )}
+          {/* Mobile Tool Options Panel */}
+          {isMobile && !zenMode && ['pen', 'highlighter', 'sticky'].includes(activeTool) && (
+            <div className="m-tool-options-panel">
+              <div className="m-drag-handle" style={{ width: '40px', height: '4px', background: 'var(--reader-border)', borderRadius: '2px', margin: '0 auto 8px auto', opacity: 0.7 }}></div>
+              <button className="m-close-options" onClick={() => setActiveTool('select')}>
+                <X size={16} />
+              </button>
+              
+              {activeTool === 'sticky' && (
+                <div className="palette-section">
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--m-muted)' }}>Sticky Note Color</span>
+                  <div className="color-dots" style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    {["#fef08a", "#bfdbfe", "#bbf7d0", "#fbcfe8", "#e9d5ff", "#e4e4e7"].map(c => (
+                      <button 
+                        key={c} 
+                        className={`color-dot ${activeStickyColor === c ? 'active' : ''}`} 
+                        style={{ 
+                          backgroundColor: c, 
+                          width: '28px', 
+                          height: '28px', 
+                          borderRadius: '50%', 
+                          border: activeStickyColor === c ? '2px solid var(--reader-text)' : '1px solid rgba(0,0,0,0.1)',
+                          cursor: 'pointer'
+                        }} 
+                        onClick={() => setActiveStickyColor(c)}
+                      />
+                    ))}
                   </div>
-                ) : (
-                  <div className="stroke-widths">
-                    {[2, 4, 8].map(w => (
-                      <button key={w} className={`stroke-btn ${strokeWidth === w ? 'active' : ''}`} onClick={() => setStrokeWidth(w)}>
-                        <div style={{ width: '18px', height: w, backgroundColor: 'var(--d-text)', borderRadius: w }} />
+                </div>
+              )}
+
+              {(activeTool === 'pen' || activeTool === 'highlighter') && (
+                <>
+                  <div className="palette-section">
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--m-muted)' }}>Color</span>
+                    <div className="color-dots" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      {["#000000", "#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#7c3aed", "#ec4899", "#14b8a6"].map(c => (
+                        <button 
+                          key={c} 
+                          className={`color-dot ${penColor === c ? 'active' : ''}`} 
+                          style={{ 
+                            backgroundColor: c, 
+                            width: '28px', 
+                            height: '28px', 
+                            borderRadius: '50%', 
+                            border: penColor === c ? '2px solid var(--reader-text)' : '1px solid rgba(0,0,0,0.1)',
+                            cursor: 'pointer'
+                          }} 
+                          onClick={() => setPenColor(c)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="palette-section">
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--m-muted)' }}>Stroke Width</span>
+                    <div className="size-pills" style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                      {[1.5, 3, 6, 10].map(s => (
+                        <button 
+                          key={s} 
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            background: strokeWidth === s ? 'var(--m-blue-weak)' : 'transparent',
+                            color: strokeWidth === s ? 'var(--m-blue)' : 'var(--m-muted)',
+                            border: strokeWidth === s ? '1px solid var(--m-blue)' : '1px solid var(--m-border)',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => setStrokeWidth(s)}
+                        >
+                          {s}px
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTool === 'pen' && (
+                <div className="palette-section">
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--m-muted)' }}>Pen Type</span>
+                  <div className="pen-type-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginTop: '6px' }}>
+                    {[
+                      { id: "ballpoint", label: "Ballpoint" },
+                      { id: "fountain", label: "Fountain" },
+                      { id: "brush", label: "Brush Pen" },
+                      { id: "autosnap", label: "Smart Shape" }
+                    ].map(p => (
+                      <button 
+                        key={p.id}
+                        style={{
+                          padding: '8px',
+                          background: penStyle === p.id ? 'var(--m-blue-weak)' : 'transparent',
+                          color: penStyle === p.id ? 'var(--m-blue)' : 'var(--m-text)',
+                          border: penStyle === p.id ? '1px solid var(--m-blue)' : '1px solid var(--m-border)',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => setPenStyle(p.id)}
+                      >
+                        {p.label}
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
-
-            <div className="toolbar-spacer-modern"></div>
-            <button className="tool-item focus-toggle" onClick={() => setIsFocusMode(!isFocusMode)}>
-              {isFocusMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-              <span>Focus Mode</span>
-            </button>
-          </aside>
-
-          <main className="main-workspace-modern">
-            <div className="workspace-controls-modern">
-              <div className="page-nav-modern">
-                <button onClick={() => setCurrentPage(Math.max(0, currentPage-1))} disabled={currentPage===0}><ChevronLeft size={18} /></button>
-                <div className="page-indicator-modern">
-                  <input type="text" value={currentPage+1} readOnly /> / {pages.length}
                 </div>
-                <button onClick={() => setCurrentPage(Math.min(pages.length-1, currentPage+1))} disabled={currentPage===pages.length-1}><ChevronRight size={18} /></button>
-              </div>
-              <div className="zoom-pill-modern">
-                <button onClick={() => setZoom(Math.max(50, zoom-10))}><ZoomOut size={16} /></button>
-                <span>{zoom}%</span>
-                <button onClick={() => setZoom(Math.min(200, zoom+10))}><ZoomIn size={16} /></button>
-              </div>
-              <div className="action-group-modern">
-                <button className="btn-action-modern" onClick={() => saveFileChanges({})}><Save size={18} /><span>Save</span></button>
-                <button className="btn-action-modern" onClick={() => alert("Note shared! Public link: https://starnote.ai/shared/" + id)}><Share2 size={18} /><span>Share</span></button>
-              </div>
+              )}
             </div>
-            <div className="document-viewport-modern">
-              <div className="document-wrapper-modern" style={{ width: `${zoom}%`, position: 'relative' }}>
-                <canvas 
-                  ref={canvasRef}
-                  style={{ 
-                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                    zIndex: 10,
-                    pointerEvents: ['pen', 'highlighter', 'eraser', 'text', 'shape', 'circle', 'line'].includes(activeTool) ? 'auto' : 'none',
-                    touchAction: ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line'].includes(activeTool) ? 'none' : 'auto',
-                    cursor: activeTool === 'pen' || activeTool === 'highlighter' ? 'crosshair' : activeTool === 'eraser' ? 'cell' : 'default',
-                  }}
-                  width={1000} height={1414}
-                  onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-                />
-                {file.blobUrl ? (
-                  file.fileType && file.fileType.startsWith("image/") ? (
-                    <img src={file.blobUrl} alt={file.name} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
-                  ) : (
-                    <iframe src={objectUrl || file.blobUrl} title={file.name} className="modern-iframe" style={{ position: 'relative', zIndex: 1, backgroundColor: 'white' }} />
-                  )
-                ) : (
-                  <div className="paper-a4-modern">
-                    <div className="paper-body-modern">
-                      <SlashEditor 
-                        initialContent={pages[currentPage] || ""}
-                        onChange={(val) => {
-                          const updated = [...pages];
-                          updated[currentPage] = val;
-                          setPages(updated);
-                        }}
-                        onBlur={() => saveFileChanges({ pages })}
-                        onSummarize={handleSummarize}
-                        onFlashcard={handleGenerateFlashcards}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* FLOATING ZEN MODE EXIT BUTTON */}
-            {isFocusMode && (
-              <button className="btn-exit-zen slide-up" onClick={() => setIsFocusMode(false)}>
-                <Minimize2 size={16} /> Exit Zen Mode
-              </button>
-            )}
-          </main>
+          )}
+        </main>
 
-          <aside className={`right-sidebar-modern ${showSidebar && !isFocusMode ? 'open' : ''}`}>
-            <div className="sidebar-top-modern">
-              <h3>AI Assistant</h3>
-              <button className="close-sidebar-modern" onClick={() => setShowSidebar(false)}><X size={18} /></button>
-            </div>
-            <div className="sidebar-scroll-modern">
-              <div className="ai-card-modern">
-                <div className="card-header-modern"><Sparkles size={18} className="text-blue" /><span>AI Summarizer</span></div>
-                {summary ? (
-                  <div className="summary-text-modern" style={{ fontSize: '13px', lineHeight: '1.5', marginTop: '8px' }}>
-                    <p>{summary}</p>
-                    <button className="card-btn-modern" onClick={handleSummarize} disabled={isSummarizing} style={{ marginTop: '12px' }}>
-                      {isSummarizing ? "Regenerating..." : "Regenerate Summary"}
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <p>Get a quick summary of this document.</p>
-                    <button className="card-btn-modern" onClick={handleSummarize} disabled={isSummarizing}>
-                      {isSummarizing ? "Summarizing..." : "Summarize Document"}
-                    </button>
-                  </>
-                )}
-              </div>
-              <div className="ai-card-modern">
-                <div className="card-header-modern"><Layers size={18} className="text-blue" /><span>Flashcard Gen</span></div>
-                <p>Use AI to automatically turn this document into study flashcards.</p>
-                <button className="card-btn-modern" onClick={handleGenerateFlashcards} disabled={isGeneratingCards}>
-                  {isGeneratingCards ? "Extracting Cards..." : "Generate Deck"}
+        {/* 4. Right Contextual AI Workspace */}
+        {showSidebar && !zenMode && (
+          <aside className="right-ai-workspace-premium">
+            <div className="ai-workspace-header">
+              <div className="workspace-tabs">
+                <button 
+                  className={aiWorkspaceMode === "chat" ? "active" : ""} 
+                  onClick={() => setAiWorkspaceMode("chat")}
+                >
+                  AI Tutor
+                </button>
+                <button 
+                  className={aiWorkspaceMode === "summary" ? "active" : ""} 
+                  onClick={() => {
+                    setAiWorkspaceMode("summary");
+                    if (!summary) handleFloatingToolbarAction("summarize");
+                  }}
+                >
+                  Doc Summary
                 </button>
               </div>
+              <button className="close-workspace-btn" onClick={() => setShowSidebar(false)}><X size={18} /></button>
+            </div>
 
-              <div className="ai-card-modern">
-                <div className="card-header-modern"><MessageSquare size={18} className="text-blue" /><span>AI Tutor</span></div>
-                <p>Ask questions and get explained concepts.</p>
-                <div className="ai-actions-row">
-                  <button className="card-btn-modern" onClick={() => navigate("/ai")}>Chat</button>
-                  <button className="card-btn-icon-modern" title="Voice Ask"><Plus size={18} /></button>
-                </div>
+            {/* Context Signals indicators */}
+            <div className="contextual-signals-panel">
+              <div className="section-title">Context Signals Detected</div>
+              <div className="signals-row">
+                <span className="signal-pill">📄 {file?.name?.substring(0, 15)}...</span>
+                <span className="signal-pill">📍 Page {currentPage + 1}</span>
+                {selection.text && <span className="signal-pill active-selection">🔍 Selection active</span>}
+                {plannerTasks.length > 0 && <span className="signal-pill">📅 Planner: {plannerTasks.length} open</span>}
+                <span className="signal-pill">🎴 Flashcards: {totalFlashcards}</span>
               </div>
+            </div>
 
-              <div className="notes-section-modern">
-                <div className="notes-header-modern">
-                  <span>STICKY NOTES</span>
-                  <button className="add-note-btn" onClick={addNote}><Plus size={16} /> Add Note</button>
-                </div>
-                <div className="notes-list-modern">
-                  {notes.length === 0 ? (
-                    <div className="notes-empty-modern">
-                      <StickyNote size={24} />
-                      <p>No notes for this document yet.</p>
-                    </div>
-                  ) : (
-                    notes.map(note => (
-                      <div key={note.id} className="note-item-modern">
-                        <div className="note-item-header">
-                          <span className="note-page-tag">Page {note.page + 1}</span>
-                          <button className="note-delete-btn" onClick={() => deleteNote(note.id)}><Trash2 size={14} /></button>
-                        </div>
-                        <textarea 
-                          value={note.text || ""} 
-                          onChange={(e) => updateNote(note.id, e.target.value)}
-                          onBlur={() => flushNoteOnBlur(note.id)}
-                          placeholder="Type something..."
-                          autoFocus={note.text === ""}
-                        />
+            <div className="ai-content-body">
+              {aiWorkspaceMode === "chat" ? (
+                <div className="ai-chat-container">
+                  <div className="chat-messages-scroll">
+                    {aiMessages.map((m, idx) => (
+                      <div key={idx} className={`chat-bubble ${m.role}`}>
+                        <div className="bubble-header">{m.role === "assistant" ? "StarNote AI" : "You"}</div>
+                        <div className="bubble-text">{m.text}</div>
                       </div>
-                    ))
-                  )}
+                    ))}
+                    {isAiResponding && (
+                      <div className="chat-bubble assistant responding">
+                        <div className="bubble-header">StarNote AI (typing...)</div>
+                        <div className="bubble-text">{currentResponseChunk || "Thinking..."}</div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <form 
+                    className="ai-chat-input-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleAiQuery(chatInput);
+                    }}
+                  >
+                    <input 
+                      type="text" 
+                      placeholder={selection.text ? "Ask about highlighted text..." : "Ask AI Tutor anything..."} 
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      disabled={isAiResponding}
+                    />
+                    <button type="submit" disabled={isAiResponding || !chatInput.trim()}>
+                      <Sparkles size={16} />
+                    </button>
+                  </form>
                 </div>
-              </div>
+              ) : (
+                <div className="ai-summary-container">
+                  <div className="summary-scrollable">
+                    <h3>Document Overview</h3>
+                    {isSummarizing ? (
+                      <p className="loading-state">Synthesizing document elements...</p>
+                    ) : (
+                      <p className="summary-content-text">
+                        {summary || "No overview generated yet. Click below to summarize."}
+                      </p>
+                    )}
+                    <button 
+                      className="generate-overview-btn" 
+                      onClick={async () => {
+                        setIsSummarizing(true);
+                        try {
+                          const prompt = `Summarize this text in 3 paragraphs focusing on key insights: ${(file?.content || pages.join("\n")).substring(0, 5000)}`;
+                          const res = await aiModel.generateContent(prompt);
+                          setSummary(res.response.text());
+                        } catch (e) {
+                          setSummary("Failed to generate summary completion.");
+                        }
+                        setIsSummarizing(false);
+                      }}
+                      disabled={isSummarizing}
+                    >
+                      {isSummarizing ? "Processing..." : "Generate Full Summary"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
-        </div>
-      </div>
-    );
-  }
+        )}
 
-  // --- TABLET & MOBILE VIEW ---
-  return (
-    <div className={`reader-modern-mobile ${isFocusMode ? 'focus-mode' : ''}`}>
-      <ContextualToolbar />
-      <header className="mobile-reader-header">
-        <div className="m-header-left">
-          <button className="m-btn-back" onClick={() => navigate("/notes")}><ChevronLeft size={24} /></button>
-          <div className="m-file-info">
-            <span className="m-file-name">{file.name}</span>
-            <span className="m-page-indicator">{currentPage + 1} / {pages.length}</span>
-          </div>
-        </div>
-        <div className="m-header-right">
-          <button className={`m-ai-btn ${showSidebar ? 'active' : ''}`} onClick={() => setShowSidebar(!showSidebar)}><Sparkles size={20} /></button>
-          <button className="m-ai-btn" onClick={() => navigate("/ai")}><MessageSquare size={20} /></button>
-          <button className="m-btn-more"><MoreVertical size={24} /></button>
-        </div>
-      </header>
-
-      {!isFocusMode && (
-        <div className="m-secondary-toolbar">
-          <div className="m-page-nav">
-            <button onClick={() => setCurrentPage(Math.max(0, currentPage-1))} disabled={currentPage===0}><ChevronLeft size={20} /></button>
-            <span className="m-zoom-val">{currentPage + 1} / {pages.length}</span>
-            <button onClick={() => setCurrentPage(Math.min(pages.length-1, currentPage+1))} disabled={currentPage===pages.length-1}><ChevronRight size={20} /></button>
-          </div>
-          <div className="m-zoom-controls">
-            <button onClick={() => setZoom(Math.max(50, zoom-10))}><ZoomOut size={18} /></button>
-            <span className="m-zoom-val">{zoom}%</span>
-            <button onClick={() => setZoom(Math.min(200, zoom+10))}><ZoomIn size={18} /></button>
-          </div>
-        </div>
-      )}
-
-      <main className={isTablet ? "m-mobile-viewport tablet-view" : "m-mobile-viewport"}>
-        <div className="m-document-wrapper" style={{ width: `${zoom}%`, position: 'relative' }}>
-          <canvas 
-            ref={canvasRef}
-            style={{ 
-              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-              zIndex: 10,
-              pointerEvents: ['pen', 'highlighter', 'eraser', 'text', 'shape', 'circle', 'line'].includes(activeTool) ? 'auto' : 'none',
-              // Prevent page scroll while drawing on touch devices
-              touchAction: ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line'].includes(activeTool) ? 'none' : 'auto',
-              cursor: activeTool === 'pen' || activeTool === 'highlighter' ? 'crosshair' : activeTool === 'eraser' ? 'cell' : 'default',
-            }}
-            width={1000} height={1414}
-            onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={(e) => { e.preventDefault(); draw(e); }}
-            onTouchEnd={stopDrawing}
-          />
-          {file.blobUrl ? (
-            <div className="m-iframe-container">
-              {file.fileType && file.fileType.startsWith("image/") ? (
-                <img src={file.blobUrl} alt={file.name} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '8px' }} />
-              ) : (
-                <iframe src={objectUrl || file.blobUrl} title={file.name} style={{ width: '100%', height: '100%', border: 'none', backgroundColor: 'white' }} />
-              )}
-            </div>
-          ) : (
-            <div className="m-paper-a4">
-              <div className="m-paper-body">
-                <SlashEditor 
-                  initialContent={pages[currentPage] || ""}
-                  onChange={(val) => {
-                    const updated = [...pages];
-                    updated[currentPage] = val;
-                    setPages(updated);
-                  }}
-                  onBlur={() => saveFileChanges({ pages })}
-                  onSummarize={handleSummarize}
-                  onFlashcard={handleGenerateFlashcards}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-
-      <div className={`m-bottom-sheet ${showSidebar ? 'open' : ''}`}>
-        <div className="sheet-handle" onClick={() => setShowSidebar(!showSidebar)}></div>
-        <div className="sheet-header">
-          <h3>AI Assistant & Notes</h3>
-          <button className="m-close-sheet" onClick={() => setShowSidebar(false)}><X size={24} /></button>
-        </div>
-        <div className="sheet-content">
-          <div className="sheet-card">
-            <div className="sheet-header-row">
-              <h3>AI Summary</h3>
-              <button className="m-primary-btn mini" onClick={handleSummarize}>{isSummarizing ? "..." : "Generate"}</button>
-            </div>
-            <p className="summary-p">{summary || "Generate a summary to see it here."}</p>
-          </div>
-
-          <div className="sheet-card">
-            <div className="sheet-header-row">
-              <h3>Sticky Notes</h3>
-              <button className="m-text-btn" onClick={addNote}><Plus size={18} /> Add</button>
-            </div>
-            <div className="m-notes-list">
-              {notes.length === 0 ? (
-                <p className="m-empty-msg">No notes added yet.</p>
-              ) : (
-                notes.map(note => (
-                  <div key={note.id} className="m-note-item">
-                    <div className="m-note-top">
-                      <span>Page {note.page + 1}</span>
-                      <button onClick={() => deleteNote(note.id)}><Trash2 size={16} /></button>
-                    </div>
-                    <textarea 
-                      value={note.text || ""} 
-                      onChange={(e) => updateNote(note.id, e.target.value)}
-                      onBlur={() => flushNoteOnBlur(note.id)}
-                      placeholder="Type a note..."
-                      autoFocus={note.text === ""}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <nav className={`m-bottom-toolbar floating-pill ${isTablet ? 'tablet-pill' : ''}`}>
-        <div className="m-tools-row">
-          <button className={`m-tool-btn ${activeTool === 'highlighter' ? 'active' : ''}`} onClick={() => toggleTool('highlighter')}><Highlighter size={18} /><span>High</span></button>
-          <button className={`m-tool-btn ${activeTool === 'pen' ? 'active' : ''}`} onClick={() => toggleTool('pen')}><PenTool size={18} /><span>Pen</span></button>
-          <button className={`m-tool-btn ${activeTool === 'text' ? 'active' : ''}`} onClick={() => toggleTool('text')}><Type size={18} /><span>Text</span></button>
-          <button className={`m-tool-btn ${['shape', 'circle', 'line'].includes(activeTool) ? 'active' : ''}`} onClick={() => toggleTool('shape')}><Square size={18} /><span>Shapes</span></button>
-          <button className={`m-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => toggleTool('eraser')}><Eraser size={18} /><span>Eraser</span></button>
-          <button className="m-tool-btn" onClick={undo}><RotateCcw size={18} /><span>Undo</span></button>
-        </div>
-      </nav>
-
-      {showToolOptions && ['pen', 'highlighter', 'shape', 'circle', 'line'].includes(activeTool) && (
-        <div className="m-tool-options-panel">
-          <button className="m-close-options" onClick={() => setShowToolOptions(false)}>
-            <X size={16} />
+        {/* Sidebar trigger when closed */}
+        {!showSidebar && !zenMode && (
+          <button className="expand-sidebar-floating-btn" onClick={() => setShowSidebar(true)}>
+            <MessageSquare size={20} />
           </button>
-          <div className="color-swatches">
-            {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(c => (
-              <button key={c} className={`swatch ${penColor === c ? 'active' : ''}`} style={{ backgroundColor: c }} onClick={() => setPenColor(c)} />
-            ))}
-          </div>
-          {['shape', 'circle', 'line'].includes(activeTool) ? (
-            <div className="shape-variants">
-              <button className={`variant-btn ${activeTool === 'shape' ? 'active' : ''}`} onClick={() => setActiveTool('shape')}>⬛</button>
-              <button className={`variant-btn ${activeTool === 'circle' ? 'active' : ''}`} onClick={() => setActiveTool('circle')}>⚫</button>
-              <button className={`variant-btn ${activeTool === 'line' ? 'active' : ''}`} onClick={() => setActiveTool('line')}>➖</button>
-            </div>
-          ) : (
-            <div className="stroke-widths">
-              {[2, 4, 8].map(w => (
-                <button key={w} className={`stroke-btn ${strokeWidth === w ? 'active' : ''}`} onClick={() => setStrokeWidth(w)}>
-                  <div style={{ width: '18px', height: w, backgroundColor: 'var(--m-text)', borderRadius: w }} />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+
+        {/* Left Tool Rail trigger when closed */}
+        {!showLeftRail && !zenMode && !isMobile && (
+          <button 
+            className="expand-left-rail-floating-btn" 
+            onClick={() => setShowLeftRail(true)}
+            title="Show toolbar"
+          >
+            <PanelLeft size={20} />
+          </button>
+        )}
+      </div>
+
+      {/* Hidden file selector for canvas images / stickers */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImageFileChange} 
+        accept="image/*" 
+        style={{ display: 'none' }} 
+      />
     </div>
   );
 }

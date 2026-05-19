@@ -11,6 +11,8 @@ const NoteSchema = new mongoose.Schema({
   blobUrl: { type: String, default: "" },      // Base64 for uploaded files
   pages: [{ type: String }],                   // For notebooks
   notes: [{ type: mongoose.Schema.Types.Mixed }],  // Sticky notes
+  connectors: [{ type: mongoose.Schema.Types.Mixed }],
+  canvasImages: [{ type: mongoose.Schema.Types.Mixed }],
   bookmarks: [{ type: mongoose.Schema.Types.Mixed }],
   drawHistory: { type: mongoose.Schema.Types.Mixed, default: {} },
   isTrashed: { type: Boolean, default: false },

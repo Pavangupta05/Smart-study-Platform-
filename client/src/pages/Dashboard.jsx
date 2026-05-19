@@ -148,6 +148,8 @@ function Dashboard() {
   };
 
   const deleteTask = async (id) => {
+    const taskToDelete = tasks.find(t => (t._id || t.id) === id);
+    if (!taskToDelete) return;
     setTasks(prev => prev.filter(t => (t._id || t.id) !== id));
     try { 
       await tasksService.delete(id); 
@@ -156,7 +158,7 @@ function Dashboard() {
       console.error("Delete task error:", err);
       toast.error("Failed to delete task.");
       // Rollback
-      setTasks(prev => [task, ...prev]);
+      setTasks(prev => [taskToDelete, ...prev]);
     }
   };
 

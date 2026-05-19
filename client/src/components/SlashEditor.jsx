@@ -44,9 +44,23 @@ export default function SlashEditor({ initialContent, onChange, onBlur, onSummar
   };
 
   const getCaretCoordinates = () => {
-    // Basic approximation for textarea caret
     if (!textareaRef.current) return { top: 0, left: 0 };
-    return { top: 40, left: 20 }; // Fallback static position due to textarea limitations
+    const el = textareaRef.current;
+    const start = el.selectionStart;
+    
+    // Estimate line and column index of the caret
+    const textBeforeCursor = el.value.substring(0, start);
+    const lines = textBeforeCursor.split("\n");
+    const lineCount = lines.length;
+    
+    // Line height is ~24px, offset top accordingly and adjust for scroll position
+    const top = Math.min(el.clientHeight - 130, Math.max(20, lineCount * 24 - el.scrollTop + 10));
+    
+    // Horizontal character width is ~7.5px, offset left accordingly
+    const lastLineLength = lines[lines.length - 1].length;
+    const left = Math.min(el.clientWidth - 160, Math.max(20, lastLineLength * 7.5 + 15));
+    
+    return { top, left };
   };
 
   const handleKeyDown = (e) => {

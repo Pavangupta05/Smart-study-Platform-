@@ -348,10 +348,25 @@ function Notes() {
         </div>
 
         {filteredFiles.length === 0 ? (
-          <div className="empty-state fade-in">
-            <div className="empty-illustration">📭</div>
-            <h3>No notes found</h3>
-            <p>Your <b>{category || "workspace"}</b> is empty. Upload a file or start fresh.</p>
+          <div className="empty-state fade-in" style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div className="empty-illustration" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="cloud-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="rgba(99, 102, 241, 0.35)" />
+                    <stop offset="100%" stopColor="rgba(168, 85, 247, 0.03)" />
+                  </linearGradient>
+                </defs>
+                <circle cx="60" cy="60" r="48" fill="url(#cloud-glow)" />
+                <rect x="42" y="38" width="36" height="46" rx="4" stroke="var(--primary)" strokeWidth="2" fill="var(--card-bg, rgba(255,255,255,0.05))" />
+                <line x1="50" y1="48" x2="70" y2="48" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                <line x1="50" y1="56" x2="66" y2="56" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                <line x1="50" y1="64" x2="68" y2="64" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+                <path d="M68 76 L78 86" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>No notes found</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Your <b>{category || "workspace"}</b> is empty. Upload a file or start fresh.</p>
             <button className="btn-primary" onClick={(e) => { e.stopPropagation(); createNewNotebook(); }}>
               <Plus size={16} /> Create Notebook
             </button>

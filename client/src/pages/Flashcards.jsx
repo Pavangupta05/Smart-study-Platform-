@@ -12,6 +12,25 @@ function Flashcards() {
   const [decks, setDecks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getDeckColor = (deckName) => {
+    const premiumColors = [
+      "#6366f1", // Indigo
+      "#ec4899", // Pink
+      "#3b82f6", // Blue
+      "#10b981", // Emerald
+      "#f59e0b", // Amber
+      "#8b5cf6", // Violet
+      "#06b6d4", // Cyan
+      "#f43f5e"  // Rose
+    ];
+    let hash = 0;
+    for (let i = 0; i < deckName.length; i++) {
+      hash = deckName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % premiumColors.length;
+    return premiumColors[index];
+  };
+
   // Group flat flashcards array into decks
   const processFlashcards = (cards) => {
     const grouped = {};
@@ -23,7 +42,7 @@ function Flashcards() {
           name: deckName,
           count: 0,
           lastStudied: c.lastReviewed ? new Date(c.lastReviewed).toLocaleDateString() : "Never",
-          color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
+          color: getDeckColor(deckName),
           cards: []
         };
       }
