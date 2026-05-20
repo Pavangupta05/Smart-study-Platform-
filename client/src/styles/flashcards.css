@@ -1,5 +1,5 @@
 .flashcards-page {
-  padding: 40px 60px 100px;
+  padding: var(--page-padding);
   flex: 1;
   overflow-y: auto;
 }

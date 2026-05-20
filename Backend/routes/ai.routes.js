@@ -6,14 +6,14 @@ const { getProvider } = require("../services/ai/ai.provider");
 // ── POST /api/ai/chat ────────────────────────────────────────────────────────
 // Full chat with context awareness
 router.post("/chat", protect, async (req, res) => {
-  const { messages = [], context = {} } = req.body;
+  const { messages = [], context = {}, provider: reqProvider } = req.body;
 
   if (!messages.length) {
     return res.status(400).json({ success: false, message: "Messages array is required." });
   }
 
   try {
-    const provider = getProvider();
+    const provider = getProvider(reqProvider);
     const text = await provider.chat(messages, context);
     res.json({ success: true, data: { text } });
   } catch (err) {
@@ -28,15 +28,15 @@ router.post("/chat", protect, async (req, res) => {
 // ── POST /api/ai/chat/stream ─────────────────────────────────────────────────
 // Streaming chat via SSE — for typewriter effect
 router.post("/chat/stream", protect, async (req, res) => {
-  const { messages = [], context = {} } = req.body;
+  const { messages = [], context = {}, provider: reqProvider, file = null } = req.body;
 
   if (!messages.length) {
     return res.status(400).json({ success: false, message: "Messages required." });
   }
 
   try {
-    const provider = getProvider();
-    await provider.streamChat(messages, context, res);
+    const provider = getProvider(reqProvider);
+    await provider.streamChat(messages, context, res, file);
   } catch (err) {
     console.error("AI Stream Error:", err.message);
     if (!res.headersSent) {
@@ -48,7 +48,7 @@ router.post("/chat/stream", protect, async (req, res) => {
 // ── POST /api/ai/flashcards ──────────────────────────────────────────────────
 // Generate flashcards for a topic
 router.post("/flashcards", protect, async (req, res) => {
-  const { topic, count = 10 } = req.body;
+  const { topic, count = 10, provider: reqProvider } = req.body;
 
   if (!topic?.trim()) {
     return res.status(400).json({ success: false, message: "Topic is required." });
@@ -59,7 +59,7 @@ router.post("/flashcards", protect, async (req, res) => {
   }
 
   try {
-    const provider = getProvider();
+    const provider = getProvider(reqProvider);
     const cards = await provider.generateFlashcards(topic, count);
     res.json({ success: true, data: { cards } });
   } catch (err) {
@@ -74,14 +74,14 @@ router.post("/flashcards", protect, async (req, res) => {
 // ── POST /api/ai/optimize-schedule ──────────────────────────────────────────
 // AI schedule optimization
 router.post("/optimize-schedule", protect, async (req, res) => {
-  const { tasks = [] } = req.body;
+  const { tasks = [], provider: reqProvider } = req.body;
 
   if (!tasks.length) {
     return res.status(400).json({ success: false, message: "No tasks to optimize." });
   }
 
   try {
-    const provider = getProvider();
+    const provider = getProvider(reqProvider);
     const result = await provider.optimizeSchedule(tasks);
 
     // Parse the structured response

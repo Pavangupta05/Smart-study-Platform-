@@ -53,14 +53,15 @@ function Planner() {
   };
 
   const deleteTask = async (id) => {
+    const task = tasks.find(t => (t._id || t.id) === id); // capture before optimistic update
     setTasks(prev => prev.filter(t => (t._id || t.id) !== id));
     try { 
       await tasksService.delete(id); 
       toast.success("Task deleted");
     } catch (err) {
       toast.error("Failed to delete task.");
-      // Rollback
-      setTasks(prev => [...prev, task].sort((a, b) => a.time.localeCompare(b.time)));
+      // Rollback: re-insert the removed task
+      if (task) setTasks(prev => [...prev, task].sort((a, b) => a.time.localeCompare(b.time)));
     }
   };
 
@@ -151,7 +152,7 @@ function Planner() {
             <div>
               <h2 className="section-title">Today's Schedule</h2>
               <div className="energy-indicator">
-                <Brain size={14} /> Best Focus Time: 08:00 - 11:30
+                <Brain size={14} /> Recommended: mornings are ideal for deep work
               </div>
             </div>
             <button className={`btn-ai-optimize ${isOptimizing ? 'loading' : ''}`} onClick={handleOptimize}>

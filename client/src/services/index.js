@@ -48,9 +48,12 @@ export const flashcardsService = {
 
 // CHATS
 export const chatService = {
-  getLatest: () => api.get("/chats"),
-  sendMessage: (role, text) => api.post("/chats/message", { role, text }),
-  clear: () => api.delete("/chats"),
+  getAll: () => api.get("/chats"),
+  getById: (id) => api.get(`/chats/${id}`),
+  create: (title, messages) => api.post("/chats", { title, messages }),
+  sendMessage: (id, role, text) => api.post(`/chats/${id}/message`, { role, text }),
+  update: (id, title) => api.put(`/chats/${id}`, { title }),
+  delete: (id) => api.delete(`/chats/${id}`),
 };
 
 // AI SERVICE — all AI calls go through the backend (API key is secure)
@@ -60,23 +63,23 @@ export const aiService = {
    * @param {Array} messages - [{role, text}]
    * @param {Object} context - {currentPage, currentNote, selection, document}
    */
-  chat: (messages, context = {}) =>
-    api.post("/ai/chat", { messages, context }),
+  chat: (messages, context = {}, provider = null, options = {}) =>
+    api.post("/ai/chat", { messages, context, provider }, options),
 
   /**
    * Generate flashcards for a topic
    * @param {string} topic
    * @param {number} count
    */
-  generateFlashcards: (topic, count = 10) =>
-    api.post("/ai/flashcards", { topic, count }),
+  generateFlashcards: (topic, count = 10, provider = null) =>
+    api.post("/ai/flashcards", { topic, count, provider }),
 
   /**
    * Optimize a study schedule
    * @param {Array} tasks
    */
-  optimizeSchedule: (tasks) =>
-    api.post("/ai/optimize-schedule", { tasks }),
+  optimizeSchedule: (tasks, provider = null) =>
+    api.post("/ai/optimize-schedule", { tasks, provider }),
 
   /**
    * Streaming chat — returns a fetch ReadableStream for SSE
@@ -84,7 +87,7 @@ export const aiService = {
    * @param {Array} messages
    * @param {Object} context
    */
-  streamChat: async (messages, context = {}) => {
+  streamChat: async (messages, context = {}, provider = null, file = null, options = {}) => {
     const token = localStorage.getItem("starNote_token");
     const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
     const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
@@ -93,9 +96,18 @@ export const aiService = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ messages, context }),
+      body: JSON.stringify({ messages, context, provider, file }),
+      signal: options.signal
     });
     return response;
   },
+
+  /** One-shot completion with custom system prompt (summarize, etc.) */
+  completeWithPrompt: (messages, systemPrompt, context = {}, provider = null) =>
+    api.post("/ai/chat", {
+      messages,
+      context: { ...context, systemPrompt },
+      provider,
+    }),
 };
 

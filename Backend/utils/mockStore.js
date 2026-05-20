@@ -201,8 +201,19 @@ const mockChats = {
     saveStore();
     return store.chats[idx];
   },
+  async updateById(id, data) {
+    const idx = store.chats.findIndex((c) => c._id === id);
+    if (idx === -1) return null;
+    store.chats[idx] = { ...store.chats[idx], ...data, updatedAt: new Date() };
+    saveStore();
+    return store.chats[idx];
+  },
   async delete({ user }) {
-    const idx = store.chats.findIndex((c) => c.user === user);
+    store.chats = store.chats.filter(c => c.user !== user);
+    saveStore();
+  },
+  async deleteById(id) {
+    const idx = store.chats.findIndex((c) => c._id === id);
     if (idx !== -1) {
       store.chats.splice(idx, 1);
       saveStore();

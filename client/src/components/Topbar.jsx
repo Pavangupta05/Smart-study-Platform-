@@ -38,18 +38,18 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
   }, [location.pathname]);
 
   // Instant theme toggle — directly manipulates DOM before React re-render
-  const toggleTheme = () => {
+  const toggleTheme = (e) => {
     const next = theme === "dark" ? "light" : "dark";
-    // Apply instantly to DOM (no waiting for re-render)
-    document.body.classList.remove("light", "dark");
-    document.body.classList.add(next);
-    localStorage.setItem("theme", next);
-    // Then sync React state
     if (setTheme) {
-      setTheme(next);
+      setTheme(next, e);
     }
-    // Also dispatch custom event for any other listeners (e.g. Settings.jsx)
-    window.dispatchEvent(new CustomEvent("themeChange", { detail: { theme: next } }));
+    window.dispatchEvent(new CustomEvent("themeChange", { 
+      detail: { 
+        theme: next,
+        clientX: e?.clientX,
+        clientY: e?.clientY
+      } 
+    }));
   };
 
   const isDark = theme === "dark";

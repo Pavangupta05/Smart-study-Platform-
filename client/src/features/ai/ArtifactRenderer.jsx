@@ -13,8 +13,12 @@ import {
   ChevronRight,
   Check,
   X,
+  Download
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { flashcardsService } from "../../services/index";
+import CodeSandbox from "../../components/CodeSandbox";
 
 // ── Type metadata ────────────────────────────────────────────────────────────
 const TYPE_META = {
@@ -33,6 +37,23 @@ function FlashcardViewer({ content }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [mastered, setMastered] = useState(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const saveToDeck = async () => {
+    setSaving(true);
+    try {
+      const deckName = `AI Artifact — ${new Date().toLocaleDateString()}`;
+      await flashcardsService.bulkCreate(
+        cards.map((c) => ({ front: c.question, back: c.answer })),
+        deckName
+      );
+      toast.success(`Saved ${cards.length} cards to Flashcards`);
+    } catch {
+      toast.error("Could not save flashcards");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!cards.length) return <ReactMarkdown>{content}</ReactMarkdown>;
 
@@ -41,6 +62,11 @@ function FlashcardViewer({ content }) {
 
   return (
     <div className="artifact-flashcard-viewer">
+      <div className="artifact-fc-toolbar">
+        <button type="button" className="artifact-save-deck-btn" onClick={saveToDeck} disabled={saving}>
+          {saving ? "Saving…" : "Save to Flashcards"}
+        </button>
+      </div>
       <div className="artifact-fc-progress">
         <span>{index + 1} / {cards.length}</span>
         <span className="artifact-fc-mastered">{mastered.size} mastered</span>
@@ -159,6 +185,7 @@ function CodeViewer({ content, lang }) {
         </button>
       </div>
       <pre className="artifact-code-block"><code>{content}</code></pre>
+      <CodeSandbox code={content} lang={lang} />
     </div>
   );
 }
@@ -208,6 +235,14 @@ export default function ArtifactRenderer({ artifact }) {
           <Icon size={15} strokeWidth={2} />
           <span className="artifact-type-label">{TypeMeta.label}</span>
         </div>
+        <button 
+          className="artifact-header-btn" 
+          onClick={() => window.print()} 
+          title="Export to PDF"
+        >
+          <Download size={14} />
+          <span>Export</span>
+        </button>
       </div>
       <div className="artifact-content">
         {renderContent()}

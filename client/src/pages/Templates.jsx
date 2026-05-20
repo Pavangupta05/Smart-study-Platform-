@@ -4,6 +4,7 @@ import {
   Plus, BookOpen, Brain, Zap, Check,
   ChevronRight, GraduationCap, ListTodo
 } from "lucide-react";
+import { toast } from "sonner";
 import { notesService } from "../services/index";
 import "../styles/templates.css";
 
@@ -79,7 +80,7 @@ function Templates() {
       navigate(`/reader/${res.data.note._id}`);
     } catch (err) {
       console.error(err);
-      alert("Failed to create note from template.");
+      toast.error("Failed to create note from template.");
     }
   };
 
@@ -125,7 +126,12 @@ function Templates() {
               </div>
             ))}
 
-            <div className="template-card-modern add-custom-card">
+            <div className="template-card-modern add-custom-card" onClick={async () => {
+                try {
+                  const res = await notesService.create({ name: "Custom Template", size: "0 KB", icon: "✏️", category: "general", content: "# My Template\n\nStart building your own structure here..." });
+                  navigate(`/reader/${res.data.note._id}`);
+                } catch { navigate("/notes"); }
+              }}>
               <div className="icon-box-dashed">
                 <Plus size={24} />
               </div>

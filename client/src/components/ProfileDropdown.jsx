@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Settings, LogOut, Shield, Bell, HelpCircle } from "lucide-react";
+import { User, Settings, LogOut, Shield, Bell, HelpCircle, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
+import { hasVoiceGuruBadge } from "../utils/studyGamification";
 import "../styles/profile-dropdown.css";
 
 function ProfileDropdown() {
@@ -23,7 +24,7 @@ function ProfileDropdown() {
 
   return (
     <div className="profile-dropdown-container" ref={dropdownRef}>
-      <button className="avatar-btn" onClick={() => setIsOpen(!isOpen)}>
+      <button className="avatar-btn" onClick={() => setIsOpen(!isOpen)} aria-label="Open profile menu">
         <div className="avatar">
           {user?.avatar ? (
             <img src={user.avatar} alt="Profile" className="avatar-img-tiny" />
@@ -31,6 +32,11 @@ function ProfileDropdown() {
             initials
           )}
         </div>
+        {hasVoiceGuruBadge() && (
+          <span className="avatar-voice-guru" title="Voice Guru badge">
+            <Award size={12} />
+          </span>
+        )}
       </button>
 
       <AnimatePresence>
@@ -70,7 +76,6 @@ function ProfileDropdown() {
               <button className="dropdown-item" onClick={() => { navigate("/settings", { state: { tab: "notifications" } }); setIsOpen(false); }}>
                 <Bell size={16} />
                 <span>Notifications</span>
-                <span className="notification-badge">3</span>
               </button>
             </div>
 

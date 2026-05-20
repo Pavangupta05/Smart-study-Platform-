@@ -1,65 +1,37 @@
-import { useState, useEffect } from "react";
-import { Play, Pause, RotateCcw, Volume2, Headphones } from "lucide-react";
+import { Play, Pause, RotateCcw, Headphones } from "lucide-react";
+import { useTimer } from "../context/TimerContext";
 import "./PomodoroWidget.css";
 
 function PomodoroWidget() {
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isActive, setIsActive] = useState(false);
-  const [mode, setMode] = useState("focus"); // focus, shortBreak, longBreak
+  const {
+    minutes,
+    seconds,
+    isActive,
+    mode,
+    toggleTimer,
+    resetTimer,
+    changeMode,
+    soundEnabled,
+    setSoundEnabled
+  } = useTimer();
 
-  const modes = {
-    focus: 25 * 60,
-    shortBreak: 5 * 60,
-    longBreak: 15 * 60
+  const totalTime = mode === "study" ? 25 * 60 : mode === "shortBreak" ? 5 * 60 : 15 * 60;
+  const timeLeft = minutes * 60 + seconds;
+  const progress = ((totalTime - timeLeft) / totalTime) * 100;
+
+  const formatTime = () => {
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
-
-  useEffect(() => {
-    let interval = null;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft(t => t - 1), 1000);
-    } else if (timeLeft === 0 && isActive) {
-      setIsActive(false);
-      // Play a simple notification beep
-      try {
-        const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-        audio.play().catch(e => console.log("Audio play blocked by browser:", e));
-      } catch(err) {
-        console.error("Audio error", err);
-      }
-    }
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
-
-  const toggleTimer = () => setIsActive(!isActive);
-  
-  const resetTimer = () => {
-    setIsActive(false);
-    setTimeLeft(modes[mode]);
-  };
-
-  const switchMode = (newMode) => {
-    setMode(newMode);
-    setIsActive(false);
-    setTimeLeft(modes[newMode]);
-  };
-
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const progress = ((modes[mode] - timeLeft) / modes[mode]) * 100;
 
   return (
     <div className="pomodoro-widget">
       <div className="pomo-header">
         <div className="pomo-tabs">
-          <button className={mode === "focus" ? "active" : ""} onClick={() => switchMode("focus")}>Focus</button>
-          <button className={mode === "shortBreak" ? "active" : ""} onClick={() => switchMode("shortBreak")}>Short Break</button>
-          <button className={mode === "longBreak" ? "active" : ""} onClick={() => switchMode("longBreak")}>Long Break</button>
+          <button className={mode === "study" ? "active" : ""} onClick={() => changeMode("study")}>Focus</button>
+          <button className={mode === "shortBreak" ? "active" : ""} onClick={() => changeMode("shortBreak")}>Short Break</button>
+          <button className={mode === "longBreak" ? "active" : ""} onClick={() => changeMode("longBreak")}>Long Break</button>
         </div>
-        <button className="btn-lofi">
+        <button className={`btn-lofi ${soundEnabled ? "active" : ""}`} onClick={() => setSoundEnabled(!soundEnabled)}>
           <Headphones size={16} /> Lofi
         </button>
       </div>
@@ -75,7 +47,7 @@ function PomodoroWidget() {
               strokeDashoffset={283 - (283 * progress) / 100}
             />
           </svg>
-          <div className="pomo-time">{formatTime(timeLeft)}</div>
+          <div className="pomo-time">{formatTime()}</div>
         </div>
 
         <div className="pomo-controls">

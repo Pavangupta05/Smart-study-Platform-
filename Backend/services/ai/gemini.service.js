@@ -42,6 +42,12 @@ function buildSystemPrompt(context = {}) {
   if (context.document) {
     prompt += `\n📄 DOCUMENT CONTEXT: User is reading "${context.document}"`;
   }
+  if (context.language) {
+    prompt += `\n\n🌐 LANGUAGE: ${context.language}`;
+  }
+  if (context.systemPrompt) {
+    prompt += `\n\n📌 TASK:\n${context.systemPrompt}`;
+  }
 
   return prompt;
 }
@@ -112,7 +118,7 @@ async function optimizeSchedule(tasks) {
 /**
  * Streaming chat via Server-Sent Events
  */
-async function streamChat(messages = [], context = {}, res) {
+async function streamChat(messages = [], context = {}, res, file = null) {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const systemPrompt = buildSystemPrompt(context);
@@ -121,8 +127,18 @@ async function streamChat(messages = [], context = {}, res) {
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
     .join("\n");
 
-  const lastMessage = messages[messages.length - 1];
   const fullPrompt = `${systemPrompt}\n\n--- Conversation History ---\n${historyText}\n\nStarNote AI:`;
+
+  let parts = [{ text: fullPrompt }];
+
+  if (file && file.data) {
+    parts.unshift({
+      inlineData: {
+        data: file.data,
+        mimeType: file.type || "application/octet-stream",
+      }
+    });
+  }
 
   // Set SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -131,7 +147,7 @@ async function streamChat(messages = [], context = {}, res) {
   res.flushHeaders();
 
   try {
-    const result = await model.generateContentStream(fullPrompt);
+    const result = await model.generateContentStream(parts);
 
     for await (const chunk of result.stream) {
       const chunkText = chunk.text();

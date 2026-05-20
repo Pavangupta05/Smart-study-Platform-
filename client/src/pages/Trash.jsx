@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Trash2, RotateCcw, X, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { notesService } from "../services/index";
 import "../styles/trash.css";
@@ -7,6 +8,8 @@ import "../styles/trash.css";
 function Trash() {
   const [trashItems, setTrashItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isEmptying, setIsEmptying] = useState(false);
 
   useEffect(() => {
     notesService.getTrash()
@@ -38,22 +41,101 @@ function Trash() {
     }
   };
 
-  const emptyTrash = async () => {
-    if (window.confirm("Permanently delete all items in trash?")) {
-      try {
-        for (const item of trashItems) {
-          await notesService.deletePermanent(item._id);
-        }
-        setTrashItems([]);
-      } catch (e) {
-        console.error(e);
-        toast.error("Failed to empty trash.");
-      }
+  const emptyTrash = () => {
+    setShowConfirmModal(true);
+  };
+
+  const handleEmptyTrashConfirm = async () => {
+    setIsEmptying(true);
+    try {
+      // Delete all items in parallel for speed
+      await Promise.all(trashItems.map(item => notesService.deletePermanent(item._id)));
+      setTrashItems([]);
+      setShowConfirmModal(false);
+      toast.success("Trash emptied successfully.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to empty trash.");
+    } finally {
+      setIsEmptying(false);
     }
   };
 
   return (
     <div className="trash-page fade-in">
+      {/* CONFIRM EMPTY TRASH MODAL */}
+      <AnimatePresence>
+        {showConfirmModal && (
+          <motion.div 
+            className="gen-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="gen-modal"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              style={{ maxWidth: "400px" }}
+            >
+              <div className="gen-modal-header">
+                <div className="gen-modal-title" style={{ color: "var(--danger)" }}>
+                  <AlertCircle size={18} />
+                  <h3>Empty Trash?</h3>
+                </div>
+                <button className="gen-close" onClick={() => setShowConfirmModal(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="gen-modal-body">
+                <p style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.5" }}>
+                  This will permanently delete all {trashItems.length} items in the trash. This action cannot be undone.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+                <button 
+                  className="empty-state-cta"
+                  style={{ 
+                    flex: 1, 
+                    background: "var(--surface-hover)", 
+                    color: "var(--text-secondary)", 
+                    border: "1px solid var(--border)",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  style={{ 
+                    flex: 1, 
+                    background: "#ef4444", 
+                    color: "#fff", 
+                    border: "none",
+                    padding: "10px 16px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                  onClick={handleEmptyTrashConfirm}
+                  disabled={isEmptying}
+                >
+                  {isEmptying ? "Emptying..." : "Empty Trash"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="trash-header">
         <div className="header-info">
           <h1 className="page-title">Trash</h1>

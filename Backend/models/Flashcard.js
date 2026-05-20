@@ -7,6 +7,10 @@ const FlashcardSchema = new mongoose.Schema({
   back: { type: String, required: true },
   mastered: { type: Boolean, default: false },
   lastReviewed: { type: Date, default: null },
+  repetitions: { type: Number, default: 0 },
+  interval: { type: Number, default: 0 },
+  easeFactor: { type: Number, default: 2.5 },
+  nextReviewDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Flashcard", FlashcardSchema);

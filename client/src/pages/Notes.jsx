@@ -365,7 +365,7 @@ function Notes() {
                 <path d="M68 76 L78 86" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
             </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>No notes found</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>No notes found</h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Your <b>{category || "workspace"}</b> is empty. Upload a file or start fresh.</p>
             <button className="btn-primary" onClick={(e) => { e.stopPropagation(); createNewNotebook(); }}>
               <Plus size={16} /> Create Notebook

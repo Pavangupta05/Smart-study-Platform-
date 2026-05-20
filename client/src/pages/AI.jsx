@@ -7,5 +7,9 @@ import AISplit from "../features/ai/AISplit";
  * This page simply renders the new split workspace.
  */
 export default function AI() {
-  return <AISplit />;
+  return (
+    <div className="ai-page">
+      <AISplit />
+    </div>
+  );
 }

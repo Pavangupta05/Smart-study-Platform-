@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { 
   Play, Plus, CheckCircle2, Circle, Trash2,
   Sparkles, ArrowRight, Layout, Flame, Layers,
-  FileText, Clock, TrendingUp, TrendingDown, BarChart2
+  FileText, Clock, TrendingUp, TrendingDown, BarChart2, Brain
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
-import { tasksService, notesService } from "../services/index";
+import { tasksService, notesService, flashcardsService } from "../services/index";
 import {
   AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
@@ -94,11 +94,28 @@ function Dashboard() {
       .finally(() => setIsLoading(false));
   };
 
+  const [flashcards, setFlashcards] = useState([]);
+
+  const fetchFlashcards = () => {
+    flashcardsService.getAll()
+      .then(res => setFlashcards(res.data.cards || []))
+      .catch(err => console.error("Fetch flashcards error:", err));
+  };
+
+  const dueCardsCount = useMemo(() => {
+    const today = new Date();
+    return flashcards.filter(c => {
+      if (!c.nextReviewDate) return true;
+      return new Date(c.nextReviewDate) <= today;
+    }).length;
+  }, [flashcards]);
+
   // Initial Fetch
   useEffect(() => {
     setIsLoading(true);
     fetchTasks();
     fetchNotes();
+    fetchFlashcards();
   }, []);
 
   // Real-time synchronization
@@ -106,9 +123,11 @@ function Dashboard() {
     if (!socket) return;
     socket.on("sync_tasks", fetchTasks);
     socket.on("sync_notes", fetchNotes);
+    socket.on("sync_flashcards", fetchFlashcards);
     return () => {
       socket.off("sync_tasks", fetchTasks);
       socket.off("sync_notes", fetchNotes);
+      socket.off("sync_flashcards", fetchFlashcards);
     };
   }, [socket]);
 
@@ -242,6 +261,68 @@ function Dashboard() {
         animate="show"
       >
         <motion.div variants={itemVars} className="dash-main">
+          {/* ACTIVE RECALL DUE TODAY ALERT */}
+          {dueCardsCount > 0 && (
+            <motion.div 
+              className="insight-card due-flashcards-widget"
+              whileHover={{ y: -4 }}
+              onClick={() => navigate("/flashcards")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "20px 24px",
+                background: "linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(var(--primary-rgb), 0.02))",
+                border: "1px dashed var(--primary)",
+                borderRadius: "24px",
+                cursor: "pointer",
+                marginBottom: "24px",
+                gap: "16px",
+                width: "100%"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "16px",
+                  background: "rgba(var(--primary-rgb), 0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--primary)"
+                }}>
+                  <Brain size={24} />
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "var(--text)", margin: 0 }}>Active Recall Study Session</h3>
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: "4px 0 0" }}>
+                    You have <strong>{dueCardsCount} flashcard{dueCardsCount === 1 ? "" : "s"}</strong> due for review today! Retain your knowledge with spaced repetition.
+                  </p>
+                </div>
+              </div>
+              <button 
+                className="btn-resume" 
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "14px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                  border: "none",
+                  cursor: "pointer"
+                }}
+              >
+                <span>Study Now</span>
+                <ArrowRight size={14} />
+              </button>
+            </motion.div>
+          )}
+
           {/* FOCUS CARD & POMODORO */}
           <section className="dash-section dash-widgets-grid">
             <PomodoroWidget />

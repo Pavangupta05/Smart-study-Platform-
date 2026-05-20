@@ -1,47 +1,43 @@
-import { useState } from "react";
+import { useMemo } from "react";
+import { buildHeatmapFromActivity } from "../utils/studyGamification";
 import "./HeatmapWidget.css";
 
 function HeatmapWidget() {
-  // Generate mock data for the last 12 weeks
-  const weeks = 12;
-  const daysPerWeek = 7;
-  
-  const generateMockData = () => {
-    const data = [];
-    for (let w = 0; w < weeks; w++) {
-      const week = [];
-      for (let d = 0; d < daysPerWeek; d++) {
-        // Random intensity 0-4
-        week.push(Math.floor(Math.random() * 5));
-      }
-      data.push(week);
-    }
-    return data;
-  };
-
-  const [heatmapData] = useState(generateMockData());
+  const { data: heatmapData, total, map } = useMemo(() => buildHeatmapFromActivity(12), []);
   const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May"];
+
+  const tooltipFor = (wIndex, dIndex) => {
+    const weeks = 12;
+    const today = new Date();
+    const dayOffset = (weeks - 1 - wIndex) * 7 + (6 - dIndex);
+    const dte = new Date(today);
+    dte.setDate(dte.getDate() - dayOffset);
+    const key = dte.toISOString().slice(0, 10);
+    const count = map[key] || 0;
+    if (count === 0) return `No AI questions on ${key}`;
+    return `You asked ${count} question${count === 1 ? "" : "s"} on ${key}`;
+  };
 
   return (
     <div className="heatmap-widget">
       <div className="heatmap-header">
         <h3>Study Activity</h3>
-        <span className="heatmap-total">342 Contributions</span>
+        <span className="heatmap-total">{total} AI questions</span>
       </div>
 
       <div className="heatmap-container">
         <div className="heatmap-months">
           {monthLabels.map((m, i) => <span key={i}>{m}</span>)}
         </div>
-        
+
         <div className="heatmap-grid">
           {heatmapData.map((week, wIndex) => (
             <div key={`w-${wIndex}`} className="heatmap-column">
               {week.map((level, dIndex) => (
-                <div 
-                  key={`d-${wIndex}-${dIndex}`} 
+                <div
+                  key={`d-${wIndex}-${dIndex}`}
                   className={`heatmap-cell level-${level}`}
-                  title={`${level * 2} activities`}
+                  title={tooltipFor(wIndex, dIndex)}
                 />
               ))}
             </div>

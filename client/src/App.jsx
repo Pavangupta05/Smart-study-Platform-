@@ -7,6 +7,7 @@ import Topbar from "./components/Topbar";
 import Preloader from "./components/Preloader";
 import CommandPalette from "./components/CommandPalette";
 import MobileDock from "./components/MobileDock";
+import StudyTimer from "./components/StudyTimer";
 
 // Lazy-loaded pages — code split for faster initial load
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -66,9 +67,62 @@ function App() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
+  const triggerThemeTransition = (nextTheme, clientX, clientY) => {
+    const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!document.startViewTransition || isReducedMotion) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    const x = clientX ?? window.innerWidth / 2;
+    const y = clientY ?? window.innerHeight / 2;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    // Save to localStorage immediately
+    localStorage.setItem("theme", nextTheme);
+
+    const transition = document.startViewTransition(() => {
+      document.documentElement.classList.add("view-transitioning");
+      document.body.classList.remove("light", "dark");
+      document.body.classList.add(nextTheme);
+      
+      const appEl = document.querySelector(".app");
+      if (appEl) {
+        appEl.classList.remove("light", "dark");
+        appEl.classList.add(nextTheme);
+      }
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        [
+          { clipPath: `circle(0px at ${x}px ${y}px)` },
+          { clipPath: `circle(${endRadius}px at ${x}px ${y}px)` }
+        ],
+        {
+          duration: 380,
+          easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+          pseudoElement: "::view-transition-new(root)"
+        }
+      );
+    });
+
+    transition.finished.then(() => {
+      document.documentElement.classList.remove("view-transitioning");
+      setTheme(nextTheme);
+      window.dispatchEvent(new CustomEvent("themeChangeCompleted", { detail: { theme: nextTheme } }));
+    });
+  };
+
   useEffect(() => {
     const syncTheme = () => setTheme(localStorage.getItem("theme") || "light");
-    const syncThemeCustom = (e) => setTheme(e.detail?.theme || localStorage.getItem("theme") || "light");
+    const syncThemeCustom = (e) => {
+      const nextTheme = e.detail?.theme || localStorage.getItem("theme") || "light";
+      triggerThemeTransition(nextTheme, e.detail?.clientX, e.detail?.clientY);
+    };
     window.addEventListener("storage", syncTheme);
     window.addEventListener("themeChange", syncThemeCustom);
     return () => {
@@ -82,6 +136,10 @@ function App() {
   if (!isAuthenticated) {
     return (
       <div className={theme}>
+        <div className="global-bg">
+          <div className="bg-layer bg-light" />
+          <div className="bg-layer bg-dark" />
+        </div>
         <Suspense fallback={<PageSkeleton />}>
           <Routes>
             <Route path="/landing" element={<Landing />} />
@@ -96,6 +154,10 @@ function App() {
 
   return (
     <div className={`app ${theme} ${zenMode ? "zen-mode" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
+      <div className="global-bg">
+        <div className="bg-layer bg-light" />
+        <div className="bg-layer bg-dark" />
+      </div>
       <Toaster position="top-center" richColors closeButton />
       {!zenMode && (
         <Sidebar 
@@ -109,7 +171,7 @@ function App() {
       <div className="main">
         <Topbar 
           theme={theme}
-          setTheme={setTheme}
+          setTheme={(nextVal, event) => triggerThemeTransition(nextVal, event?.clientX, event?.clientY)}
           zenMode={zenMode} 
           setZenMode={setZenMode} 
           isSidebarOpen={isSidebarOpen}
@@ -138,6 +200,7 @@ function App() {
 
       <CommandPalette />
       <MobileDock />
+      <StudyTimer />
       
       {/* GlobalAskAI removed — AI page now has its own integrated input */}
     </div>
@@ -146,13 +209,24 @@ function App() {
 
 // Reusable transition wrapper
 function PageTransition({ children }) {
+  const { pathname } = useLocation();
+  const isAIPage = pathname === "/ai";
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", width: "100%", overflowY: "auto", overflowX: "hidden" }}
+      className={isAIPage ? "page-transition page-transition--ai" : "page-transition"}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        height: "100%",
+        width: "100%",
+        overflowY: isAIPage ? "hidden" : "auto",
+        overflowX: "hidden",
+      }}
     >
       {children}
     </motion.div>

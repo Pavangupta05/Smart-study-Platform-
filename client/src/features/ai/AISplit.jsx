@@ -1,35 +1,46 @@
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, User, Copy, Check, BookmarkPlus, BrainCircuit,
-  Trash2, ArrowUp, Plus, X, AudioLines, Upload, FolderOpen,
-  ClipboardPaste, Loader2, PenLine, Globe, Layers, SplitSquareHorizontal,
-  MessageSquare, ChevronRight,
+  Sparkles, Copy, Check, BookmarkPlus, BrainCircuit,
+  Trash2, ArrowUp, Plus, X, FolderOpen,
+  PenLine, Globe, Layers, SplitSquareHorizontal,
+  MessageSquare, ChevronRight, MessageSquarePlus, PanelLeft,
+  ChevronDown, Search, Square, Mic, Paperclip, FileText, Image as ImageIcon,
+  Volume2, VolumeX, Maximize, Minimize, Link2, FileStack, ListChecks,
+  Loader2, Languages, LayoutTemplate, History, Flame, Award,
+  MoreHorizontal, GripVertical
 } from "lucide-react";
+
+const MODEL_OPTIONS = [
+  { id: "gemini", name: "Gemini 1.5 Pro", short: "Gemini", desc: "Fast & reliable for general tasks" },
+  { id: "claude", name: "Claude 3.5 Sonnet", short: "Claude", desc: "Advanced reasoning & coding" },
+  { id: "groq", name: "Llama 3.3 (Groq)", short: "Groq", desc: "Lightning fast responses" },
+  { id: "openrouter", name: "Llama 3.3 (OpenRouter)", short: "OpenRouter", desc: "High quality instruct model" },
+];
+
+const IconSlot = ({ children, size = 14 }) => (
+  <span className="ais-icon-slot" style={{ width: size, height: size }} aria-hidden>
+    {children}
+  </span>
+);
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import { useLocation } from "react-router-dom";
-import { notesService, chatService, aiService } from "../../services/index";
-import { detectArtifact } from "./artifactDetector";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { notesService, chatService, aiService, flashcardsService } from "../../services/index";
+import { detectArtifact, parseFlashcards } from "./artifactDetector";
 import ArtifactRenderer from "./ArtifactRenderer";
 import { useAIContext } from "../../context/AIContext";
+import StreamingText from "../../components/StreamingText";
+import { useHotkeys } from "../../hooks/useHotkeys";
+import { AI_PROMPT_TEMPLATES, AI_LANGUAGES } from "../../constants/promptTemplates";
+import {
+  getStreak, getXP, recordAIStudySession, recordChatQuestion,
+  recordTTSListen, hasVoiceGuruBadge
+} from "../../utils/studyGamification";
 import "../../styles/ai-split.css";
 
-// ── Typewriter markdown ───────────────────────────────────────────────────────
-const TypewriterMarkdown = memo(({ text, delay = 10 }) => {
-  const [displayed, setDisplayed] = useState("");
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (idx < text.length) {
-      const t = setTimeout(() => {
-        setDisplayed(p => p + text[idx]);
-        setIdx(p => p + 1);
-      }, delay);
-      return () => clearTimeout(t);
-    }
-  }, [idx, delay, text]);
-  return <ReactMarkdown>{displayed}</ReactMarkdown>;
-});
+const LANG_STORAGE_KEY = "starNote_aiLanguage";
+
 
 // ── Voice visualizer ─────────────────────────────────────────────────────────
 const VoiceVisualizer = memo(({ volumes }) => (
@@ -45,71 +56,137 @@ const VoiceVisualizer = memo(({ volumes }) => (
   </div>
 ));
 
+function displayText(msg, summarizeMap) {
+  const sum = summarizeMap?.[msg._idx];
+  if (sum?.showSummary && sum.summary) return sum.summary;
+  return msg.text;
+}
+
+function hasListOrFlashcards(text) {
+  if (!text || text.length < 80) return false;
+  return parseFlashcards(text).length > 0 || /^[\s]*[-*•]\s/m.test(text) || /^\d+[\.\)]\s/m.test(text);
+}
+
 // ── Message bubble ────────────────────────────────────────────────────────────
-const MessageBubble = memo(({ msg, index, isLast, onCopy, onSave, onQuiz, onArtifact, copiedIdx, savedIdx }) => {
+const MessageBubble = memo(({
+  msg, index, isLast, isStreaming, onCopy, onSave, onQuiz, onArtifact, onSpeak,
+  onSummarize, onFlashcards, onRestoreVersion, copiedIdx, savedIdx, speakingIdx,
+  summarizingIdx, summarizeMap, showHistoryFor, setShowHistoryFor,
+  moreMenuIdx, setMoreMenuIdx,
+}) => {
   const isAI = msg.role === "ai";
+  const text = displayText({ ...msg, _idx: index }, summarizeMap);
+  const sum = summarizeMap?.[index];
+  const versions = msg.versions || [];
+  const showHistory = showHistoryFor === index;
 
   return (
     <motion.div
-      className={`ais-msg ${isAI ? "ais-msg--ai" : "ais-msg--user"}`}
+      className={`ais-msg ${isAI ? "ais-msg--ai" : "ais-msg--user"} ${speakingIdx === index ? "ais-msg--speaking" : ""}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      tabIndex={0}
+      role="article"
+      aria-label={isAI ? "AI message" : "Your message"}
     >
       {isAI && (
-        <div className="ais-msg-avatar">
-          <Sparkles size={13} strokeWidth={2.5} />
+        <div className={`ais-msg-avatar ${speakingIdx === index ? "speaking" : ""}`}>
+          <IconSlot size={14}>
+            <Sparkles size={14} strokeWidth={2.5} />
+          </IconSlot>
         </div>
       )}
       <div className="ais-msg-body">
         {isAI && (
           <span className="ais-msg-sender">StarNote AI</span>
         )}
-        <div className="ais-msg-content">
+        <div className={`ais-msg-content ${isStreaming && isLast ? "ais-msg-content--streaming" : ""}`}>
           {isAI ? (
-            isLast ? (
-              <TypewriterMarkdown text={msg.text} />
+            isStreaming && isLast ? (
+              <StreamingText text={msg.text} isStreaming />
             ) : (
-              <ReactMarkdown>{msg.text}</ReactMarkdown>
+              <ReactMarkdown>{text}</ReactMarkdown>
             )
           ) : (
             <p>{msg.text}</p>
           )}
         </div>
-        {isAI && (
-          <div className="ais-msg-actions">
+        {isAI && msg.text && !isStreaming && (
+          <div className="ais-msg-actions" role="toolbar" aria-label="Message actions">
             <button
               className={`ais-action-btn ${copiedIdx === index ? "active" : ""}`}
-              onClick={() => onCopy(msg.text, index)}
-              title="Copy"
+              onClick={() => onCopy(text, index)}
+              aria-label={copiedIdx === index ? "Copied" : "Copy message"}
             >
-              {copiedIdx === index ? <Check size={13} /> : <Copy size={13} />}
-              {copiedIdx === index ? "Copied" : "Copy"}
+              <IconSlot>{copiedIdx === index ? <Check size={14} /> : <Copy size={14} />}</IconSlot>
+              <span className="ais-action-label">{copiedIdx === index ? "Copied" : "Copy"}</span>
             </button>
             <button
-              className={`ais-action-btn ${savedIdx === index ? "active" : ""}`}
-              onClick={() => onSave(msg.text, index)}
-              title="Save as note"
+              className={`ais-action-btn ${speakingIdx === index ? "active" : ""}`}
+              onClick={() => onSpeak(text, index)}
+              aria-label={speakingIdx === index ? "Stop reading aloud" : "Read aloud"}
             >
-              <BookmarkPlus size={13} />
-              {savedIdx === index ? "Saved" : "Save"}
+              <IconSlot>{speakingIdx === index ? <VolumeX size={14} /> : <Volume2 size={14} />}</IconSlot>
+              <span className="ais-action-label">{speakingIdx === index ? "Stop" : "Listen"}</span>
             </button>
-            <button
-              className="ais-action-btn"
-              onClick={() => onQuiz(msg.text)}
-              title="Generate quiz"
-            >
-              <BrainCircuit size={13} />
-              Quiz
+            <button className="ais-action-btn" onClick={() => onArtifact(msg.text)} aria-label="Open in artifact pane">
+              <IconSlot><SplitSquareHorizontal size={14} /></IconSlot>
+              <span className="ais-action-label">Artifact</span>
             </button>
-            <button
-              className="ais-action-btn"
-              onClick={() => onArtifact(msg.text)}
-              title="Open in artifact pane"
-            >
-              <SplitSquareHorizontal size={13} />
-              Artifact
-            </button>
+            <div className="ais-more-wrap">
+              <button
+                type="button"
+                className={`ais-action-btn ${moreMenuIdx === index ? "active" : ""}`}
+                onClick={() => setMoreMenuIdx(moreMenuIdx === index ? null : index)}
+                aria-expanded={moreMenuIdx === index}
+                aria-haspopup="menu"
+                aria-label="More actions"
+              >
+                <IconSlot><MoreHorizontal size={14} /></IconSlot>
+                <span className="ais-action-label">More</span>
+              </button>
+              {moreMenuIdx === index && (
+                <div className="ais-more-menu" role="menu">
+                  <button type="button" role="menuitem" className="ais-more-item" onClick={() => { onSave(text, index); setMoreMenuIdx(null); }}>
+                    <BookmarkPlus size={14} /> {savedIdx === index ? "Saved" : "Save note"}
+                  </button>
+                  {msg.text.length > 200 && (
+                    <button type="button" role="menuitem" className="ais-more-item" disabled={summarizingIdx === index} onClick={() => { onSummarize(index, msg.text); setMoreMenuIdx(null); }}>
+                      <FileStack size={14} /> {sum?.showSummary ? "Show full" : "Summarize"}
+                    </button>
+                  )}
+                  {hasListOrFlashcards(msg.text) && (
+                    <button type="button" role="menuitem" className="ais-more-item" onClick={() => { onFlashcards(msg.text); setMoreMenuIdx(null); }}>
+                      <ListChecks size={14} /> Flashcards
+                    </button>
+                  )}
+                  <button type="button" role="menuitem" className="ais-more-item" onClick={() => { onQuiz(msg.text); setMoreMenuIdx(null); }}>
+                    <BrainCircuit size={14} /> Quiz
+                  </button>
+                  {versions.length > 1 && (
+                    <button type="button" role="menuitem" className="ais-more-item" onClick={() => { setShowHistoryFor(showHistory ? null : index); setMoreMenuIdx(null); }}>
+                      <History size={14} /> History
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {showHistory && versions.length > 1 && (
+              <div className="ais-history-menu ais-history-menu--inline" role="menu">
+                {versions.map((v, vi) => (
+                  <button
+                    key={vi}
+                    type="button"
+                    role="menuitem"
+                    className={vi === (msg.versionIndex ?? versions.length - 1) ? "active" : ""}
+                    onClick={() => onRestoreVersion(index, vi)}
+                  >
+                    {new Date(v.at).toLocaleString()} — {v.text.slice(0, 40)}…
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -124,8 +201,10 @@ const ThinkingIndicator = () => (
     initial={{ opacity: 0, y: 6 }}
     animate={{ opacity: 1, y: 0 }}
   >
-    <div className="ais-msg-avatar">
-      <Sparkles size={13} className="spin" />
+    <div className="ais-msg-avatar ais-msg-avatar--thinking">
+      <IconSlot size={14}>
+        <Sparkles size={14} strokeWidth={2.5} className="ais-spin" />
+      </IconSlot>
     </div>
     <div className="ais-msg-body">
       <span className="ais-msg-sender">StarNote AI</span>
@@ -189,7 +268,7 @@ const WelcomeScreen = ({ onSend }) => (
       {QUICK_ACTIONS.map((action, i) => (
         <motion.button
           key={i}
-          className="ais-quick-card"
+          className="ais-quick-card ais-quick-card--glass"
           onClick={() => onSend(action.prompt)}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -217,6 +296,16 @@ export default function AISplit() {
   const [isListening, setIsListening] = useState(false);
   const [voiceVolumes, setVoiceVolumes] = useState(new Array(20).fill(6));
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedModel, setSelectedModel] = useState("openrouter");
+  const [showModelMenu, setShowModelMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [attachedFile, setAttachedFile] = useState(null);
+  
+  const modelMenuRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const isListeningRef = useRef(false);
   const chatEndRef = useRef(null);
@@ -230,24 +319,132 @@ export default function AISplit() {
   const sourceRef = useRef(null);
   const rafRef = useRef(null);
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const contextData = useAIContext();
+  const [webSearch, setWebSearch] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [speakingIdx, setSpeakingIdx] = useState(null);
+  const [mentionNotes, setMentionNotes] = useState([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [summarizeMap, setSummarizeMap] = useState({});
+  const [summarizingIdx, setSummarizingIdx] = useState(null);
+  const [showHistoryFor, setShowHistoryFor] = useState(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const [aiLanguage, setAiLanguage] = useState(() => {
+    try {
+      return localStorage.getItem(LANG_STORAGE_KEY) || "en";
+    } catch {
+      return "en";
+    }
+  });
+  const [streak, setStreak] = useState(() => getStreak());
+  const [xp, setXp] = useState(() => getXP());
+  const [streamingMsgIndex, setStreamingMsgIndex] = useState(null);
+  const [moreMenuIdx, setMoreMenuIdx] = useState(null);
+  const [showHeaderMore, setShowHeaderMore] = useState(false);
+  const [mentionHighlight, setMentionHighlight] = useState(0);
+  const [ttsStatus, setTtsStatus] = useState("");
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  const [artifactWidthPct, setArtifactWidthPct] = useState(() => {
+    try {
+      const v = parseInt(localStorage.getItem("starNote_artifactWidth"), 10);
+      return Number.isFinite(v) && v >= 32 && v <= 62 ? v : 48;
+    } catch {
+      return 48;
+    }
+  });
+  const templatesRef = useRef(null);
+  const langMenuRef = useRef(null);
+  const headerMoreRef = useRef(null);
+  const liveRegionRef = useRef(null);
+  const resizingRef = useRef(false);
 
-  // Load chat history
-  useEffect(() => {
-    chatService.getLatest()
-      .then(res => {
-        if (res.data.session?.messages?.length) {
-          setMessages(res.data.session.messages);
-          // Auto-detect artifact from last AI message
-          const last = [...res.data.session.messages].reverse().find(m => m.role === "ai");
-          if (last) {
-            const detected = detectArtifact(last.text);
-            if (detected) { setArtifact(detected); setShowArtifact(true); }
-          }
-        }
-      })
-      .catch(() => {});
+  const languageInstruction = AI_LANGUAGES.find((l) => l.id === aiLanguage)?.instruction || "";
+  const selectedModelMeta = MODEL_OPTIONS.find((m) => m.id === selectedModel) || MODEL_OPTIONS[3];
+
+  const closeAllMenus = useCallback(() => {
+    setShowModelMenu(false);
+    setShowLangMenu(false);
+    setShowTemplates(false);
+    setShowHeaderMore(false);
+    setShowPlusMenu(false);
+    setMoreMenuIdx(null);
   }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const res = await chatService.getAll();
+      if (res.data.sessions) {
+        setSessions(res.data.sessions);
+      }
+    } catch {}
+  };
+
+  const loadSession = async (id) => {
+    try {
+      const res = await chatService.getById(id);
+      if (res.data.session) {
+        setActiveSessionId(res.data.session._id || "new");
+        const msgs = normalizeMessages(res.data.session.messages || []);
+        setMessages(msgs);
+        setSummarizeMap({});
+        
+        const last = [...msgs].reverse().find(m => m.role === "ai");
+        if (last) {
+          const detected = detectArtifact(last.text);
+          if (detected) { setArtifact(detected); setShowArtifact(true); }
+          else { setShowArtifact(false); setArtifact(null); }
+        } else {
+          setShowArtifact(false); setArtifact(null);
+        }
+
+        if (window.innerWidth <= 768) {
+          setIsSidebarOpen(false);
+        }
+      }
+    } catch {}
+  };
+
+  const normalizeMessages = (msgs) =>
+    (msgs || []).map((m) => ({
+      ...m,
+      versions: m.versions?.length ? m.versions : [{ text: m.text, at: m.at || Date.now() }],
+      versionIndex: m.versionIndex ?? 0,
+    }));
+
+  // Load chat history + shared session link
+  useEffect(() => {
+    fetchSessions();
+    const shared = searchParams.get("session");
+    if (shared) loadSession(shared);
+    else loadSession("latest");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LANG_STORAGE_KEY, aiLanguage);
+  }, [aiLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem("starNote_artifactWidth", String(artifactWidthPct));
+  }, [artifactWidthPct]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") closeAllMenus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeAllMenus]);
 
   // Handle navigation-initiated messages (from Command Palette)
   useEffect(() => {
@@ -273,13 +470,19 @@ export default function AISplit() {
     if (window.scrollY !== 0) window.scrollTo(0, 0);
   }, [messages, loading]);
 
-  // Close plus menu on outside click
+  // Close menus on outside click
   useEffect(() => {
-    if (!showPlusMenu) return;
-    const h = (e) => { if (plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false); };
+    const h = (e) => { 
+      if (showPlusMenu && plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false); 
+      if (showModelMenu && modelMenuRef.current && !modelMenuRef.current.contains(e.target)) setShowModelMenu(false);
+      if (showTemplates && templatesRef.current && !templatesRef.current.contains(e.target)) setShowTemplates(false);
+      if (showLangMenu && langMenuRef.current && !langMenuRef.current.contains(e.target)) setShowLangMenu(false);
+      if (showHeaderMore && headerMoreRef.current && !headerMoreRef.current.contains(e.target)) setShowHeaderMore(false);
+      if (moreMenuIdx !== null) setMoreMenuIdx(null);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, [showPlusMenu]);
+  }, [showPlusMenu, showModelMenu, showTemplates, showLangMenu, showHeaderMore, moreMenuIdx]);
 
   // Voice recognition setup
   useEffect(() => {
@@ -288,7 +491,7 @@ export default function AISplit() {
     const rec = new SR();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = "en-US";
+    rec.lang = aiLanguage === "en" ? "en-US" : aiLanguage === "es" ? "es-ES" : `${aiLanguage}-${aiLanguage.toUpperCase()}`;
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; ++i) {
         if (e.results[i].isFinal) setInput(p => p + e.results[i][0].transcript + " ");
@@ -340,56 +543,139 @@ export default function AISplit() {
     }
   };
 
+  useHotkeys([
+    { key: " ", ctrl: true, handler: () => toggleVoice() },
+    { key: "m", ctrl: true, handler: () => setShowModelMenu((v) => !v) },
+    { key: "f", ctrl: true, handler: () => setFocusMode((v) => !v) },
+  ], [isListening]);
+
   // File upload handler
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setShowPlusMenu(false);
-    if (file.type.startsWith("text/") || file.name.endsWith(".md") || file.name.endsWith(".txt")) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const content = ev.target.result;
-        const truncated = content.length > 2000 ? content.slice(0, 2000) + "..." : content;
-        setInput(`Here's the content of ${file.name}:\n\n${truncated}\n\nPlease summarize and explain the key points.`);
-        textareaRef.current?.focus();
-      };
-      reader.readAsText(file);
-    } else {
-      setInput(`I've uploaded a file: ${file.name}. Please help me analyze it.`);
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAttachedFile({
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        data: ev.target.result.split(',')[1] // Get base64 string
+      });
       textareaRef.current?.focus();
-    }
+    };
+    reader.readAsDataURL(file);
     e.target.value = "";
   };
 
-  // Send message
+  const removeAttachment = () => {
+    setAttachedFile(null);
+  };
+
   const handleSend = useCallback(async (customInput) => {
-    const text = (customInput || input).trim();
-    if (!text || loading) return;
+    let text = (customInput || input).trim();
+    if ((!text && !attachedFile) || loading) return;
+
+    if (webSearch) {
+      text = `[SYSTEM: User requested to search the live web for this query if needed.]\n` + text;
+    }
+
+    if (attachedFile) {
+      // Don't append raw base64 to text, just a visual indicator for history
+      text = `[Attached File: ${attachedFile.name}]\n` + text;
+    }
 
     const userMsg = { role: "user", text };
+    const currentAttachedFile = attachedFile; // capture for closure
+
     setMessages(prev => [...prev, userMsg]);
     setInput("");
+    setAttachedFile(null);
     setLoading(true);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
 
-    chatService.sendMessage("user", text).catch(() => {});
+    let currentSessionId = activeSessionId || "new";
+
+    // Setup AbortController
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     try {
+      // First, send user message and create/update session
+      const userRes = await chatService.sendMessage(currentSessionId, "user", text);
+      if (userRes.data.session) {
+        currentSessionId = userRes.data.session._id;
+        setActiveSessionId(currentSessionId);
+        fetchSessions(); // update sidebar title
+      }
+
       await new Promise(r => setTimeout(r, 300));
       const allMessages = [...messages, userMsg];
       
-      const res = await aiService.chat(allMessages, { 
-        currentPage: "ai",
-        ...contextData
-      });
-      
-      const aiText = res.data.data.text;
-      const aiMsg = { role: "ai", text: aiText };
-      const msgIndex = allMessages.length; // index of this AI message
+      recordChatQuestion();
 
-      setMessages(prev => [...prev, aiMsg]);
-      chatService.sendMessage("ai", aiText).catch(() => {});
+      const response = await aiService.streamChat(allMessages, { 
+        currentPage: "ai",
+        language: languageInstruction,
+        ...contextData
+      }, selectedModel, currentAttachedFile, { signal: abortController.signal });
+      
+      if (!response.ok) throw new Error("Failed to stream response");
+
+      // Add empty AI message placeholder
+      setMessages(prev => [...prev, { role: "ai", text: "", versions: [], versionIndex: 0 }]);
+      const msgIndex = allMessages.length;
+      setStreamingMsgIndex(msgIndex);
+      let aiText = "";
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+        
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const dataStr = line.slice(6);
+            if (dataStr === "[DONE]") break;
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.text) {
+                aiText += data.text;
+                // Incrementally update the UI
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[msgIndex] = { role: "ai", text: aiText };
+                  return newMsgs;
+                });
+              } else if (data.error) {
+                console.error("Stream Error:", data.error);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      const versionEntry = { text: aiText, at: Date.now() };
+      setMessages((prev) => {
+        const next = [...prev];
+        const cur = next[msgIndex];
+        if (cur?.role === "ai") {
+          const versions = [...(cur.versions || []), versionEntry];
+          next[msgIndex] = { ...cur, text: aiText, versions, versionIndex: versions.length - 1 };
+        }
+        return next;
+      });
+      await chatService.sendMessage(currentSessionId, "ai", aiText);
+
+      recordAIStudySession();
+      setStreak(getStreak());
+      setXp(getXP());
 
       // Auto-detect artifact
       const detected = detectArtifact(aiText);
@@ -397,16 +683,32 @@ export default function AISplit() {
         setArtifact(detected);
         setArtifactSource(msgIndex);
         setShowArtifact(true);
+        toast.success(`${detected.type.charAt(0).toUpperCase() + detected.type.slice(1)} artifact ready`, {
+          description: "Open the side panel to study or save it.",
+          action: {
+            label: "Open",
+            onClick: () => setShowArtifact(true),
+          },
+        });
       }
-    } catch {
-      setMessages(prev => [...prev, {
-        role: "ai",
-        text: "I had a brief connection issue. Please try again — I'm here to help!",
-      }]);
+    } catch (err) {
+      if (err.name === "AbortError" || err.message.includes("abort")) {
+         setMessages(prev => [...prev, {
+            role: "ai",
+            text: "Generation stopped by user.",
+         }]);
+      } else {
+         setMessages(prev => [...prev, {
+            role: "ai",
+            text: "I had a brief connection issue. Please try again — I'm here to help!",
+         }]);
+      }
+    } finally {
+      setLoading(false);
+      setStreamingMsgIndex(null);
+      abortControllerRef.current = null;
     }
-
-    setLoading(false);
-  }, [input, loading, messages, isListening]);
+  }, [input, loading, messages, isListening, activeSessionId, selectedModel, languageInstruction, contextData, attachedFile, webSearch]);
 
   const handleCopy = async (text, idx) => {
     await navigator.clipboard.writeText(text);
@@ -434,17 +736,234 @@ export default function AISplit() {
     setShowArtifact(true);
   };
 
+  const getAvailableVoices = () => {
+    return new Promise((resolve) => {
+      const synth = window.speechSynthesis;
+      let voices = synth.getVoices();
+      if (voices.length) {
+        resolve(voices);
+      } else {
+        synth.onvoiceschanged = () => {
+          resolve(synth.getVoices());
+        };
+      }
+    });
+  };
+
+  const pickVoice = (voices, langId) => {
+    const langPrefix = langId === "en" ? "en" : langId;
+    const preferred = voices.find(
+      (v) =>
+        (v.name.includes("Google") || v.name.includes("Premium")) &&
+        v.lang.toLowerCase().startsWith(langPrefix)
+    );
+    if (preferred) return preferred;
+    const langMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix));
+    if (langMatch) return langMatch;
+    const enFallback = voices.find((v) => v.lang.toLowerCase().startsWith("en"));
+    return enFallback || voices[0] || null;
+  };
+
+  const handleSpeak = useCallback(async (text, idx) => {
+    if (speakingIdx === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+      setTtsStatus("Speech stopped");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text.replace(/[*_`#]/g, ""));
+    const voices = await getAvailableVoices();
+    const voice = pickVoice(voices, aiLanguage);
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    }
+    utterance.rate = 1.05;
+    utterance.onend = () => { setSpeakingIdx(null); setTtsStatus("Finished reading"); };
+    utterance.onerror = () => { setSpeakingIdx(null); setTtsStatus("Speech stopped"); };
+    setSpeakingIdx(idx);
+    setTtsStatus("Reading aloud");
+    window.speechSynthesis.speak(utterance);
+    const tts = recordTTSListen();
+    if (tts.voiceGuru) setXp(getXP());
+  }, [speakingIdx, aiLanguage]);
+
+  const handleSummarize = async (index, fullText) => {
+    const existing = summarizeMap[index];
+    if (existing?.showSummary && existing.summary) {
+      setSummarizeMap((m) => ({ ...m, [index]: { ...existing, showSummary: false } }));
+      return;
+    }
+    if (existing?.summary) {
+      setSummarizeMap((m) => ({ ...m, [index]: { ...existing, showSummary: true } }));
+      return;
+    }
+    setSummarizingIdx(index);
+    try {
+      const res = await aiService.completeWithPrompt(
+        [{ role: "user", text: fullText }],
+        "Summarize the following AI response in 3–6 concise bullet points. Preserve key facts. Do not add preamble.",
+        { currentPage: "ai", language: languageInstruction },
+        selectedModel
+      );
+      const summary = res.data?.data?.text || res.data?.text || "";
+      setSummarizeMap((m) => ({
+        ...m,
+        [index]: { original: fullText, summary, showSummary: true },
+      }));
+    } catch {
+      toast.error("Could not summarize. Try again.");
+    } finally {
+      setSummarizingIdx(null);
+    }
+  };
+
+  const handleCreateFlashcards = async (text) => {
+    const cards = parseFlashcards(text);
+    if (!cards.length) {
+      toast.info("No Q/A pairs detected. Try asking for flashcards in Q: A: format.");
+      return;
+    }
+    const deckName = `AI Chat — ${new Date().toLocaleDateString()}`;
+    try {
+      await flashcardsService.bulkCreate(
+        cards.map((c) => ({ front: c.question, back: c.answer })),
+        deckName
+      );
+      toast.success(`Added ${cards.length} cards to "${deckName}"`);
+    } catch {
+      toast.error("Failed to save flashcards.");
+    }
+  };
+
+  const handleRestoreVersion = (index, versionIdx) => {
+    setMessages((prev) => {
+      const next = [...prev];
+      const msg = next[index];
+      if (!msg?.versions?.[versionIdx]) return prev;
+      next[index] = { ...msg, text: msg.versions[versionIdx].text, versionIndex: versionIdx };
+      return next;
+    });
+    setShowHistoryFor(null);
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!activeSessionId) {
+      toast.info("Send a message first to create a session link.");
+      return;
+    }
+    const url = `${window.location.origin}/ai?session=${activeSessionId}`;
+    await navigator.clipboard.writeText(url);
+    toast.success("Session link copied", {
+      description: "Opens this chat when you’re signed in on this device.",
+    });
+  };
+
+  const startArtifactResize = (e) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    const onMove = (ev) => {
+      if (!resizingRef.current) return;
+      const root = document.querySelector(".ais-root--split");
+      if (!root) return;
+      const rect = root.getBoundingClientRect();
+      const pct = ((rect.right - ev.clientX) / rect.width) * 100;
+      setArtifactWidthPct(Math.min(62, Math.max(32, pct)));
+    };
+    const onUp = () => {
+      resizingRef.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  // Fetch notes for @mention
+  const fetchMentionNotes = async (query) => {
+    try {
+      const res = await notesService.getAll();
+      const notes = res.data.notes || [];
+      const filtered = notes.filter(n => 
+        n.name.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 6);
+      setMentionNotes(filtered);
+      setShowMentions(filtered.length > 0);
+    } catch {
+      setShowMentions(false);
+    }
+  };
+
+  const handleMentionSelect = (note) => {
+    // Replace @query with @NoteName
+    const atIndex = input.lastIndexOf('@');
+    const before = input.substring(0, atIndex);
+    const newInput = `${before}@${note.name} `;
+    setInput(newInput);
+    setShowMentions(false);
+    setMentionQuery("");
+    textareaRef.current?.focus();
+  };
+
   const handleTextareaChange = (e) => {
-    setInput(e.target.value);
+    const value = e.target.value;
+    setInput(value);
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+
+    // Check for @mention trigger
+    const atIndex = value.lastIndexOf('@');
+    if (atIndex !== -1) {
+      const afterAt = value.substring(atIndex + 1);
+      // Only trigger if there's no space after @ (user is still typing the mention)
+      if (!afterAt.includes(' ') && afterAt.length >= 0) {
+        setMentionQuery(afterAt);
+        setMentionHighlight(0);
+        fetchMentionNotes(afterAt);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const handleInputKeyDown = (e) => {
+    if (showMentions && mentionNotes.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionHighlight((h) => Math.min(h + 1, mentionNotes.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionHighlight((h) => Math.max(h - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleMentionSelect(mentionNotes[mentionHighlight]);
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowMentions(false);
+        return;
+      }
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   const hasMessages = messages.length > 0;
   const showSplit = showArtifact && artifact;
 
   const plusItems = [
-    { icon: <Upload size={16} />, label: "Upload file", action: () => fileInputRef.current?.click() },
+    { icon: <FileText size={16} />, label: "Upload document", action: () => fileInputRef.current?.click() },
+    { icon: <ImageIcon size={16} />, label: "Upload photo", action: () => fileInputRef.current?.click() },
     {
       icon: <FolderOpen size={16} />, label: "Browse Notes", action: async () => {
         try {
@@ -455,23 +974,309 @@ export default function AISplit() {
         } catch { toast.error("Failed to load notes."); }
         setShowPlusMenu(false);
       }
-    },
-    {
-      icon: <ClipboardPaste size={16} />, label: "Paste text", action: async () => {
-        try {
-          const text = await navigator.clipboard.readText();
-          if (text) setInput(p => p + text);
-        } catch { toast.error("Clipboard access denied. Please paste manually."); }
-        setShowPlusMenu(false);
-      }
-    },
+    }
   ];
 
+  const handleNewChat = () => {
+    setActiveSessionId(null);
+    setMessages([]);
+    setSummarizeMap({});
+    setArtifact(null);
+    setShowArtifact(false);
+    if (window.innerWidth <= 768) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
+  const handleDeleteChat = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await chatService.delete(id);
+      if (activeSessionId === id) {
+        handleNewChat();
+      }
+      fetchSessions();
+      toast.success("Chat deleted");
+    } catch {
+      toast.error("Failed to delete chat");
+    }
+  };
+
   return (
-    <div className={`ais-root ${showSplit ? "ais-root--split" : ""}`}>
-      {/* ══ LEFT PANE — Conversation ══════════════════════════════════════ */}
-      <div className="ais-chat-pane">
-        {/* Minimal Chat Pane (No Header) */}
+    <div
+      className={`ais-root ${showSplit && !focusMode && !isMobile ? "ais-root--split" : ""} ${isSidebarOpen && !focusMode ? "ais-root--sidebar" : ""} ${focusMode ? "ais-root--focus" : ""}`}
+      style={showSplit && !focusMode && !isMobile ? { "--artifact-width": `${artifactWidthPct}%` } : undefined}
+    >
+      <div className="sr-only" aria-live="polite" ref={liveRegionRef}>{ttsStatus}</div>
+      
+      {/* ══ SIDEBAR — Chat History ══════════════════════════════════════ */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <>
+            {/* Mobile Backdrop */}
+            <motion.div 
+              className="ais-sidebar-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <motion.div 
+              className="ais-sidebar"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 260, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+            <div className="ais-sidebar-header">
+              <button className="ais-new-chat-btn" onClick={handleNewChat}>
+                <MessageSquarePlus size={16} />
+                <span>New Chat</span>
+              </button>
+              <div className="ais-sidebar-search-container">
+                <Search size={14} className="search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Search chats..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="ais-sidebar-search"
+                />
+              </div>
+            </div>
+            <div className="ais-sidebar-list">
+              <div className="ais-sidebar-group">Recent</div>
+              {sessions.filter(s => s.title?.toLowerCase().includes(searchQuery.toLowerCase())).map(session => (
+                <div 
+                  key={session._id} 
+                  className={`ais-sidebar-item ${activeSessionId === session._id ? 'active' : ''}`}
+                  onClick={() => loadSession(session._id)}
+                >
+                  <MessageSquare size={14} className="icon" />
+                  <span className="title">{session.title || "New Chat"}</span>
+                  <button className="delete-btn" onClick={(e) => handleDeleteChat(e, session._id)}>
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+              {sessions.length === 0 && (
+                <div className="ais-sidebar-empty">No previous chats</div>
+              )}
+            </div>
+          </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* ══ MIDDLE PANE — Conversation ══════════════════════════════════════ */}
+      <div className={`ais-chat-pane ${focusMode ? "ais-focus-mode" : ""}`}>
+        <div className="ais-chat-pane-header">
+          <div className="ais-chat-pane-header-left">
+            {!focusMode && (
+              <button className="ais-header-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} title="Toggle sidebar" aria-label="Toggle sidebar">
+                <IconSlot size={18}><PanelLeft size={18} /></IconSlot>
+              </button>
+            )}
+            <div className="ais-model-selector" ref={modelMenuRef}>
+              <button 
+                className="ais-model-btn" 
+                onClick={() => setShowModelMenu(!showModelMenu)}
+                aria-expanded={showModelMenu}
+                aria-haspopup="listbox"
+              >
+                <span className="ais-model-chip">{selectedModelMeta.short}</span>
+                <ChevronDown size={14} className="icon-caret" />
+              </button>
+              
+              <AnimatePresence>
+                {showModelMenu && (
+                  <motion.div 
+                    className="ais-model-menu"
+                    role="listbox"
+                    initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {MODEL_OPTIONS.map(model => (
+                      <div 
+                        key={model.id}
+                        role="option"
+                        aria-selected={selectedModel === model.id}
+                        className={`ais-model-option ${selectedModel === model.id ? 'active' : ''}`}
+                        onClick={() => { setSelectedModel(model.id); setShowModelMenu(false); }}
+                      >
+                        <div className="title">{model.name}</div>
+                        <div className="desc">{model.desc}</div>
+                        {selectedModel === model.id && <Check size={14} className="check" />}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+          <div className="ais-chat-pane-header-right">
+            {!focusMode && (
+              <div className="ais-header-badges" aria-label="Study stats">
+                <span className="ais-stat-badge" title="Daily study streak">
+                  <IconSlot size={14}><Flame size={14} /></IconSlot>
+                  {streak.count}d
+                </span>
+                <span className="ais-stat-badge ais-stat-badge--text" title="Experience points">
+                  {xp} XP
+                </span>
+                {hasVoiceGuruBadge() && (
+                  <span className="ais-stat-badge voice-guru" title="Voice Guru — 5+ Listen uses">
+                    <IconSlot size={14}><Award size={14} /></IconSlot>
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="ais-header-tools ais-header-tools--desktop">
+              <div className="ais-lang-selector" ref={langMenuRef}>
+                <button
+                  className="ais-header-btn"
+                  onClick={() => { setShowLangMenu((v) => !v); setShowTemplates(false); setShowHeaderMore(false); }}
+                  aria-label="Reply language"
+                  aria-expanded={showLangMenu}
+                >
+                  <IconSlot size={18}><Languages size={18} /></IconSlot>
+                </button>
+                <AnimatePresence>
+                  {showLangMenu && (
+                    <motion.div className="ais-model-menu ais-lang-menu" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+                      {AI_LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.id}
+                          type="button"
+                          className={`ais-model-option ${aiLanguage === lang.id ? "active" : ""}`}
+                          onClick={() => { setAiLanguage(lang.id); setShowLangMenu(false); }}
+                        >
+                          <div className="title">{lang.label}</div>
+                          {aiLanguage === lang.id && <Check size={14} className="check" />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              {activeSessionId && (
+                <button
+                  className="ais-header-btn"
+                  onClick={handleCopyInviteLink}
+                  aria-label="Copy session link for this account"
+                  title="Copy session link (same account)"
+                >
+                  <IconSlot size={18}><Link2 size={18} /></IconSlot>
+                </button>
+              )}
+              <div className="ais-templates-wrap" ref={templatesRef}>
+                <button
+                  className={`ais-header-btn ${showTemplates ? "active" : ""}`}
+                  onClick={() => { setShowTemplates((v) => !v); setShowLangMenu(false); }}
+                  aria-label="Prompt templates"
+                  aria-expanded={showTemplates}
+                >
+                  <IconSlot size={18}><LayoutTemplate size={18} /></IconSlot>
+                </button>
+                <AnimatePresence>
+                  {showTemplates && (
+                    <motion.div className="ais-model-menu ais-templates-menu" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+                      {AI_PROMPT_TEMPLATES.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="ais-model-option"
+                          onClick={() => {
+                            setInput((prev) => (prev ? `${prev}\n\n${t.prompt} ` : `${t.prompt} `));
+                            setShowTemplates(false);
+                            textareaRef.current?.focus();
+                          }}
+                        >
+                          <div className="title">{t.label}</div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              <button 
+                className={`ais-header-btn ${focusMode ? "active" : ""}`} 
+                onClick={() => setFocusMode(!focusMode)} 
+                title="Focus mode (Ctrl+F)"
+                aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
+              >
+                <IconSlot size={18}>
+                  {focusMode ? <Minimize size={18} /> : <Maximize size={18} />}
+                </IconSlot>
+              </button>
+            </div>
+            <div className="ais-header-overflow ais-header-tools--mobile" ref={headerMoreRef}>
+              <button
+                className={`ais-header-btn ${showHeaderMore ? "active" : ""}`}
+                onClick={() => setShowHeaderMore((v) => !v)}
+                aria-label="More options"
+                aria-expanded={showHeaderMore}
+              >
+                <IconSlot size={18}><MoreHorizontal size={18} /></IconSlot>
+              </button>
+              <AnimatePresence>
+                {showHeaderMore && (
+                  <motion.div className="ais-model-menu ais-header-overflow-menu" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}>
+                    <div className="ais-overflow-group-label">Language</div>
+                    {AI_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.id}
+                        type="button"
+                        className={`ais-overflow-item ${aiLanguage === lang.id ? "active" : ""}`}
+                        onClick={() => { setAiLanguage(lang.id); setShowHeaderMore(false); }}
+                      >
+                        {lang.label}
+                      </button>
+                    ))}
+                    <div className="ais-overflow-divider" />
+                    <div className="ais-overflow-group-label">Templates</div>
+                    {AI_PROMPT_TEMPLATES.slice(0, 4).map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className="ais-overflow-item"
+                        onClick={() => {
+                          setInput((prev) => (prev ? `${prev}\n\n${t.prompt} ` : `${t.prompt} `));
+                          setShowHeaderMore(false);
+                          textareaRef.current?.focus();
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                    <div className="ais-overflow-divider" />
+                    {activeSessionId && (
+                      <button type="button" className="ais-overflow-item" onClick={() => { handleCopyInviteLink(); setShowHeaderMore(false); }}><Link2 size={16} /> Copy session link</button>
+                    )}
+                    <button type="button" className="ais-overflow-item" onClick={() => { setFocusMode((f) => !f); setShowHeaderMore(false); }}><Maximize size={16} /> Focus mode</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+          {loading && (
+            <div className="ais-progress-track" role="progressbar" aria-label="Generating response">
+              <div className="ais-progress-fill" />
+            </div>
+          )}
+        </div>
+        {focusMode && (
+          <button type="button" className="ais-focus-exit" onClick={() => setFocusMode(false)}>
+            <Minimize size={16} /> Exit focus
+          </button>
+        )}
 
         {/* Messages */}
         <div className="ais-messages" ref={messagesEndRef}>
@@ -486,12 +1291,24 @@ export default function AISplit() {
                     msg={msg}
                     index={i}
                     isLast={i === messages.length - 1 && msg.role === "ai"}
+                    isStreaming={loading && streamingMsgIndex === i}
                     onCopy={handleCopy}
                     onSave={handleSave}
                     onQuiz={handleQuiz}
                     onArtifact={handleManualArtifact}
+                    onSpeak={handleSpeak}
+                    onSummarize={handleSummarize}
+                    onFlashcards={handleCreateFlashcards}
+                    onRestoreVersion={handleRestoreVersion}
                     copiedIdx={copiedIdx}
                     savedIdx={savedIdx}
+                    speakingIdx={speakingIdx}
+                    summarizingIdx={summarizingIdx}
+                    summarizeMap={summarizeMap}
+                    showHistoryFor={showHistoryFor}
+                    setShowHistoryFor={setShowHistoryFor}
+                    moreMenuIdx={moreMenuIdx}
+                    setMoreMenuIdx={setMoreMenuIdx}
                   />
                 ))}
               </AnimatePresence>
@@ -540,33 +1357,80 @@ export default function AISplit() {
                 </div>
               ) : (
                 <>
-                  <button
-                    className={`ais-pill-btn ${showPlusMenu ? "active" : ""}`}
-                    onClick={() => setShowPlusMenu(v => !v)}
-                    title="Attach"
-                  >
-                    {showPlusMenu ? <X size={18} /> : <Plus size={18} />}
-                  </button>
+                  <div className="ais-pill-left-actions">
+                    <button
+                      className={`ais-pill-btn ${showPlusMenu ? "active" : ""}`}
+                      onClick={() => setShowPlusMenu(v => !v)}
+                      title="Attach"
+                    >
+                      {showPlusMenu ? <X size={18} /> : <Paperclip size={18} />}
+                    </button>
+                    <button
+                      className={`ais-pill-btn ${webSearch ? "active-globe" : ""}`}
+                      onClick={() => setWebSearch(!webSearch)}
+                      title="Toggle Web Search"
+                    >
+                      <Globe size={18} color={webSearch ? "var(--primary)" : "currentColor"} />
+                    </button>
+                  </div>
 
-                  <textarea
-                    ref={textareaRef}
-                    className="ais-input"
-                    placeholder="Ask anything..."
-                    value={input}
-                    onChange={handleTextareaChange}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                    rows={1}
-                    spellCheck={false}
-                  />
+                  <div className="ais-input-core">
+                    {attachedFile && (
+                      <div className="ais-attachment-chip">
+                        {attachedFile.type.startsWith('image/') ? <ImageIcon size={14} /> : <FileText size={14} />}
+                        <span className="ais-attachment-name">{attachedFile.name}</span>
+                        <button className="ais-attachment-remove" onClick={removeAttachment}>
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                    {showMentions && mentionNotes.length > 0 && (
+                      <ul className="ais-mention-menu" role="listbox" aria-label="Link a note">
+                        {mentionNotes.map((note, ni) => (
+                          <li key={note._id}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={ni === mentionHighlight}
+                              className={ni === mentionHighlight ? "highlighted" : ""}
+                              onClick={() => handleMentionSelect(note)}
+                            >
+                              {note.icon || "📝"} {note.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <textarea
+                      ref={textareaRef}
+                      className="ais-input"
+                      placeholder={attachedFile ? "Add a message about this file..." : "Ask anything..."}
+                      value={input}
+                      onChange={handleTextareaChange}
+                      onKeyDown={handleInputKeyDown}
+                      rows={1}
+                      spellCheck={false}
+                      aria-label="Message to AI"
+                    />
+                  </div>
 
                   <div className="ais-pill-right">
-                    {!input.trim() ? (
-                      <button className="ais-send-btn idle" onClick={toggleVoice} title="Voice input">
-                        <AudioLines size={18} />
+                    {loading ? (
+                      <button className="ais-send-btn stop" onClick={handleStop} title="Stop generating">
+                        <Square size={14} fill="currentColor" />
+                      </button>
+                    ) : (!input.trim() && !attachedFile) ? (
+                      <button
+                        className={`ais-send-btn idle ${isListening ? "listening-ring" : ""}`}
+                        onClick={toggleVoice}
+                        title="Voice input (Ctrl+Space)"
+                        aria-label="Voice input"
+                      >
+                        <Mic size={18} />
                       </button>
                     ) : (
-                      <button className="ais-send-btn active" onClick={() => handleSend()} disabled={loading}>
-                        {loading ? <Loader2 size={17} className="spin" /> : <ArrowUp size={18} strokeWidth={2.5} />}
+                      <button className="ais-send-btn active" onClick={() => handleSend()}>
+                        <ArrowUp size={18} strokeWidth={2.5} />
                       </button>
                     )}
                   </div>
@@ -574,19 +1438,44 @@ export default function AISplit() {
               )}
             </div>
 
-            <p className="ais-input-hint">Enter to send · Shift+Enter for new line</p>
+            <p className="ais-input-hint">
+              <span className="ais-hint-full">Enter send · Shift+Enter newline · Ctrl+Space voice · Ctrl+M model · Ctrl+F focus</span>
+              <span className="ais-hint-short">Enter send · Ctrl+Space mic</span>
+            </p>
           </div>
         </div>
       </div>
 
+      {showSplit && !isMobile && (
+        <div
+          className="ais-resize-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize artifact panel"
+          onMouseDown={startArtifactResize}
+        >
+          <GripVertical size={14} />
+        </div>
+      )}
+
       {/* ══ RIGHT PANE — Artifact ═════════════════════════════════════════ */}
       <AnimatePresence>
         {showSplit && (
+          <>
+            {isMobile && (
+              <motion.div
+                className="ais-artifact-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowArtifact(false)}
+              />
+            )}
           <motion.div
-            className="ais-artifact-pane"
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: "var(--artifact-width, 48%)" }}
-            exit={{ opacity: 0, width: 0 }}
+            className={`ais-artifact-pane ${isMobile ? "ais-artifact-pane--sheet" : ""}`}
+            initial={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, width: 0 }}
+            animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, width: "var(--artifact-width, 48%)" }}
+            exit={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, width: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="ais-artifact-header">
@@ -613,6 +1502,7 @@ export default function AISplit() {
               </AnimatePresence>
             </div>
           </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

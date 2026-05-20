@@ -113,8 +113,11 @@ html, body {
   --glass-bg: rgba(var(--surface-rgb), 0.72);
   --glass-border: rgba(var(--primary-rgb), 0.08);
 
-  /* ── Tertiary text (below muted) ── */
-  --text-tertiary: #b5b5b5;
+  /* ── Spacing Overrides ── */
+  --page-padding-top: 48px;
+  --page-padding-x: 48px;
+  --page-padding-bottom: 100px;
+  --page-padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom);
 }
 
 body.dark {
@@ -156,22 +159,56 @@ body.dark {
   --primary-shadow: rgba(245, 245, 244, 0.15);
 }
 
-body::before {
-  content: "";
+.global-bg {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100dvh;
-  z-index: -1;
-  background: 
-    radial-gradient(at 0% 0%, var(--mesh-color) 0, transparent 40%),
-    radial-gradient(at 100% 0%, var(--mesh-color) 0, transparent 40%),
-    radial-gradient(at 100% 100%, var(--mesh-color) 0, transparent 40%),
-    radial-gradient(at 0% 100%, var(--mesh-color) 0, transparent 40%),
-    radial-gradient(at 50% 50%, var(--mesh-color) 0, transparent 50%);
-  animation: meshFlow 30s ease-in-out infinite alternate;
+  z-index: -10;
   pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-layer {
+  position: absolute;
+  top: -5vh;
+  left: -5vw;
+  width: 110vw;
+  height: 110dvh;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+.bg-light {
+  background: 
+    radial-gradient(circle at 80% 15%, rgba(24, 24, 27, 0.03) 0%, transparent 55%),
+    radial-gradient(circle at 15% 85%, rgba(161, 161, 170, 0.04) 0%, transparent 45%),
+    linear-gradient(135deg, #ffffff 0%, #f4f4f5 50%, #e4e4e7 100%);
+  animation: meshFlow 40s ease-in-out infinite alternate;
+  opacity: 1;
+}
+
+.bg-dark {
+  background: 
+    radial-gradient(circle at 80% 15%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    radial-gradient(circle at 15% 85%, rgba(113, 113, 122, 0.05) 0%, transparent 45%),
+    linear-gradient(135deg, #000000 0%, #09090b 50%, #18181b 100%);
+  animation: meshFlow 40s ease-in-out infinite alternate;
+  opacity: 0;
+}
+
+.dark .bg-dark {
+  opacity: 1;
+}
+.dark .bg-light {
+  opacity: 0;
+}
+.light .bg-dark {
+  opacity: 0;
+}
+.light .bg-light {
+  opacity: 1;
 }
 
 @keyframes meshFlow {
@@ -196,8 +233,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Cinematic transition for theme-critical properties */
-  transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1), color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 
 /* ===== LAYOUT ===== */
 .app {
@@ -228,10 +266,6 @@ body {
 }
 
 @media (max-width: 600px) {
-  .dashboard-minimal {
-    padding: 24px 20px 120px 20px;
-    height: 100%;
-  }
   .main {
     /* Account for fixed topbar (56px) + safe area */
     padding-top: calc(56px + env(safe-area-inset-top, 0px));
@@ -354,47 +388,31 @@ body.dark code {
 }
 
 /* ===== GLOBAL THEME TRANSITION ===== */
-/* Smooth transition when switching dark/light modes */
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
-  transition-duration: 0.6s;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+/* Smooth transition for core page layouts and surfaces */
+body,
+.main,
+.app,
+.page-container,
+.card,
+.glass-card {
+  transition: 
+    background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Exclude animation-critical elements from the theme transition */
-.spin,
-.skeleton,
-.ai-thinking-dots span,
-.mobile-dock,
-.mobile-dock-v2,
-.mobile-dock-v2 *,
-.dock-fab-btn,
-.dock-fab-backdrop,
-.dock-fab-actions,
-.dock-fab-action-btn,
-.dock-pill-bg,
-.indicator,
-.chevron-toggle,
-.sidebar,
-.sidebar *,
-.topbar-v2,
-.topbar-v2 *,
-[data-no-transition],
-[data-no-transition] * {
-  /* Let these elements manage their own transitions */
-  transition-property: none;
-}
-
-/* Re-enable specific transitions needed for these elements */
+/* Specific smooth transitions for large nav shells */
 .sidebar {
-  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
-              background-color 0.25s ease,
-              border-color 0.25s ease,
-              transform 0.3s ease !important;
+  transition: 
+    width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s ease !important;
 }
 
+/* Keep spinner and skeleton animations clean */
 .spin {
   transition: none !important;
   animation: spin 1.5s linear infinite;
@@ -408,6 +426,19 @@ body.dark code {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Smooth transitions for global form controls */
+input,
+textarea,
+select,
+button,
+label {
+  transition: 
+    color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ===== EMPTY STATE — Shared across all pages ===== */
@@ -512,4 +543,42 @@ body.dark code {
   .empty-state {
     padding: 48px 20px;
   }
+}
+
+/* ===== RESPONSIVE PAGE PADDING ===== */
+@media (max-width: 900px) {
+  :root {
+    --page-padding-top: 24px;
+    --page-padding-x: 20px;
+    --page-padding-bottom: 120px;
+    --page-padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom);
+  }
+}
+@media (max-width: 600px) {
+  :root {
+    --page-padding-top: 16px;
+    --page-padding-x: 16px;
+    --page-padding-bottom: 140px;
+    --page-padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom);
+  }
+}
+
+/* ===== VIEW TRANSITIONS (Telegram-style theme circular reveal) ===== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none !important;
+  mix-blend-mode: normal !important;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 99999;
+}
+
+/* Disable DOM transitions during active View Transitions */
+.view-transitioning,
+.view-transitioning * {
+  transition: none !important;
 }

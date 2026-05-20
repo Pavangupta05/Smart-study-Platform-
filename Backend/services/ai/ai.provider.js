@@ -5,6 +5,8 @@
  */
 
 const geminiService = require("./gemini.service");
+const groqService = require("./groq.service");
+const openrouterService = require("./openrouter.service");
 
 // Claude stub — ready for future integration
 const claudeService = {
@@ -23,14 +25,22 @@ const claudeService = {
 const providers = {
   gemini: geminiService,
   claude: claudeService,
+  groq: groqService,
+  openrouter: openrouterService,
 };
 
 /**
- * Get the active AI provider based on environment config.
- * Falls back to Gemini if the configured provider isn't available.
+ * Get the active AI provider based on environment config or requested override.
+ * Falls back to environment default, then Gemini if neither is available.
  */
-function getProvider() {
-  const providerName = (process.env.AI_PROVIDER || "gemini").toLowerCase();
+function getProvider(requestedProvider) {
+  let providerName = (requestedProvider || process.env.AI_PROVIDER || "gemini").toLowerCase();
+  
+  // Verify requested provider exists, else fallback to env
+  if (requestedProvider && !providers[providerName]) {
+    providerName = (process.env.AI_PROVIDER || "gemini").toLowerCase();
+  }
+
   const provider = providers[providerName];
   if (!provider) {
     console.warn(`⚠️  AI provider "${providerName}" not found. Falling back to Gemini.`);

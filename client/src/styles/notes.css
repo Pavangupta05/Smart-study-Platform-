@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 40px;
+  padding: 14px var(--page-padding-x);
   font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
@@ -127,7 +127,7 @@
 .header-main {
   max-width: 900px;
   margin: -40px auto 0 auto;
-  padding: 0 40px;
+  padding: 0 var(--page-padding-x);
   position: relative;
 }
 
@@ -186,7 +186,7 @@
 .notes-content {
   max-width: 900px;
   margin: 0 auto;
-  padding: 32px 40px 100px 40px;
+  padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom) var(--page-padding-x);
 }
 
 .notion-drop-zone {

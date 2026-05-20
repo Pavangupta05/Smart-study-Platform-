@@ -1,22 +1,19 @@
-import { useState } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
-import { 
-  LayoutGrid, 
-  StickyNote, 
-  Sparkles, 
-  Clock3, 
-  Settings, 
-  Search, 
-  Plus, 
-  ChevronRight, 
-  Bookmark, 
-  Trash2, 
-  Layout,
-  Menu,
-  X,
+import { useState, useEffect } from "react";
+import { useNavigate, NavLink, useLocation } from "react-router-dom";
+import {
+  LayoutGrid,
+  StickyNote,
+  Sparkles,
+  Clock3,
+  Settings,
+  Search,
+  Plus,
+  ChevronRight,
+  ChevronDown,
+  Bookmark,
+  Trash2,
   Home,
   LibraryBig,
-  History,
   Wrench,
   Flame,
   Pin,
@@ -25,249 +22,315 @@ import {
   LockKeyhole,
   School,
   Binary,
-  Shapes
-} from "lucide-react"; 
+  Shapes,
+  X,
+  Zap,
+  TrendingUp,
+} from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { notesService } from "../services/index";
 import "../styles/sidebar.css";
 
+/* ─── Core navigation items ─── */
+const CORE_NAV = [
+  { to: "/",           Icon: Home,       label: "Home",       end: true  },
+  { to: "/planner",    Icon: Clock3,     label: "Planner"               },
+  { to: "/notes",      Icon: StickyNote, label: "Notes"                 },
+  { to: "/flashcards", Icon: LibraryBig, label: "Flashcards"            },
+  { to: "/ai",         Icon: Sparkles,   label: "AI Tutor"              },
+];
+
 function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
+  const location   = useLocation();
   const { user, firstName, initials, logout } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState({
+  const [collapsed, setCollapsed] = useState({
     important: false,
-    recent: false,
-    favorites: false,
-    private: false,
-    tools: false
+    recent:    false,
+    private:   false,
+    tools:     false,
   });
+  const [recentNotes, setRecentNotes] = useState([]);
+  const [importantNotes, setImportantNotes] = useState([]);
 
-  const toggleSection = (section) => {
-    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  useEffect(() => {
+    const fetchSidebarNotes = async () => {
+      try {
+        const res = await notesService.getAll();
+        if (res.data && res.data.notes) {
+          const allNotes = res.data.notes.filter(n => !n.isTrashed);
+          
+          // Important: notes marked pinned, or just pick the first 2 as fallback for now
+          const pinned = allNotes.filter(n => n.pinned || n.isImportant);
+          setImportantNotes(pinned.length > 0 ? pinned : allNotes.slice(0, 2));
 
-  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+          // Recent: sort by updatedAt descending
+          const sorted = [...allNotes].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          setRecentNotes(sorted.slice(0, 4));
+        }
+      } catch (err) {
+        console.error("Failed to fetch sidebar notes:", err);
+      }
+    };
+    if (isSidebarOpen || !isMobileMenuOpen) { // Fetch mainly when active
+      fetchSidebarNotes();
+    }
+  }, [location.pathname]); // Re-fetch occasionally when navigating
 
-  // Auto-close handler for both mobile and desktop (mini-mode)
-  const handleNavLinkClick = () => {
-    closeMobileMenu();
-    // Only auto-collapse on desktop if it's currently pinned open
-    // If you want it to ALWAYS go back to mini-mode after click:
+  const toggle      = (k) => setCollapsed(p => ({ ...p, [k]: !p[k] }));
+  const closeMobile = () => setIsMobileMenuOpen(false);
+
+  const handleNav   = () => {
+    closeMobile();
     setIsSidebarOpen(false);
   };
 
   const createQuickNote = async (e, cat) => {
     e.preventDefault();
     e.stopPropagation();
-    const newNote = {
-      name: `Untitled ${cat.charAt(0).toUpperCase() + cat.slice(1)} Note`,
-      size: "0 KB",
-      icon: "📄",
-      category: cat,
-      content: "# New Note\n\nStart typing here..."
-    };
     try {
-      const res = await notesService.create(newNote);
+      const res = await notesService.create({
+        name: `Untitled ${cat.charAt(0).toUpperCase() + cat.slice(1)} Note`,
+        size: "0 KB", icon: "📄", category: cat,
+        content: "# New Note\n\nStart typing here...",
+      });
       navigate(`/reader/${res.data.note._id}`);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
+
+  const isCollapsed = !isSidebarOpen;
 
   return (
     <>
-      {/* DESKTOP SIDEBAR & MOBILE OVERLAY */}
-      <div className={`sidebar ${theme} ${isMobileMenuOpen ? 'mobile-open' : ''} ${!isSidebarOpen ? 'collapsed' : ''}`}>
-        <div className="sidebar-top">
-          <div className="logo-row" onClick={() => navigate("/")} style={{ cursor: 'pointer' }}>
-            <div className="logo-mark">
-              <LibraryBig size={18} className="logo-icon-svg" />
+      {/* ── SIDEBAR PANEL ── */}
+      <aside
+        className={[
+          "sidebar",
+          theme,
+          isMobileMenuOpen ? "mobile-open" : "",
+          isCollapsed      ? "collapsed"   : "",
+        ].join(" ")}
+      >
+        {/* ─── HEADER ─── */}
+        <div className="sb-header">
+          <div className="sb-logo" onClick={() => navigate("/")} role="button" tabIndex={0} style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%" }}>
+            <div className="sb-logo-mark">
+              <LibraryBig size={16} />
             </div>
-            <h2 className="logo-text">StarNote</h2>
-            <button className="btn-close-menu mobile-only" onClick={closeMobileMenu}>
-              <X size={20} />
-            </button>
-          </div>
-          
-          <div className="sidebar-search-container">
-            <div className="sidebar-search-minimal" onClick={onOpenSearch}>
-              <Search size={20} />
-              <span>Search...</span>
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+              <span className="sb-logo-text" style={{ lineHeight: 1 }}>StarNote</span>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "3px", fontWeight: 500 }}>Personal Workspace</span>
             </div>
+            <ChevronDown size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
           </div>
+
+          {/* Search pill */}
+          <button className="sb-search" onClick={onOpenSearch} aria-label="Search">
+            <Search size={15} />
+            <span className="sb-search-label">Search anything...</span>
+            <span className="sb-search-kbd">⌘K</span>
+          </button>
         </div>
 
-        <div className="sidebar-scroll">
-          {/* CORE NAV */}
-          <div className="sidebar-group">
-            <NavLink to="/" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
-              <Home size={20} />
-              <span>Home</span>
-            </NavLink>
-            <NavLink to="/planner" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
-              <Clock3 size={20} />
-              <span>Planner</span>
-            </NavLink>
-            <NavLink to="/notes" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
-              <StickyNote size={20} />
-              <span>Notes</span>
-            </NavLink>
-            <NavLink to="/flashcards" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
-              <LibraryBig size={20} />
-              <span>Flashcards</span>
-            </NavLink>
-            <NavLink to="/ai" onClick={handleNavLinkClick} className={({ isActive }) => "item " + (isActive ? "active" : "")}>
-              <Sparkles size={20} />
-              <span>AI Tutor</span>
-            </NavLink>
-          </div>
+        {/* ─── SCROLL AREA ─── */}
+        <div className="sb-scroll">
 
-          {/* IMPORTANT / PINNED */}
-          <div className="sidebar-group">
-            <div className="group-header" onClick={() => toggleSection('important')}>
-              <div className="group-label-row">
-                <Flame size={14} className="icon-important" />
-                <div className="group-label">Important</div>
-              </div>
-              <ChevronRight size={14} className={`chevron-toggle ${collapsedSections.important ? '' : 'rotated'}`} />
+          {/* CORE NAV */}
+          <nav className="sb-section">
+            {CORE_NAV.map(({ to, Icon, label, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={handleNav}
+                className={({ isActive }) => `sb-item${isActive ? " active" : ""}`}
+              >
+                <span className="sb-item-icon"><Icon size={18} /></span>
+                <span className="sb-item-label">{label}</span>
+                {label === "AI Tutor" && <span className="sb-badge sb-badge-ai">AI</span>}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="sb-divider" />
+
+          {/* IMPORTANT */}
+          {importantNotes.length > 0 && (
+            <div className="sb-section">
+              <button className="sb-group-hdr" onClick={() => toggle("important")}>
+                <span className="sb-group-icon"><Flame size={13} /></span>
+                <span className="sb-group-label">Important</span>
+                <ChevronRight
+                  size={13}
+                  className={`sb-chevron ${collapsed.important ? "" : "rotated"}`}
+                />
+              </button>
+              {!collapsed.important && (
+                <div className="sb-group-body">
+                  {importantNotes.map(note => (
+                    <NavLink key={`imp-${note._id}`} to={`/reader/${note._id}`} onClick={handleNav} className="sb-item sb-item-sm">
+                      <span className="sb-item-icon">
+                        <Pin size={14} style={{ color: "#f59e0b" }} />
+                      </span>
+                      <span className="sb-item-label">{note.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
-            {!collapsedSections.important && (
-              <div className="group-content">
-                <NavLink to="/notes" className="item mini-item" onClick={handleNavLinkClick}>
-                  <Pin size={16} style={{ color: 'var(--primary)', transform: 'rotate(45deg)' }} />
-                  <span>Exam Revision</span>
-                  <div className="status-badge-dot pulse-green" title="In Progress"></div>
-                </NavLink>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* RECENT */}
-          <div className="sidebar-group">
-            <div className="group-header" onClick={() => toggleSection('recent')}>
-              <div className="group-label-row">
-                <Clock size={14} />
-                <div className="group-label">Recent</div>
-              </div>
-              <ChevronRight size={14} className={`chevron-toggle ${collapsedSections.recent ? '' : 'rotated'}`} />
+          {recentNotes.length > 0 && (
+            <div className="sb-section">
+              <button className="sb-group-hdr" onClick={() => toggle("recent")}>
+                <span className="sb-group-icon"><Clock size={13} /></span>
+                <span className="sb-group-label">Recent</span>
+                <ChevronRight
+                  size={13}
+                  className={`sb-chevron ${collapsed.recent ? "" : "rotated"}`}
+                />
+              </button>
+              {!collapsed.recent && (
+                <div className="sb-group-body">
+                  {recentNotes.map(note => (
+                    <NavLink key={`rec-${note._id}`} to={`/reader/${note._id}`} onClick={handleNav} className="sb-item sb-item-sm">
+                      <span className="sb-item-icon">
+                        <StickyNote size={14} />
+                      </span>
+                      <span className="sb-item-label">{note.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
-            {!collapsedSections.recent && (
-              <div className="group-content">
-                <NavLink to="/notes" className="item mini-item" onClick={handleNavLinkClick}>
-                  <StickyNote size={16} />
-                  <span>Physics Ch. 4</span>
-                  <div className="status-badge-dot pulse-amber" title="Needs Review"></div>
-                </NavLink>
-                <NavLink to="/notes" className="item mini-item" onClick={handleNavLinkClick}>
-                  <StickyNote size={14} />
-                  <span>Organic Chem</span>
-                </NavLink>
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* FAVORITES */}
-          <div className="sidebar-group">
-            <div className="group-header" onClick={() => toggleSection('favorites')}>
-              <div className="group-label-row">
-                <Bookmark size={14} />
-                <div className="group-label">Favorites</div>
-              </div>
-              <ChevronRight size={14} className={`chevron-toggle ${collapsedSections.favorites ? '' : 'rotated'}`} />
-            </div>
-            {!collapsedSections.favorites && (
-              <div className="group-content">
-                <NavLink to="/notes" className="item" onClick={handleNavLinkClick}>
-                  <Bookmark size={18} className="icon-fav" />
-                  <span>Project Draft</span>
-                </NavLink>
-              </div>
-            )}
-          </div>
-
-          {/* PRIVATE PAGES */}
-          <div className="sidebar-group">
-            <div className="group-header">
-              <div className="group-label-row" onClick={() => toggleSection('private')}>
-                <LockKeyhole size={14} />
-                <div className="group-label">Private</div>
-                <ChevronRight size={14} className={`chevron-toggle ${collapsedSections.private ? '' : 'rotated'}`} />
-              </div>
-              <button className="btn-add-inline" onClick={(e) => createQuickNote(e, 'private')}>
-                <Plus size={14} />
+          {/* PRIVATE */}
+          <div className="sb-section">
+            <div className="sb-group-hdr-row">
+              <button
+                className="sb-group-hdr sb-group-hdr-flex"
+                onClick={() => toggle("private")}
+              >
+                <span className="sb-group-icon"><LockKeyhole size={13} /></span>
+                <span className="sb-group-label">Private</span>
+                <ChevronRight
+                  size={13}
+                  className={`sb-chevron ${collapsed.private ? "" : "rotated"}`}
+                />
+              </button>
+              <button
+                className="sb-add-btn"
+                onClick={(e) => createQuickNote(e, "private")}
+                title="New private note"
+                aria-label="New private note"
+              >
+                <Plus size={13} />
               </button>
             </div>
-            {!collapsedSections.private && (
-              <div className="group-content">
-                <NavLink to="/notes/university" className="nested-item" onClick={handleNavLinkClick}>
-                  <ChevronRight size={14} className="chevron" />
-                  <School size={18} />
-                  <span>University</span>
+            {!collapsed.private && (
+              <div className="sb-group-body">
+                <NavLink to="/notes/university" onClick={handleNav} className="sb-item sb-item-sm sb-item-nested">
+                  <span className="sb-item-icon"><School size={14} /></span>
+                  <span className="sb-item-label">University</span>
                 </NavLink>
-                <NavLink to="/notes/research" className="nested-item" onClick={handleNavLinkClick}>
-                  <ChevronRight size={14} className="chevron" />
-                  <Binary size={18} />
-                  <span>Research</span>
+                <NavLink to="/notes/research" onClick={handleNav} className="sb-item sb-item-sm sb-item-nested">
+                  <span className="sb-item-icon"><Binary size={14} /></span>
+                  <span className="sb-item-label">Research</span>
                 </NavLink>
               </div>
             )}
           </div>
+
+          <div className="sb-divider" />
 
           {/* TOOLS */}
-          <div className="sidebar-group">
-            <div className="group-header" onClick={() => toggleSection('tools')}>
-              <div className="group-label-row">
-                <Wrench size={14} />
-                <div className="group-label">Tools</div>
-              </div>
-              <ChevronRight size={14} className={`chevron-toggle ${collapsedSections.tools ? '' : 'rotated'}`} />
-            </div>
-            {!collapsedSections.tools && (
-              <div className="group-content">
-                <NavLink to="/templates" onClick={handleNavLinkClick} className="item">
-                  <Shapes size={20} />
-                  <span>Templates</span>
+          <div className="sb-section">
+            <button className="sb-group-hdr" onClick={() => toggle("tools")}>
+              <span className="sb-group-icon"><Wrench size={13} /></span>
+              <span className="sb-group-label">Tools</span>
+              <ChevronRight
+                size={13}
+                className={`sb-chevron ${collapsed.tools ? "" : "rotated"}`}
+              />
+            </button>
+            {!collapsed.tools && (
+              <div className="sb-group-body">
+                <NavLink to="/templates" onClick={handleNav} className="sb-item sb-item-sm">
+                  <span className="sb-item-icon"><Shapes size={15} /></span>
+                  <span className="sb-item-label">Templates</span>
                 </NavLink>
-                <NavLink to="/trash" onClick={handleNavLinkClick} className="item">
-                  <Trash2 size={20} />
-                  <span>Trash</span>
+                <NavLink to="/trash" onClick={handleNav} className="sb-item sb-item-sm">
+                  <span className="sb-item-icon"><Trash2 size={15} /></span>
+                  <span className="sb-item-label">Trash</span>
                 </NavLink>
               </div>
             )}
           </div>
+
+          {/* UPGRADE BANNER (only when expanded) */}
+          {!isCollapsed && user?.plan !== "pro" && (
+            <div className="sb-upgrade-banner">
+              <div className="sb-upgrade-icon"><Zap size={16} fill="currentColor" /></div>
+              <div className="sb-upgrade-text">
+                <span className="sb-upgrade-title">Upgrade to Pro</span>
+                <span className="sb-upgrade-sub">Unlimited AI, analytics & more</span>
+              </div>
+              <button
+                className="sb-upgrade-btn"
+                onClick={() => navigate("/settings", { state: { tab: "billing" } })}
+              >
+                Upgrade
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* ULTRA-MINIMAL USER DOCK */}
-        <div className="premium-user-dock">
-          <div className="user-dock-clickable" onClick={() => navigate("/profile")}>
-            <div className="user-dock-avatar">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Profile" className="avatar-img-mini" />
-              ) : (
-                initials
-              )}
-              <div className="user-dock-status"></div>
+        {/* ─── USER DOCK ─── */}
+        <div className="sb-user-dock">
+          <div className="sb-user-left" onClick={() => navigate("/profile")} role="button" tabIndex={0}>
+            <div className="sb-user-avatar">
+              {user?.avatar
+                ? <img src={user.avatar} alt="Profile" className="sb-avatar-img" />
+                : initials
+              }
+              <span className="sb-online-dot" />
             </div>
-            <div className="user-dock-info">
-              <span className="user-dock-name">{user?.name || firstName}</span>
-              <span className="user-dock-plan">{user?.plan === 'pro' ? 'Pro' : 'Free'}</span>
+            <div className="sb-user-meta">
+              <span className="sb-user-name">{firstName}</span>
+              <span className="sb-user-plan">
+                {user?.plan === "pro" ? "⚡ Pro" : "Free Plan"}
+              </span>
             </div>
           </div>
-          <div className="user-dock-icon-actions">
-            <NavLink to="/settings" className="icon-action-btn" title="Settings" onClick={handleNavLinkClick}>
+          <div className="sb-user-actions">
+            <NavLink
+              to="/settings"
+              className="sb-icon-btn"
+              title="Settings"
+              onClick={handleNav}
+              aria-label="Settings"
+            >
               <Settings size={15} />
             </NavLink>
-            <button className="icon-action-btn logout-icon" title="Logout" onClick={() => logout()}>
+            <button
+              className="sb-icon-btn sb-logout-btn"
+              title="Logout"
+              onClick={logout}
+              aria-label="Logout"
+            >
               <LogOut size={15} />
             </button>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* OVERLAY FOR MOBILE MENU */}
-      {isMobileMenuOpen && <div className="menu-overlay" onClick={closeMobileMenu}></div>}
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div className="sb-overlay" onClick={closeMobile} aria-label="Close menu" />
+      )}
     </>
   );
 }

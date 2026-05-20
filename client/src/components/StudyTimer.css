@@ -1,71 +1,91 @@
-.study-timer-wrapper {
-  position: relative;
+/* ===== GLOBAL FLOATING STUDY TIMER ===== */
+.study-timer-floating-wrapper {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  z-index: 9999;
   display: flex;
   align-items: center;
-}
-
-.timer-pill {
-  background: rgba(var(--primary-rgb), 0.04);
-  backdrop-filter: blur(12px);
+  gap: 8px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  padding: 6px 14px;
   border-radius: 9999px;
+  padding: 6px 16px 6px 8px;
+  box-shadow: var(--shadow-lg), 0 10px 30px rgba(0, 0, 0, 0.08);
+  user-select: none;
+  cursor: grab;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  backdrop-filter: blur(12px);
+}
+
+.study-timer-floating-wrapper:active {
+  cursor: grabbing;
+}
+
+.study-timer-floating-wrapper.timer-active {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(37, 99, 235, 0.15);
+}
+
+/* Drag Handle */
+.timer-pill-drag-handle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: grab;
+  padding-right: 4px;
+  border-right: 1px solid var(--border);
+}
+
+.timer-pill-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Clickable Content area */
+.timer-pill-clickable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.2s;
-  user-select: none;
 }
 
-body.dark .timer-pill {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+.mode-icon.study {
+  color: var(--accent-blue);
 }
 
-.timer-pill:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-  border-color: var(--text-muted);
-}
-
-.timer-pill.active {
-  border-color: #0084ff;
-  color: #0084ff;
-  box-shadow: 0 0 15px rgba(0, 132, 255, 0.2);
+.mode-icon.break {
+  color: var(--accent-emerald);
 }
 
 .time-display {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
+  color: var(--text);
 }
 
+/* Floating Settings Popup */
 .timer-controls-card {
   position: absolute;
-  top: calc(100% + 12px);
+  bottom: calc(100% + 12px);
   right: 0;
-  width: 240px;
+  width: 230px;
   background: var(--surface);
-  backdrop-filter: blur(24px);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 16px;
   box-shadow: var(--shadow-modal);
-  z-index: 2000;
+  z-index: 10000;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  cursor: default;
+  backdrop-filter: blur(20px);
 }
 
-body.dark .timer-controls-card {
-  background: rgba(20, 20, 20, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-}
-
+/* Mode Select buttons */
 .mode-switcher {
   display: flex;
   gap: 4px;
@@ -79,57 +99,74 @@ body.dark .timer-controls-card {
   background: transparent;
   border: none;
   padding: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-secondary);
   border-radius: 6px;
-  transition: all 0.2s;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-switcher button:hover {
+  color: var(--text);
 }
 
 .mode-switcher button.active {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 
+/* Core Action Controls */
 .main-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .play-pause {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: #0084ff;
+  background: var(--primary);
   border: none;
-  color: white;
+  color: var(--primary-foreground);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .play-pause:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(0, 132, 255, 0.4);
+  opacity: 0.9;
 }
 
-.reset {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
+.reset-btn {
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.reset:hover {
+.reset-btn:hover {
   color: var(--text);
+  border-color: var(--text-muted);
 }
 
+/* Sound Toggles */
 .soundscapes {
   border-top: 1px solid var(--border);
-  padding-top: 12px;
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -138,35 +175,55 @@ body.dark .timer-controls-card {
 .sound-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.sound-options button {
+.sound-toggle-btn {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--surface-hover);
   border: 1px solid transparent;
   padding: 8px 12px;
   border-radius: 10px;
   color: var(--text-secondary);
-  font-size: 13px;
-  transition: all 0.2s;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.sound-options button:hover {
-  background: var(--surface);
+.sound-toggle-btn:hover {
   border-color: var(--border);
 }
 
-.sound-options button.active {
-  background: rgba(0, 132, 255, 0.1);
-  border-color: rgba(0, 132, 255, 0.2);
-  color: #0084ff;
+.sound-toggle-btn.active {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.2);
+  color: var(--accent-blue);
+}
+
+/* Dark mode custom adjustments */
+body.dark .study-timer-floating-wrapper {
+  background: rgba(24, 24, 27, 0.85);
+  box-shadow: var(--shadow-lg), 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .timer-controls-card {
+  background: rgba(24, 24, 27, 0.95);
+  box-shadow: var(--shadow-modal);
+}
+
+/* Mobile safety boundaries */
+@media (max-width: 768px) {
+  .study-timer-floating-wrapper {
+    bottom: 90px;
+    right: 16px;
+    padding: 6px 12px 6px 6px;
+  }
 }

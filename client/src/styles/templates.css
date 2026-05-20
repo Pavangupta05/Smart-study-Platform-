@@ -1,16 +1,10 @@
 /* STARNOTE TEMPLATES REDESIGN */
 
 .templates-page {
-  padding: 48px 64px 100px;
+  padding: var(--page-padding);
   flex: 1; /* Fix height overlap */
   overflow-y: auto;
   background: transparent; /* Show global mesh */
-}
-
-@media (max-width: 768px) {
-  .templates-page {
-    padding: 24px 20px 140px 20px; /* Dock padding */
-  }
 }
 
 .templates-container {

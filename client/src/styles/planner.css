@@ -1,7 +1,7 @@
 /* PREMIUM SMART PLANNER - DESIGN SYSTEM */
 
 .planner-page {
-  padding: 60px 80px 100px;
+  padding: var(--page-padding);
   background: transparent; /* Show global mesh */
   flex: 1;
   overflow-y: auto;

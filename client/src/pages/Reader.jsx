@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { toast } from "sonner";
 import { notesService, flashcardsService, tasksService } from "../services/index";
 import "../styles/reader.css";
 import "../styles/reader-mobile.css";
@@ -1592,7 +1593,10 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                   </button>
                 )}
                 <button className="utility-btn" onClick={handlePrint}><Printer size={16} /> <span>Print/Export</span></button>
-                <button className="utility-btn" onClick={() => alert("Deep Link copied! Share to study group.")}><Share2 size={16} /> <span>Share</span></button>
+                <button className="utility-btn" onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Deep Link copied to clipboard!");
+                }}><Share2 size={16} /> <span>Share</span></button>
               </div>
             </div>
           )}

@@ -30,14 +30,17 @@
   border-radius: var(--tv2-radius);
 
   /* Glass morphism removed */
-  background: var(--surface);
+  background-color: var(--surface);
   border: 1px solid var(--border);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.04),
     0 8px 32px rgba(0, 0, 0, 0.06);
 
-  /* ⚡ Instant theme switch — no transition lag */
-  transition: none;
+  /* Smooth theme switch to prevent UI glitching */
+  transition: 
+    background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Prevent safe-area clipping on notched devices */
   -webkit-transform: translateZ(0);
@@ -46,7 +49,7 @@
 
 /* ── Dark mode — single authoritative override ── */
 .topbar-v2.dark {
-  background: var(--surface);
+  background-color: var(--surface);
   border-color: rgba(255, 255, 255, 0.1);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.5),
@@ -400,4 +403,20 @@
    ============================================================ */
 .tv2-right .profile-dropdown-container {
   position: relative;
+}
+
+/* Smooth transitions for theme-critical properties inside the topbar */
+.tv2-breadcrumb,
+.tv2-theme-pill,
+.tv2-icon-btn,
+.tv2-icon-btn-bg,
+.tv2-search-btn,
+.tv2-logo-text,
+.tv2-title,
+.theme-track {
+  transition: 
+    color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }

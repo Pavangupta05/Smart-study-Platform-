@@ -11,8 +11,8 @@ function SearchModal({ isOpen, onClose }) {
 
   // Commands available in the palette
   const commands = [
-    { id: "c1", icon: <Sun size={16} />, title: "Toggle Light Theme", action: () => { document.body.classList.remove("dark"); localStorage.setItem("starNote_theme", "light"); } },
-    { id: "c2", icon: <Moon size={16} />, title: "Toggle Dark Theme", action: () => { document.body.classList.add("dark"); localStorage.setItem("starNote_theme", "dark"); } },
+    { id: "c1", icon: <Sun size={16} />, title: "Toggle Light Theme", action: () => { window.dispatchEvent(new CustomEvent("themeChange", { detail: { theme: "light" } })); } },
+    { id: "c2", icon: <Moon size={16} />, title: "Toggle Dark Theme", action: () => { window.dispatchEvent(new CustomEvent("themeChange", { detail: { theme: "dark" } })); } },
     { id: "c3", icon: <Plus size={16} />, title: "Create New Note", action: () => navigate("/notes") },
     { id: "c4", icon: <Clock size={16} />, title: "Open Study Planner", action: () => navigate("/planner") },
     { id: "c5", icon: <Zap size={16} />, title: "Start 25m Pomodoro", action: () => { alert("Timer feature coming soon!"); } },
