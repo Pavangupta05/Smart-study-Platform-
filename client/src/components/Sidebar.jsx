@@ -9,7 +9,6 @@ import {
   Plus,
   ChevronRight,
   ChevronDown,
-  Bookmark,
   Trash2,
   Home,
   LibraryBig,
@@ -22,9 +21,7 @@ import {
   School,
   Binary,
   Shapes,
-  X,
   Zap,
-  TrendingUp,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { notesService } from "../services/index";
@@ -75,7 +72,7 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
     if (isSidebarOpen || !isMobileMenuOpen) { // Fetch mainly when active
       fetchSidebarNotes();
     }
-  }, [location.pathname]); // Re-fetch occasionally when navigating
+  }, [location.pathname, isMobileMenuOpen, isSidebarOpen]); // Re-fetch when active state changes
 
   const toggle = (k) => setCollapsed(p => ({ ...p, [k]: !p[k] }));
   const closeMobile = () => setIsMobileMenuOpen(false);

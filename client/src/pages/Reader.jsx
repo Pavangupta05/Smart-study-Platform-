@@ -1941,42 +1941,60 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
           {/* Mobile Floating Bottom Dock (Beautiful, necessary features only) */}
           {isMobile && !zenMode && (
-            <div className="m-bottom-toolbar-wrapper">
+            <div className="m-bottom-toolbar-wrapper" role="toolbar" aria-label="Reader tool strip">
               <div className="m-bottom-toolbar floating-pill">
                 <div className="m-tools-row">
-                  <button 
+                  <button
                     className={`m-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
                     onClick={() => selectTool('select')}
+                    tabIndex={0}
+                    aria-label="Select tool"
+                    aria-pressed={activeTool === 'select'}
                   >
                     <MousePointer2 size={18} /> <span>Select</span>
                   </button>
-                  <button 
+                  <button
                     className={`m-tool-btn ${activeTool === 'pen' ? 'active' : ''}`}
                     onClick={() => selectTool('pen')}
+                    tabIndex={0}
+                    aria-label="Pen tool"
+                    aria-pressed={activeTool === 'pen'}
                   >
                     <PenTool size={18} /> <span>Pen</span>
                   </button>
-                  <button 
+                  <button
                     className={`m-tool-btn ${activeTool === 'highlighter' ? 'active' : ''}`}
                     onClick={() => selectTool('highlighter')}
+                    tabIndex={0}
+                    aria-label="Highlighter tool"
+                    aria-pressed={activeTool === 'highlighter'}
                   >
                     <Highlighter size={18} /> <span>Highlight</span>
                   </button>
-                  <button 
+                  <button
                     className={`m-tool-btn ${activeTool === 'text' ? 'active' : ''}`}
                     onClick={() => selectTool('text')}
+                    tabIndex={0}
+                    aria-label="Text tool"
+                    aria-pressed={activeTool === 'text'}
                   >
                     <Type size={18} /> <span>Text</span>
                   </button>
-                  <button 
+                  <button
                     className={`m-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
                     onClick={() => selectTool('eraser')}
+                    tabIndex={0}
+                    aria-label="Eraser tool"
+                    aria-pressed={activeTool === 'eraser'}
                   >
                     <Eraser size={18} /> <span>Eraser</span>
                   </button>
-                  <button 
+                  <button
                     className={`m-tool-btn ${activeTool === 'sticky' ? 'active' : ''}`}
                     onClick={() => selectTool('sticky')}
+                    tabIndex={0}
+                    aria-label="Sticky note tool"
+                    aria-pressed={activeTool === 'sticky'}
                   >
                     <StickyNote size={18} /> <span>Note</span>
                   </button>
@@ -1985,8 +2003,11 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
               <button
                 className={`m-ai-dock-btn ${showSidebar ? 'active' : ''}`}
-                onClick={() => setShowSidebar(!showSidebar)}
-                aria-label="AI Tutor"
+                onClick={() => setShowSidebar((value) => !value)}
+                tabIndex={0}
+                aria-label="Open AI Tutor"
+                aria-pressed={showSidebar}
+                aria-expanded={showSidebar}
               >
                 <MessageSquare size={18} />
               </button>
@@ -2215,9 +2236,9 @@ Be precise, highly informative, use clean formatting with bold headings and bull
           </aside>
         )}
 
-        {/* Sidebar trigger when closed */}
-        {!showSidebar && !zenMode && (
-          <button className="expand-sidebar-floating-btn" onClick={() => setShowSidebar(true)}>
+        {/* Sidebar trigger when closed (desktop only) */}
+        {!showSidebar && !zenMode && !isMobile && (
+          <button className="expand-sidebar-floating-btn" onClick={() => setShowSidebar(true)} aria-label="Open AI Tutor sidebar">
             <MessageSquare size={20} />
           </button>
         )}

@@ -301,6 +301,11 @@ body.dark .m-bottom-toolbar.floating-pill,
   gap: 4px;
   overflow-x: auto;
   padding: 0 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.m-tools-row::-webkit-scrollbar {
+  display: none;
 }
 
 .m-tool-btn {
@@ -312,7 +317,8 @@ body.dark .m-bottom-toolbar.floating-pill,
   justify-content: center;
   gap: 1px;
   color: var(--m-muted);
-  width: 46px;
+  width: 44px;
+  min-width: 44px;
   height: 44px;
   transition: all 0.18s ease;
   border-radius: 14px;
