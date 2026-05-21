@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { 
   User, Bell, Palette, Lock, Sliders, Puzzle, 
-  CreditCard, MonitorSmartphone, Key, Zap, Check, 
-  Smartphone, Laptop, Copy, Trash2, Search, Download
+  CreditCard, MonitorSmartphone, Key, Zap, 
+  Smartphone, Laptop, Copy, Search, Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -40,10 +40,16 @@ function Settings() {
   const [publicMap, setPublicMap] = useState(false);
 
   // Sync name/email when user context changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (user?.name) setName(user.name);
-    if (user?.email) setEmail(user.email);
-  }, [user?.name, user?.email]);
+    if (user?.name && user.name !== name) {
+      setName(user.name);
+    }
+    if (user?.email && user.email !== email) {
+      setEmail(user.email);
+    }
+  }, [user?.name, user?.email, name, email]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleThemeToggle = (nextTheme, e) => {
     window.dispatchEvent(new CustomEvent("themeChange", { 

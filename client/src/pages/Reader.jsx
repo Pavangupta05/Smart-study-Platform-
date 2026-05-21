@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
@@ -366,16 +366,16 @@ function Reader({ zenMode, setZenMode }) {
     });
   }, [pages, drawHistory]);
 
-  const saveFileChanges = async (updates) => {
+  const saveFileChanges = useCallback(async (updates) => {
     setIsSaving(true);
     try {
       const res = await notesService.update(id, updates);
       setFile(res.data.note);
-    } catch (e) {
+    } catch {
       setFile(prev => ({ ...prev, ...updates }));
     }
     setIsSaving(false);
-  };
+  }, [id, setFile, setIsSaving]);
 
   // Sticky Note Pointer Down
   const handleStickyPointerDown = (note, e) => {
@@ -498,7 +498,7 @@ function Reader({ zenMode, setZenMode }) {
   };
 
   // Concept Mapping Connections & Context Menu
-  const handleStickyNoteClick = (note, e) => {
+  const handleStickyNoteClick = useCallback((note, e) => {
     if (activeTool === "select") {
       if (e && e.currentTarget) {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -535,7 +535,7 @@ function Reader({ zenMode, setZenMode }) {
       }
       setConceptSourceNoteId(null);
     }
-  };
+  }, [activeTool, conceptSourceNoteId, penColor, currentPage, connectors, saveFileChanges]);
 
   const handleClearConnectors = () => {
     setConnectors([]);
@@ -708,7 +708,7 @@ function Reader({ zenMode, setZenMode }) {
   };
 
   // Sticky Note Operations
-  const handleAddStickyClick = (pageIdx, e) => {
+  const handleAddStickyClick = useCallback((pageIdx, e) => {
     if (activeTool !== "sticky" && activeTool !== "text") return;
 
     // Find bounding box coordinates of the specific clicked page
@@ -740,7 +740,7 @@ function Reader({ zenMode, setZenMode }) {
         value: ""
       });
     }
-  };
+  }, [activeTool, activeStickyColor, notes, saveFileChanges]);
 
   const handleUpdateStickyText = (noteId, text) => {
     const updatedNotes = notes.map(n => n.id === noteId ? { ...n, text } : n);
@@ -864,7 +864,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
       setAiMessages(prev => [...prev, { role: "assistant", text: fullText }]);
       setCurrentResponseChunk("");
-    } catch (err) {
+    } catch {
       setAiMessages(prev => [...prev, { role: "assistant", text: "I encountered an error preparing the contextual response. Please try again." }]);
     }
     setIsAiResponding(false);
@@ -2170,7 +2170,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                           const prompt = `Summarize this text in 3 paragraphs focusing on key insights: ${(file?.content || pages.join("\n")).substring(0, 5000)}`;
                           const res = await aiModel.generateContent(prompt);
                           setSummary(res.response.text());
-                        } catch (e) {
+                        } catch {
                           setSummary("Failed to generate summary completion.");
                         }
                         setIsSummarizing(false);

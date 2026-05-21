@@ -414,94 +414,6 @@ export default function AISplit() {
       versionIndex: m.versionIndex ?? 0,
     }));
 
-  // Load chat history + shared session link
-  useEffect(() => {
-    fetchSessions();
-    const shared = searchParams.get("session");
-    if (shared) loadSession(shared);
-    else loadSession("latest");
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(LANG_STORAGE_KEY, aiLanguage);
-  }, [aiLanguage]);
-
-  useEffect(() => {
-    localStorage.setItem("starNote_artifactWidth", String(artifactWidthPct));
-  }, [artifactWidthPct]);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const onChange = () => setIsMobile(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") closeAllMenus();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [closeAllMenus]);
-
-  // Handle navigation-initiated messages (from Command Palette)
-  useEffect(() => {
-    if (location.state?.initialMessage) {
-      handleSend(location.state.initialMessage);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
-
-  // Auto-scroll logic: Target the message container specifically to avoid page-level jumps
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current;
-      // Use requestAnimationFrame to ensure the DOM has updated before scrolling
-      requestAnimationFrame(() => {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: "smooth"
-        });
-      });
-    }
-    // Defensively ensure the window hasn't jumped
-    if (window.scrollY !== 0) window.scrollTo(0, 0);
-  }, [messages, loading]);
-
-  // Close menus on outside click
-  useEffect(() => {
-    const h = (e) => { 
-      if (showPlusMenu && plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false); 
-      if (showModelMenu && modelMenuRef.current && !modelMenuRef.current.contains(e.target)) setShowModelMenu(false);
-      if (showTemplates && templatesRef.current && !templatesRef.current.contains(e.target)) setShowTemplates(false);
-      if (showLangMenu && langMenuRef.current && !langMenuRef.current.contains(e.target)) setShowLangMenu(false);
-      if (showHeaderMore && headerMoreRef.current && !headerMoreRef.current.contains(e.target)) setShowHeaderMore(false);
-      if (moreMenuIdx !== null) setMoreMenuIdx(null);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showPlusMenu, showModelMenu, showTemplates, showLangMenu, showHeaderMore, moreMenuIdx]);
-
-  // Voice recognition setup
-  useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = aiLanguage === "en" ? "en-US" : aiLanguage === "es" ? "es-ES" : `${aiLanguage}-${aiLanguage.toUpperCase()}`;
-    rec.onresult = (e) => {
-      for (let i = e.resultIndex; i < e.results.length; ++i) {
-        if (e.results[i].isFinal) setInput(p => p + e.results[i][0].transcript + " ");
-      }
-    };
-    rec.onend = () => { if (isListeningRef.current) { try { rec.start(); } catch {} } };
-    rec.onerror = (e) => { if (e.error !== "no-speech") { setIsListening(false); stopAudio(); } };
-    recognitionRef.current = rec;
-  }, []);
-
   const startAudio = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -522,13 +434,13 @@ export default function AISplit() {
     } catch {}
   };
 
-  const stopAudio = () => {
+  const stopAudio = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (sourceRef.current) { sourceRef.current.mediaStream?.getTracks().forEach(t => t.stop()); sourceRef.current.disconnect(); }
     if (audioCtxRef.current) audioCtxRef.current.close();
     audioCtxRef.current = null; analyserRef.current = null; sourceRef.current = null;
     setVoiceVolumes(new Array(20).fill(4));
-  };
+  }, []);
 
   const toggleVoice = async () => {
     if (isListening) {
@@ -547,7 +459,7 @@ export default function AISplit() {
     { key: " ", ctrl: true, handler: () => toggleVoice() },
     { key: "m", ctrl: true, handler: () => setShowModelMenu((v) => !v) },
     { key: "f", ctrl: true, handler: () => setFocusMode((v) => !v) },
-  ], [isListening]);
+  ], [isListening, stopAudio]);
 
   // File upload handler
   const handleFile = (e) => {
@@ -710,23 +622,116 @@ export default function AISplit() {
     }
   }, [input, loading, messages, isListening, activeSessionId, selectedModel, languageInstruction, contextData, attachedFile, webSearch]);
 
-  const handleCopy = async (text, idx) => {
+  // Load chat history + shared session link
+  useEffect(() => {
+    fetchSessions();
+    const shared = searchParams.get("session");
+    if (shared) loadSession(shared);
+    else loadSession("latest");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LANG_STORAGE_KEY, aiLanguage);
+  }, [aiLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem("starNote_artifactWidth", String(artifactWidthPct));
+  }, [artifactWidthPct]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") closeAllMenus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeAllMenus]);
+
+  // Handle navigation-initiated messages (from Command Palette)
+  useEffect(() => {
+    if (location.state?.initialMessage) {
+      handleSend(location.state.initialMessage);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, handleSend]);
+
+  // Auto-scroll logic: Target the message container specifically to avoid page-level jumps
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current;
+      // Use requestAnimationFrame to ensure the DOM has updated before scrolling
+      requestAnimationFrame(() => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
+      });
+    }
+    // Defensively ensure the window hasn't jumped
+    if (window.scrollY !== 0) window.scrollTo(0, 0);
+  }, [messages, loading]);
+
+  // Close menus on outside click
+  useEffect(() => {
+    const h = (e) => { 
+      if (showPlusMenu && plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false); 
+      if (showModelMenu && modelMenuRef.current && !modelMenuRef.current.contains(e.target)) setShowModelMenu(false);
+      if (showTemplates && templatesRef.current && !templatesRef.current.contains(e.target)) setShowTemplates(false);
+      if (showLangMenu && langMenuRef.current && !langMenuRef.current.contains(e.target)) setShowLangMenu(false);
+      if (showHeaderMore && headerMoreRef.current && !headerMoreRef.current.contains(e.target)) setShowHeaderMore(false);
+      if (moreMenuIdx !== null) setMoreMenuIdx(null);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showPlusMenu, showModelMenu, showTemplates, showLangMenu, showHeaderMore, moreMenuIdx]);
+
+  // Voice recognition setup
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = aiLanguage === "en" ? "en-US" : aiLanguage === "es" ? "es-ES" : `${aiLanguage}-${aiLanguage.toUpperCase()}`;
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) setInput(p => p + e.results[i][0].transcript + " ");
+      }
+    };
+    rec.onend = () => { if (isListeningRef.current) { try { rec.start(); } catch {} } };
+    rec.onerror = (e) => { if (e.error !== "no-speech") { setIsListening(false); stopAudio(); } };
+    recognitionRef.current = rec;
+  }, [aiLanguage, stopAudio]);
+
+  const handleCopy = useCallback(async (text, idx) => {
     await navigator.clipboard.writeText(text);
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 2000);
-  };
+  }, []);
 
-  const handleSave = async (text, idx) => {
-    try {
-      await notesService.create({
-        name: "AI Note — " + new Date().toLocaleDateString(),
-        icon: "🧠", category: "general", fileType: "text", content: text,
-      });
-      setSavedIdx(idx);
-      setTimeout(() => setSavedIdx(null), 2000);
-      toast.success("Saved to Notes");
-    } catch { toast.error("Failed to save note."); }
-  };
+  const handleSave = useCallback(async (text, idx) => {
+  try {
+    await notesService.create({
+      name: "AI Note — " + new Date().toLocaleDateString(),
+      icon: "🧠",
+      category: "general",
+      fileType: "text",
+      content: text,
+    });
+    setSavedIdx(idx);
+    setTimeout(() => setSavedIdx(null), 2000);
+    toast.success("Saved to Notes");
+  } catch {
+    toast.error("Failed to save note.");
+  }
+}, []);
 
   const handleQuiz = (text) => handleSend(`Please generate a short quiz (3-5 questions, MCQ + short answer) based on:\n"${text.slice(0, 400)}"`);
 

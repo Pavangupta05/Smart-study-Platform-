@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/auth");
+const { validate } = require("../middleware/validation");
 const { getMockMode } = require("../config/db");
 const { mockNotes } = require("../utils/mockStore");
 const multer = require("multer");
@@ -84,7 +85,14 @@ router.get("/:id", protect, ensureModel, async (req, res) => {
 });
 
 // POST /api/notes
-router.post("/", protect, ensureModel, upload.single("file"), async (req, res) => {
+router.post("/", protect, ensureModel, upload.single("file"), validate([
+    // Basic payload validation – all fields are optional but must be strings if present
+    require('express-validator').body('name').optional().isString(),
+    require('express-validator').body('icon').optional().isString(),
+    require('express-validator').body('category').optional().isString(),
+    require('express-validator').body('content').optional().isString(),
+    require('express-validator').body('fileType').optional().isString(),
+  ]), async (req, res) => {
   let { name, icon, category, content, blobUrl, fileType, size, pages } = req.body;
   
   if (req.file) {
@@ -125,7 +133,13 @@ router.post("/", protect, ensureModel, upload.single("file"), async (req, res) =
 });
 
 // PUT /api/notes/:id
-router.put("/:id", protect, ensureModel, async (req, res) => {
+router.put("/:id", protect, ensureModel, validate([
+    require('express-validator').body('name').optional().isString(),
+    require('express-validator').body('icon').optional().isString(),
+    require('express-validator').body('category').optional().isString(),
+    require('express-validator').body('content').optional().isString(),
+    require('express-validator').body('fileType').optional().isString(),
+  ]), async (req, res) => {
   if (getMockMode()) {
     const note = await mockNotes.findOneAndUpdate({ _id: req.params.id, user: req.userId }, req.body);
     if (!note) return res.status(404).json({ success: false, message: "Note not found." });

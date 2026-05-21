@@ -1,7 +1,10 @@
 require("dotenv").config(); 
 require("express-async-errors");
 const express = require("express");
-const cors = require("cors");
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cors = require('cors');
+
 const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -18,6 +21,17 @@ const chatRoutes = require("./routes/chat.routes");
 const aiRoutes = require("./routes/ai.routes");
 
 const app = express();
+
+// Apply security middlewares
+app.use(helmet());
+
+// Rate limiting: max 120 requests per minute per IP
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: { success: false, error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', apiLimiter);
 const server = http.createServer(app);
 const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",") : ["http://localhost:5173", "http://localhost:3000"];
 
@@ -54,7 +68,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Connect DB
 connectDB();

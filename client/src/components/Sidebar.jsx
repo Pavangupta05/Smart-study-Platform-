@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutGrid,
   StickyNote,
   Sparkles,
   Clock3,
