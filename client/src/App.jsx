@@ -8,6 +8,7 @@ import Preloader from "./components/Preloader";
 import CommandPalette from "./components/CommandPalette";
 import MobileDock from "./components/MobileDock";
 import StudyTimer from "./components/StudyTimer";
+import "./styles/simple-ui.css";
 
 // Lazy-loaded pages — code split for faster initial load
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -24,16 +25,36 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 
-// Minimal page skeleton shown while lazy chunks load
 function PageSkeleton() {
   return (
-    <div style={{ padding: "40px 32px", display: "flex", flexDirection: "column", gap: "16px", flex: 1 }}>
-      <div className="skeleton skeleton-text" style={{ width: "180px", height: "28px", borderRadius: "8px" }} />
-      <div className="skeleton skeleton-text" style={{ width: "280px", height: "16px", borderRadius: "6px" }} />
-      <div style={{ display: "grid", gap: "12px", marginTop: "8px" }}>
-        {[1, 2, 3].map(i => (
-          <div key={i} className="skeleton" style={{ height: "80px", borderRadius: "12px", background: "var(--border)" }} />
+    <div className="page-skeleton" aria-hidden="true">
+      <div className="page-skeleton-header">
+        <div>
+          <div className="skeleton skeleton-title" />
+          <div className="skeleton skeleton-subtitle" />
+        </div>
+        <div className="skeleton skeleton-action" />
+      </div>
+
+      <div className="page-skeleton-grid">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="skeleton skeleton-stat-card" />
         ))}
+      </div>
+
+      <div className="page-skeleton-body">
+        <div className="skeleton skeleton-panel skeleton-panel-large" />
+        <div className="skeleton-list">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton-list-row">
+              <div className="skeleton skeleton-avatar" />
+              <div className="skeleton-row-copy">
+                <div className="skeleton skeleton-line skeleton-line-wide" />
+                <div className="skeleton skeleton-line skeleton-line-short" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -29,9 +29,9 @@
 /* ── 0. SIDEBAR (History) ── */
 .ais-sidebar {
   height: 100%;
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -176,6 +176,10 @@
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.ais-sidebar-backdrop {
+  display: none;
 }
 
 /* ── 1. LEFT PANE (Chat) ── */
@@ -784,11 +788,11 @@
 }
 
 body.dark .ais-sidebar {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--surface);
 }
 
 body:not(.dark) .ais-sidebar {
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--surface);
 }
 
 .ais-input-shell {
@@ -802,27 +806,27 @@ body:not(.dark) .ais-sidebar {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 8px 12px 8px 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 body.dark .ais-input-pill {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--surface);
 }
 
 body:not(.dark) .ais-input-pill {
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--surface);
 }
 
 .ais-input-pill:focus-within {
-  border-color: rgba(var(--primary-rgb), 0.4);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 .ais-input-pill.listening {
@@ -1625,18 +1629,22 @@ body:not(.dark) .ais-input-pill {
     top: 0;
     bottom: 0;
     left: 0;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.12);
   }
 
   .ais-sidebar-backdrop {
+    display: block;
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.38);
     z-index: 99;
-    backdrop-filter: blur(2px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .ais-root--split .ais-chat-pane {
@@ -1935,16 +1943,16 @@ body:not(.dark) .ais-input-pill {
 }
 
 .ais-quick-card--glass {
-  background: rgba(var(--surface-rgb, 255, 255, 255), 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(120, 120, 120, 0.15);
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--border);
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 body.dark .ais-quick-card--glass {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--surface);
 }
 
 .ais-focus-exit {

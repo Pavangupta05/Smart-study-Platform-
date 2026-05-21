@@ -110,8 +110,10 @@ html, body {
   --text-4xl:  48px;
 
   /* ── Glass surface ── */
-  --glass-bg: rgba(var(--surface-rgb), 0.72);
-  --glass-border: rgba(var(--primary-rgb), 0.08);
+  --glass-bg: var(--surface);
+  --glass-border: var(--border);
+  --skeleton-base: #e5e7eb;
+  --skeleton-highlight: #f4f4f5;
 
   /* ── Spacing Overrides ── */
   --page-padding-top: 48px;
@@ -157,6 +159,8 @@ body.dark {
   --bg-card: var(--surface);
   --border-color: var(--border);
   --primary-shadow: rgba(245, 245, 244, 0.15);
+  --skeleton-base: #27272a;
+  --skeleton-highlight: #3f3f46;
 }
 
 .global-bg {
@@ -296,9 +300,8 @@ button, input, select, textarea {
 }
 
 .card, .glass-card {
-  background: rgba(var(--surface-rgb), 0.7);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(var(--primary-rgb), 0.05);
+  background: var(--surface);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
   transition: var(--transition-smooth);
 }
@@ -363,17 +366,32 @@ body.dark code {
 /* ===== SKELETON LOADERS ===== */
 .skeleton {
   pointer-events: none;
-  animation: pulse 1.5s infinite ease-in-out !important;
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-base) !important;
+  border-color: transparent !important;
+  color: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--skeleton-highlight), transparent);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
 .skeleton-icon {
-  background: var(--border);
+  background: var(--skeleton-base);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 }
 
 .skeleton-text {
-  background: var(--border);
+  background: var(--skeleton-base);
   border-radius: var(--radius-sm);
   margin-bottom: 8px;
 }
@@ -381,10 +399,146 @@ body.dark code {
 .skeleton-text.short { width: 60%; }
 .skeleton-text.long { width: 40%; }
 
-@keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.page-skeleton {
+  flex: 1;
+  width: 100%;
+  padding: var(--page-padding);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.page-skeleton-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.skeleton-title {
+  width: min(260px, 52vw);
+  height: 34px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.skeleton-subtitle {
+  width: min(360px, 70vw);
+  height: 14px;
+  border-radius: 7px;
+}
+
+.skeleton-action {
+  width: 112px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.page-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.skeleton-stat-card {
+  height: 116px;
+  border-radius: var(--radius-lg);
+}
+
+.page-skeleton-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  min-height: 0;
+}
+
+.skeleton-panel {
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-panel-large {
+  min-height: 320px;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.skeleton-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.skeleton-row-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.skeleton-line-wide { width: 86%; }
+.skeleton-line-short { width: 52%; }
+
+@media (max-width: 900px) {
+  .page-skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-skeleton-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .page-skeleton {
+    gap: 16px;
+  }
+
+  .page-skeleton-header {
+    align-items: stretch;
+  }
+
+  .skeleton-action {
+    display: none;
+  }
+
+  .page-skeleton-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .skeleton-stat-card {
+    height: 84px;
+  }
+
+  .skeleton-panel-large {
+    min-height: 220px;
+  }
 }
 
 /* ===== GLOBAL THEME TRANSITION ===== */
@@ -420,7 +574,7 @@ body,
 
 .skeleton {
   transition: none !important;
-  animation: pulse 1.5s infinite ease-in-out !important;
+  animation: none !important;
 }
 
 @keyframes spin {
