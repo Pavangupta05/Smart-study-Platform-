@@ -126,7 +126,7 @@ export default function MobileDock() {
                         key={`label-${item.to}`}
                         className="dock-pill-label"
                         initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        animate={{ opacity: 1, width: "auto", marginLeft: 6 }}
+                        animate={{ opacity: 1, width: 48, marginLeft: 6 }}
                         exit={{ opacity: 0, width: 0, marginLeft: 0 }}
                         transition={spring}
                       >
@@ -155,7 +155,7 @@ export default function MobileDock() {
                 {FAB_ACTIONS.map((item, i) => (
                   <button
                     key={item.action}
-                    className="dock-fab-action-btn"
+                    className={`dock-fab-action-btn dock-fab-action-btn--${item.action}`}
                     style={{ "--action-color": item.color }}
                     onClick={() => handleFabAction(item.action)}
                   >

@@ -15,8 +15,6 @@ body.dark {
 .notion-circle-btn,
 .full-search-bar,
 .notion-ask-ai-pill,
-.dock-pill-wrapper,
-.dock-fab-action-label,
 .ais-sidebar,
 .ais-input-pill,
 .ais-composer,
@@ -32,8 +30,7 @@ body.dark {
 .timer-panel,
 .cmd-backdrop,
 .search-modal-backdrop,
-.modal-backdrop,
-.dock-fab-backdrop {
+.modal-backdrop {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -79,12 +76,6 @@ body.dark .sidebar {
   box-shadow: var(--simple-surface-shadow) !important;
 }
 
-.dock-fab-action-label {
-  background: #18181b !important;
-  border-color: transparent !important;
-  color: #fff !important;
-}
-
 .card:hover,
 .glass-card:hover,
 .doc-card-mini:hover,
@@ -117,8 +108,7 @@ body.dark .sidebar {
 .search-modal-backdrop,
 .modal-backdrop,
 .ais-artifact-backdrop,
-.ais-sidebar-backdrop,
-.dock-fab-backdrop {
+.ais-sidebar-backdrop {
   background: rgba(0, 0, 0, 0.38) !important;
 }
 
@@ -126,8 +116,7 @@ body.dark .cmd-backdrop,
 body.dark .search-modal-backdrop,
 body.dark .modal-backdrop,
 body.dark .ais-artifact-backdrop,
-body.dark .ais-sidebar-backdrop,
-body.dark .dock-fab-backdrop {
+body.dark .ais-sidebar-backdrop {
   background: rgba(0, 0, 0, 0.58) !important;
 }
 

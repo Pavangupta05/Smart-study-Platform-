@@ -65,7 +65,7 @@ function Reader({ zenMode, setZenMode }) {
   
   const [pages, setPages] = useState([""]);
   const [currentPage, setCurrentPage] = useState(0); // Tracks visible page index in viewport
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [showPagePanel, setShowPagePanel] = useState(false);
   const [showLeftRail, setShowLeftRail] = useState(true);
   const [objectUrl, setObjectUrl] = useState(null);
@@ -94,6 +94,11 @@ function Reader({ zenMode, setZenMode }) {
   const lastPageAddedRef = useRef(0);
   const [isDrawing, setIsDrawing] = useState(false);
   const [activeDrawingPageIndex, setActiveDrawingPageIndex] = useState(null);
+  const isDrawingRef = useRef(false);
+  const activeDrawingPageRef = useRef(null);
+  const strokePointsRef = useRef([]);
+  const lastStrokePointRef = useRef(null);
+  const startPointRef = useRef({ x: 0, y: 0 });
   const [startX, setStartX] = useState(0);
   const [startY, setStartY] = useState(0);
   const [drawHistory, setDrawHistory] = useState({});
@@ -798,7 +803,11 @@ function Reader({ zenMode, setZenMode }) {
 
     const pageIdx = textInput.page;
     const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) return;
+    if (!canvas) {
+      isDrawingRef.current = false;
+      activeDrawingPageRef.current = null;
+      return;
+    }
     const ctx = canvas.getContext("2d");
 
     const x = (textInput.x / 100) * canvas.width;
@@ -917,27 +926,9 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     };
   };
 
-  const startDrawing = (pageIdx, e) => {
-    const drawTools = ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'];
-    if (!drawTools.includes(activeTool)) return;
-    setIsDrawing(true);
-    setActiveDrawingPageIndex(pageIdx);
-    
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) return;
-    
-    const { x, y } = getCoordinates(pageIdx, e);
-    setStartX(x);
-    setStartY(y);
-    setStrokePoints([{ x, y }]);
-    setCanvasSnapshot(canvas.toDataURL());
-
-    const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-
+  const applyDrawingStyle = (ctx, event = {}) => {
     if (activeTool === "highlighter") {
-      ctx.strokeStyle = `${penColor}33`; 
+      ctx.strokeStyle = `${penColor}33`;
       ctx.lineWidth = strokeWidth * 4;
       ctx.globalCompositeOperation = "source-over";
     } else if (activeTool === "eraser") {
@@ -945,24 +936,89 @@ Be precise, highly informative, use clean formatting with bold headings and bull
       ctx.lineWidth = strokeWidth * 6;
     } else {
       ctx.strokeStyle = penColor;
-      ctx.lineWidth = strokeWidth;
       ctx.globalCompositeOperation = "source-over";
+      const pressure = event.pressure !== undefined && event.pressure > 0 ? event.pressure : 0.5;
+      if (penStyle === "fountain") {
+        ctx.lineWidth = strokeWidth * (0.6 + pressure * 0.8);
+      } else if (penStyle === "brush") {
+        ctx.lineWidth = strokeWidth * (0.3 + pressure * 1.5);
+      } else {
+        ctx.lineWidth = strokeWidth;
+      }
     }
 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
   };
 
+  const drawContinuousSegment = (ctx, point, event) => {
+    const previous = lastStrokePointRef.current;
+    if (!previous) {
+      lastStrokePointRef.current = point;
+      return;
+    }
+
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    const distance = Math.hypot(dx, dy);
+    const steps = Math.max(1, Math.ceil(distance / 2));
+
+    for (let i = 1; i <= steps; i += 1) {
+      const t = i / steps;
+      const nextPoint = {
+        x: previous.x + dx * t,
+        y: previous.y + dy * t,
+      };
+
+      applyDrawingStyle(ctx, event);
+      ctx.beginPath();
+      ctx.moveTo(lastStrokePointRef.current.x, lastStrokePointRef.current.y);
+      ctx.lineTo(nextPoint.x, nextPoint.y);
+      ctx.stroke();
+      lastStrokePointRef.current = nextPoint;
+    }
+  };
+
+  const startDrawing = (pageIdx, e) => {
+    const drawTools = ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'];
+    if (!drawTools.includes(activeTool)) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    isDrawingRef.current = true;
+    activeDrawingPageRef.current = pageIdx;
+    setIsDrawing(true);
+    setActiveDrawingPageIndex(pageIdx);
+    
+    const canvas = canvasRefs.current[pageIdx];
+    if (!canvas) return;
+    
+    const { x, y } = getCoordinates(pageIdx, e);
+    startPointRef.current = { x, y };
+    setStartX(x);
+    setStartY(y);
+    strokePointsRef.current = [{ x, y }];
+    lastStrokePointRef.current = { x, y };
+    setStrokePoints([{ x, y }]);
+    setCanvasSnapshot(canvas.toDataURL());
+
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    applyDrawingStyle(ctx, e);
+  };
+
   const draw = (e) => {
-    if (!isDrawing || activeDrawingPageIndex === null) return;
-    const canvas = canvasRefs.current[activeDrawingPageIndex];
+    if (!isDrawingRef.current || activeDrawingPageRef.current === null) return;
+    e.preventDefault();
+    const pageIdx = activeDrawingPageRef.current;
+    const canvas = canvasRefs.current[pageIdx];
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const { x, y } = getCoordinates(activeDrawingPageIndex, e);
+    const { x, y } = getCoordinates(pageIdx, e);
 
     const isShape = ["shape", "circle", "line", "arrow"].includes(activeTool);
     if (isShape) {
-      const historyStack = drawHistory[activeDrawingPageIndex] || [];
+      const historyStack = drawHistory[pageIdx] || [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (historyStack.length > 0) {
         const img = new Image();
@@ -972,68 +1028,28 @@ Be precise, highly informative, use clean formatting with bold headings and bull
       ctx.beginPath();
       ctx.lineWidth = strokeWidth;
       ctx.strokeStyle = penColor;
+      const { x: shapeStartX, y: shapeStartY } = startPointRef.current;
 
       if (activeTool === "shape") {
-        ctx.strokeRect(startX, startY, x - startX, y - startY);
+        ctx.strokeRect(shapeStartX, shapeStartY, x - shapeStartX, y - shapeStartY);
       } else if (activeTool === "circle") {
-        const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
-        ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+        const radius = Math.sqrt(Math.pow(x - shapeStartX, 2) + Math.pow(y - shapeStartY, 2));
+        ctx.arc(shapeStartX, shapeStartY, radius, 0, 2 * Math.PI);
         ctx.stroke();
       } else if (activeTool === "line") {
-        ctx.moveTo(startX, startY);
+        ctx.moveTo(shapeStartX, shapeStartY);
         ctx.lineTo(x, y);
         ctx.stroke();
       } else if (activeTool === "arrow") {
-        drawArrow(ctx, startX, startY, x, y);
+        drawArrow(ctx, shapeStartX, shapeStartY, x, y);
       }
     } else {
-      if (activeTool === "highlighter") {
-        ctx.strokeStyle = `${penColor}33`;
-        ctx.lineWidth = strokeWidth * 4;
-        ctx.globalCompositeOperation = "source-over";
-      } else if (activeTool === "eraser") {
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.lineWidth = strokeWidth * 6;
-      } else {
-        ctx.strokeStyle = penColor;
-        ctx.globalCompositeOperation = "source-over";
-        if (penStyle !== "ballpoint" && penStyle !== "autosnap") {
-          let currentWidth = strokeWidth;
-          const pressure = e.pressure !== undefined && e.pressure > 0 ? e.pressure : 0.5;
-          if (penStyle === "fountain") {
-            currentWidth = strokeWidth * (0.6 + pressure * 0.8);
-          } else if (penStyle === "brush") {
-            currentWidth = strokeWidth * (0.3 + pressure * 1.5);
-          }
-          ctx.lineWidth = currentWidth;
-        } else {
-          ctx.lineWidth = strokeWidth;
-        }
-      }
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      // Smooth path using midpoints between consecutive points
-      const points = [...strokePoints, { x, y }];
-      setStrokePoints(points);
-
-      if (points.length >= 2) {
-        const p1 = points[points.length - 2];
-        const p2 = points[points.length - 1];
-        
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        
-        // Use midpoint to smooth line transition
-        const midX = (p1.x + p2.x) / 2;
-        const midY = (p1.y + p2.y) / 2;
-        
-        ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
-        ctx.stroke();
-      } else {
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
+      const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [e];
+      events.forEach((event) => {
+        const point = getCoordinates(pageIdx, event);
+        strokePointsRef.current.push(point);
+        drawContinuousSegment(ctx, point, event);
+      });
     }
   };
 
@@ -1111,12 +1127,21 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     }
   };
 
-  const stopDrawing = () => {
-    if (!isDrawing || activeDrawingPageIndex === null) return;
+  const stopDrawing = (e) => {
+    if (!isDrawingRef.current || activeDrawingPageRef.current === null) return;
+    e?.preventDefault?.();
+    if (e?.currentTarget?.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    const pageIdx = activeDrawingPageRef.current;
+    setStrokePoints(strokePointsRef.current);
+    isDrawingRef.current = false;
     setIsDrawing(false);
-    const canvas = canvasRefs.current[activeDrawingPageIndex];
+    const canvas = canvasRefs.current[pageIdx];
     if (!canvas) {
       setActiveDrawingPageIndex(null);
+      activeDrawingPageRef.current = null;
+      lastStrokePointRef.current = null;
       return;
     }
     const ctx = canvas.getContext("2d");
@@ -1128,16 +1153,22 @@ Be precise, highly informative, use clean formatting with bold headings and bull
         img.src = canvasSnapshot;
         img.onload = () => {
           ctx.drawImage(img, 0, 0);
-          detectAndDrawShape(ctx, strokePoints);
-          commitCanvasState(activeDrawingPageIndex);
+          detectAndDrawShape(ctx, strokePointsRef.current);
+          commitCanvasState(pageIdx);
           setActiveDrawingPageIndex(null);
+          activeDrawingPageRef.current = null;
+          lastStrokePointRef.current = null;
         };
       } else {
         setActiveDrawingPageIndex(null);
+        activeDrawingPageRef.current = null;
+        lastStrokePointRef.current = null;
       }
     } else {
-      commitCanvasState(activeDrawingPageIndex);
+      commitCanvasState(pageIdx);
       setActiveDrawingPageIndex(null);
+      activeDrawingPageRef.current = null;
+      lastStrokePointRef.current = null;
     }
   };
 
@@ -1685,6 +1716,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                   onPointerMove={draw}
                   onPointerUp={stopDrawing}
                   onPointerLeave={stopDrawing}
+                  onPointerCancel={stopDrawing}
                 />
 
                 {/* Canvas Text Input Overlay (for direct text annotations) */}
