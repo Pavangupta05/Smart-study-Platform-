@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ChevronLeft, 
@@ -68,9 +68,6 @@ function Reader({ zenMode, setZenMode }) {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showPagePanel, setShowPagePanel] = useState(false);
   const [showLeftRail, setShowLeftRail] = useState(true);
-  const [objectUrl, setObjectUrl] = useState(null);
-  // Per-page template overrides (key: pageIdx, value: templateId)
-  const [pageTemplates, setPageTemplates] = useState({});
   
   // Reading presets
   const [readingTheme, setReadingTheme] = useState("light"); // light, sepia, dark
@@ -91,23 +88,17 @@ function Reader({ zenMode, setZenMode }) {
   // Drawing states (Supports vertical multi-canvas layouts)
   const canvasRefs = useRef({});
   const fileInputRef = useRef(null);
-  const lastPageAddedRef = useRef(0);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [activeDrawingPageIndex, setActiveDrawingPageIndex] = useState(null);
   const isDrawingRef = useRef(false);
   const activeDrawingPageRef = useRef(null);
   const strokePointsRef = useRef([]);
   const lastStrokePointRef = useRef(null);
   const startPointRef = useRef({ x: 0, y: 0 });
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
   const [drawHistory, setDrawHistory] = useState({});
   const [penColor, setPenColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(3);
   
   // GoodNotes features: Pen presets, snap shapes
   const [penStyle, setPenStyle] = useState("ballpoint"); // ballpoint, fountain, brush, autosnap
-  const [strokePoints, setStrokePoints] = useState([]);
   const [canvasSnapshot, setCanvasSnapshot] = useState(null);
   
   // Annotation states
@@ -156,13 +147,19 @@ function Reader({ zenMode, setZenMode }) {
   
   useEffect(() => {
     let interval = null;
-    if (zenMode && zenTimerActive && zenTimer > 0) {
-      interval = setInterval(() => setZenTimer(t => t - 1), 1000);
-    } else if (zenTimer === 0) {
-      setZenTimerActive(false);
+    if (zenMode && zenTimerActive) {
+      interval = setInterval(() => {
+        setZenTimer((t) => {
+          if (t <= 1) {
+            setZenTimerActive(false);
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [zenMode, zenTimerActive, zenTimer]);
+  }, [zenMode, zenTimerActive]);
 
   const audioContextRef = useRef(null);
   const audioSourceRef = useRef(null);
@@ -215,22 +212,22 @@ function Reader({ zenMode, setZenMode }) {
       }
     } else {
       if (audioSourceRef.current) {
-        try { audioSourceRef.current.stop(); } catch(e){}
+        try { audioSourceRef.current.stop(); } catch (err) { console.warn("Failed to stop audio source", err); }
         audioSourceRef.current = null;
       }
       if (audioContextRef.current) {
-        try { audioContextRef.current.close(); } catch(e){}
+        try { audioContextRef.current.close(); } catch (err) { console.warn("Failed to close audio context", err); }
         audioContextRef.current = null;
       }
     }
 
     return () => {
       if (audioSourceRef.current) {
-        try { audioSourceRef.current.stop(); } catch(e){}
+        try { audioSourceRef.current.stop(); } catch (err) { console.warn("Failed to stop audio source", err); }
         audioSourceRef.current = null;
       }
       if (audioContextRef.current) {
-        try { audioContextRef.current.close(); } catch(e){}
+        try { audioContextRef.current.close(); } catch (err) { console.warn("Failed to close audio context", err); }
         audioContextRef.current = null;
       }
     };
@@ -248,6 +245,26 @@ function Reader({ zenMode, setZenMode }) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const drawTools = ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'];
+
+  const resetDrawingState = useCallback(() => {
+    isDrawingRef.current = false;
+    activeDrawingPageRef.current = null;
+    lastStrokePointRef.current = null;
+    strokePointsRef.current = [];
+    setCanvasSnapshot(null);
+  }, []);
+
+  const selectTool = useCallback((tool) => {
+    resetDrawingState();
+    setStickyContextMenu(null);
+    setSelection(prev => ({ ...prev, show: false }));
+    if (tool !== 'concept') {
+      setConceptSourceNoteId(null);
+    }
+    setActiveTool(tool);
+  }, [resetDrawingState]);
 
   // Fetch planners
   useEffect(() => {
@@ -326,32 +343,21 @@ function Reader({ zenMode, setZenMode }) {
       });
   }, [id]);
 
-  // PDF blob fetcher
-  useEffect(() => {
-    if (file && file.blobUrl) {
-      if (file.blobUrl.startsWith("data:")) {
-        try {
-          fetch(file.blobUrl)
-            .then(res => res.blob())
-            .then(blob => {
-              const url = URL.createObjectURL(blob);
-              setObjectUrl(url);
-            });
-        } catch (e) {
-          console.error("Failed to convert base64 to blob:", e);
-        }
-      } else if (file.blobUrl.startsWith("/uploads/")) {
-        const backendUrl = import.meta.env.VITE_API_URL 
-          ? import.meta.env.VITE_API_URL.replace("/api", "") 
-          : "http://localhost:5000";
-        setObjectUrl(`${backendUrl}${file.blobUrl}`);
-      } else {
-        setObjectUrl(file.blobUrl);
-      }
+  const objectUrl = useMemo(() => {
+    if (!file?.blobUrl) return null;
+
+    if (file.blobUrl.startsWith("data:")) {
+      return file.blobUrl;
     }
-    return () => {
-      if (objectUrl && objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
-    };
+
+    if (file.blobUrl.startsWith("/uploads/")) {
+      const backendUrl = import.meta.env.VITE_API_URL 
+        ? import.meta.env.VITE_API_URL.replace("/api", "") 
+        : "http://localhost:5000";
+      return `${backendUrl}${file.blobUrl}`;
+    }
+
+    return file.blobUrl;
   }, [file]);
 
   // Redraw Canvas content for all canvases when drawHistory is updated or mounted
@@ -689,7 +695,6 @@ function Reader({ zenMode, setZenMode }) {
       return typeof p === 'object' ? { ...p, __template: templateId } : { __template: templateId, __title: `Page ${i + 1}` };
     });
     setPages(newPages);
-    setPageTemplates(prev => ({ ...prev, [pageIdx]: templateId }));
     saveFileChanges({ pages: newPages });
   };
 
@@ -735,7 +740,7 @@ function Reader({ zenMode, setZenMode }) {
       const updatedNotes = [...notes, newNote];
       setNotes(updatedNotes);
       saveFileChanges({ notes: updatedNotes });
-      setActiveTool("select"); 
+      selectTool("select"); 
     } else if (activeTool === "text") {
       setTextInput({
         show: true,
@@ -745,7 +750,7 @@ function Reader({ zenMode, setZenMode }) {
         value: ""
       });
     }
-  }, [activeTool, activeStickyColor, notes, saveFileChanges]);
+  }, [activeTool, activeStickyColor, notes, saveFileChanges, selectTool]);
 
   const handleUpdateStickyText = (noteId, text) => {
     const updatedNotes = notes.map(n => n.id === noteId ? { ...n, text } : n);
@@ -980,25 +985,19 @@ Be precise, highly informative, use clean formatting with bold headings and bull
   };
 
   const startDrawing = (pageIdx, e) => {
-    const drawTools = ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'];
     if (!drawTools.includes(activeTool)) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture?.(e.pointerId);
     isDrawingRef.current = true;
     activeDrawingPageRef.current = pageIdx;
-    setIsDrawing(true);
-    setActiveDrawingPageIndex(pageIdx);
     
     const canvas = canvasRefs.current[pageIdx];
     if (!canvas) return;
     
     const { x, y } = getCoordinates(pageIdx, e);
     startPointRef.current = { x, y };
-    setStartX(x);
-    setStartY(y);
     strokePointsRef.current = [{ x, y }];
     lastStrokePointRef.current = { x, y };
-    setStrokePoints([{ x, y }]);
     setCanvasSnapshot(canvas.toDataURL());
 
     const ctx = canvas.getContext("2d");
@@ -1134,12 +1133,9 @@ Be precise, highly informative, use clean formatting with bold headings and bull
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
     const pageIdx = activeDrawingPageRef.current;
-    setStrokePoints(strokePointsRef.current);
     isDrawingRef.current = false;
-    setIsDrawing(false);
     const canvas = canvasRefs.current[pageIdx];
     if (!canvas) {
-      setActiveDrawingPageIndex(null);
       activeDrawingPageRef.current = null;
       lastStrokePointRef.current = null;
       return;
@@ -1155,18 +1151,15 @@ Be precise, highly informative, use clean formatting with bold headings and bull
           ctx.drawImage(img, 0, 0);
           detectAndDrawShape(ctx, strokePointsRef.current);
           commitCanvasState(pageIdx);
-          setActiveDrawingPageIndex(null);
           activeDrawingPageRef.current = null;
           lastStrokePointRef.current = null;
         };
       } else {
-        setActiveDrawingPageIndex(null);
         activeDrawingPageRef.current = null;
         lastStrokePointRef.current = null;
       }
     } else {
       commitCanvasState(pageIdx);
-      setActiveDrawingPageIndex(null);
       activeDrawingPageRef.current = null;
       lastStrokePointRef.current = null;
     }
@@ -1386,7 +1379,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
             <div className="tool-category-title">Select</div>
             <button 
               className={`tool-icon ${activeTool === 'select' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('select')}
+              onClick={() => selectTool('select')}
               title="Select / Drag sticky notes"
             >
               <MousePointer2 size={18} /> <span>Select</span>
@@ -1397,7 +1390,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'pen' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('pen')}
+              onClick={() => selectTool('pen')}
               title="Pen & Brush presets"
             >
               <PenTool size={18} /> <span>Pen</span>
@@ -1405,7 +1398,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'highlighter' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('highlighter')}
+              onClick={() => selectTool('highlighter')}
               title="Highlighter"
             >
               <Highlighter size={18} /> <span>Highlighter</span>
@@ -1413,7 +1406,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'arrow' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('arrow')}
+              onClick={() => selectTool('arrow')}
               title="Draw Arrows"
             >
               <ArrowUpRight size={18} /> <span>Arrow</span>
@@ -1421,7 +1414,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'line' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('line')}
+              onClick={() => selectTool('line')}
               title="Draw Lines"
             >
               <Minus size={18} /> <span>Line</span>
@@ -1432,7 +1425,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'shape' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('shape')}
+              onClick={() => selectTool('shape')}
               title="Rectangle Shape"
             >
               <Square size={18} /> <span>Rectangle</span>
@@ -1440,7 +1433,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'circle' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('circle')}
+              onClick={() => selectTool('circle')}
               title="Circle Shape"
             >
               <Circle size={18} /> <span>Circle</span>
@@ -1451,7 +1444,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'sticky' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('sticky')}
+              onClick={() => selectTool('sticky')}
               title="Place Sticky Note"
             >
               <StickyNote size={18} /> <span>Sticky Note</span>
@@ -1467,7 +1460,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'text' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('text')}
+              onClick={() => selectTool('text')}
               title="Add Canvas Text Label"
             >
               <Type size={18} /> <span>Text Label</span>
@@ -1475,7 +1468,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
             <button 
               className={`tool-icon ${activeTool === 'concept' ? 'active' : ''}`} 
-              onClick={() => setActiveTool('concept')}
+              onClick={() => selectTool('concept')}
               title="Concept Map Connector Link"
             >
               <Link2 size={18} /> <span>Connector</span>
@@ -1488,7 +1481,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
               <RotateCcw size={18} /> <span>Undo Ink</span>
             </button>
 
-            <button className={`tool-icon ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => setActiveTool('eraser')} title="Eraser">
+            <button className={`tool-icon ${activeTool === 'eraser' ? 'active' : ''}`} onClick={() => selectTool('eraser')} title="Eraser">
               <Eraser size={18} /> <span>Eraser</span>
             </button>
 
@@ -1948,58 +1941,62 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
           {/* Mobile Floating Bottom Dock (Beautiful, necessary features only) */}
           {isMobile && !zenMode && (
-            <div className="m-bottom-toolbar floating-pill">
-              <div className="m-tools-row">
-                <button 
-                  className={`m-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
-                  onClick={() => setActiveTool('select')}
-                >
-                  <MousePointer2 size={18} /> <span>Select</span>
-                </button>
-                <button 
-                  className={`m-tool-btn ${activeTool === 'pen' ? 'active' : ''}`}
-                  onClick={() => setActiveTool('pen')}
-                >
-                  <PenTool size={18} /> <span>Pen</span>
-                </button>
-                <button 
-                  className={`m-tool-btn ${activeTool === 'highlighter' ? 'active' : ''}`}
-                  onClick={() => setActiveTool('highlighter')}
-                >
-                  <Highlighter size={18} /> <span>Highlight</span>
-                </button>
-                <button 
-                  className={`m-tool-btn ${activeTool === 'text' ? 'active' : ''}`}
-                  onClick={() => setActiveTool('text')}
-                >
-                  <Type size={18} /> <span>Text</span>
-                </button>
-                <button 
-                  className={`m-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
-                  onClick={() => setActiveTool('eraser')}
-                >
-                  <Eraser size={18} /> <span>Eraser</span>
-                </button>
-                <button 
-                  className={`m-tool-btn ${activeTool === 'sticky' ? 'active' : ''}`}
-                  onClick={() => setActiveTool('sticky')}
-                >
-                  <StickyNote size={18} /> <span>Note</span>
-                </button>
-                <button 
-                  className={`m-tool-btn ${showSidebar ? 'active' : ''}`}
-                  onClick={() => setShowSidebar(!showSidebar)}
-                >
-                  <MessageSquare size={18} /> <span>AI Tutor</span>
-                </button>
+            <div className="m-bottom-toolbar-wrapper">
+              <div className="m-bottom-toolbar floating-pill">
+                <div className="m-tools-row">
+                  <button 
+                    className={`m-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
+                    onClick={() => selectTool('select')}
+                  >
+                    <MousePointer2 size={18} /> <span>Select</span>
+                  </button>
+                  <button 
+                    className={`m-tool-btn ${activeTool === 'pen' ? 'active' : ''}`}
+                    onClick={() => selectTool('pen')}
+                  >
+                    <PenTool size={18} /> <span>Pen</span>
+                  </button>
+                  <button 
+                    className={`m-tool-btn ${activeTool === 'highlighter' ? 'active' : ''}`}
+                    onClick={() => selectTool('highlighter')}
+                  >
+                    <Highlighter size={18} /> <span>Highlight</span>
+                  </button>
+                  <button 
+                    className={`m-tool-btn ${activeTool === 'text' ? 'active' : ''}`}
+                    onClick={() => selectTool('text')}
+                  >
+                    <Type size={18} /> <span>Text</span>
+                  </button>
+                  <button 
+                    className={`m-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
+                    onClick={() => selectTool('eraser')}
+                  >
+                    <Eraser size={18} /> <span>Eraser</span>
+                  </button>
+                  <button 
+                    className={`m-tool-btn ${activeTool === 'sticky' ? 'active' : ''}`}
+                    onClick={() => selectTool('sticky')}
+                  >
+                    <StickyNote size={18} /> <span>Note</span>
+                  </button>
+                </div>
               </div>
+
+              <button
+                className={`m-ai-dock-btn ${showSidebar ? 'active' : ''}`}
+                onClick={() => setShowSidebar(!showSidebar)}
+                aria-label="AI Tutor"
+              >
+                <MessageSquare size={18} />
+              </button>
             </div>
           )}
           {/* Mobile Tool Options Panel */}
           {isMobile && !zenMode && ['pen', 'highlighter', 'sticky'].includes(activeTool) && (
             <div className="m-tool-options-panel">
               <div className="m-drag-handle" style={{ width: '40px', height: '4px', background: 'var(--reader-border)', borderRadius: '2px', margin: '0 auto 8px auto', opacity: 0.7 }}></div>
-              <button className="m-close-options" onClick={() => setActiveTool('select')}>
+              <button className="m-close-options" onClick={() => selectTool('select')}>
                 <X size={16} />
               </button>
               
