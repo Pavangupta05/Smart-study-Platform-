@@ -1,4 +1,3 @@
-import React from "react";
 import AISplit from "../features/ai/AISplit";
 
 /**

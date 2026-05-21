@@ -32,23 +32,23 @@ import "../styles/sidebar.css";
 
 /* ─── Core navigation items ─── */
 const CORE_NAV = [
-  { to: "/",           Icon: Home,       label: "Home",       end: true  },
-  { to: "/planner",    Icon: Clock3,     label: "Planner"               },
-  { to: "/notes",      Icon: StickyNote, label: "Notes"                 },
-  { to: "/flashcards", Icon: LibraryBig, label: "Flashcards"            },
-  { to: "/ai",         Icon: Sparkles,   label: "AI Tutor"              },
+  { to: "/", Icon: Home, label: "Home", end: true },
+  { to: "/planner", Icon: Clock3, label: "Planner" },
+  { to: "/notes", Icon: StickyNote, label: "Notes" },
+  { to: "/flashcards", Icon: LibraryBig, label: "Flashcards" },
+  { to: "/ai", Icon: Sparkles, label: "AI Tutor" },
 ];
 
 function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
-  const navigate   = useNavigate();
-  const location   = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, firstName, initials, logout } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState({
     important: false,
-    recent:    false,
-    private:   false,
-    tools:     false,
+    recent: false,
+    private: false,
+    tools: false,
   });
   const [recentNotes, setRecentNotes] = useState([]);
   const [importantNotes, setImportantNotes] = useState([]);
@@ -59,7 +59,7 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
         const res = await notesService.getAll();
         if (res.data && res.data.notes) {
           const allNotes = res.data.notes.filter(n => !n.isTrashed);
-          
+
           // Important: notes marked pinned, or just pick the first 2 as fallback for now
           const pinned = allNotes.filter(n => n.pinned || n.isImportant);
           setImportantNotes(pinned.length > 0 ? pinned : allNotes.slice(0, 2));
@@ -77,10 +77,10 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
     }
   }, [location.pathname]); // Re-fetch occasionally when navigating
 
-  const toggle      = (k) => setCollapsed(p => ({ ...p, [k]: !p[k] }));
+  const toggle = (k) => setCollapsed(p => ({ ...p, [k]: !p[k] }));
   const closeMobile = () => setIsMobileMenuOpen(false);
 
-  const handleNav   = () => {
+  const handleNav = () => {
     closeMobile();
     setIsSidebarOpen(false);
   };
@@ -108,7 +108,7 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
           "sidebar",
           theme,
           isMobileMenuOpen ? "mobile-open" : "",
-          isCollapsed      ? "collapsed"   : "",
+          isCollapsed ? "collapsed" : "",
         ].join(" ")}
       >
         {/* ─── HEADER ─── */}

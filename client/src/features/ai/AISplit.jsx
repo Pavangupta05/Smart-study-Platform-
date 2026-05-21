@@ -236,12 +236,12 @@ const ArtifactEmpty = () => (
 
 // ── Welcome screen ────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { icon: <Sparkles size={16} />,     label: "Summarize",    prompt: "Summarize the key concepts I should know about this topic in a clear, structured way." },
-  { icon: <Layers size={16} />,       label: "Flashcards",   prompt: "Generate 10 flashcards with Q: and A: format on a topic of my choice." },
-  { icon: <BrainCircuit size={16} />, label: "Explain",      prompt: "Explain this concept step by step like I am a beginner:" },
-  { icon: <PenLine size={16} />,      label: "Study Plan",   prompt: "Create a structured 7-day study plan for my upcoming exam. Include daily topics, goals, and breaks." },
-  { icon: <Globe size={16} />,        label: "Quiz me",      prompt: "Generate a 5-question quiz (multiple choice) to test my knowledge on:" },
-  { icon: <ChevronRight size={16} />, label: "Outline",      prompt: "Create a detailed study outline for:" },
+  { icon: <Sparkles size={16} />, label: "Summarize", prompt: "Summarize the key concepts I should know about this topic in a clear, structured way." },
+  { icon: <Layers size={16} />, label: "Flashcards", prompt: "Generate 10 flashcards with Q: and A: format on a topic of my choice." },
+  { icon: <BrainCircuit size={16} />, label: "Explain", prompt: "Explain this concept step by step like I am a beginner:" },
+  { icon: <PenLine size={16} />, label: "Study Plan", prompt: "Create a structured 7-day study plan for my upcoming exam. Include daily topics, goals, and breaks." },
+  { icon: <Globe size={16} />, label: "Quiz me", prompt: "Generate a 5-question quiz (multiple choice) to test my knowledge on:" },
+  { icon: <ChevronRight size={16} />, label: "Outline", prompt: "Create a detailed study outline for:" },
 ];
 
 const WelcomeScreen = ({ onSend }) => (
@@ -298,12 +298,12 @@ export default function AISplit() {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== "undefined" ? window.innerWidth > 768 : true);
   const [selectedModel, setSelectedModel] = useState("openrouter");
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [attachedFile, setAttachedFile] = useState(null);
-  
+
   const modelMenuRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -379,7 +379,7 @@ export default function AISplit() {
       if (res.data.sessions) {
         setSessions(res.data.sessions);
       }
-    } catch {}
+    } catch { }
   };
 
   const loadSession = async (id) => {
@@ -390,7 +390,7 @@ export default function AISplit() {
         const msgs = normalizeMessages(res.data.session.messages || []);
         setMessages(msgs);
         setSummarizeMap({});
-        
+
         const last = [...msgs].reverse().find(m => m.role === "ai");
         if (last) {
           const detected = detectArtifact(last.text);
@@ -404,7 +404,7 @@ export default function AISplit() {
           setIsSidebarOpen(false);
         }
       }
-    } catch {}
+    } catch { }
   };
 
   const normalizeMessages = (msgs) =>
@@ -431,7 +431,7 @@ export default function AISplit() {
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
-    } catch {}
+    } catch { }
   };
 
   const stopAudio = useCallback(() => {
@@ -451,7 +451,7 @@ export default function AISplit() {
     } else {
       setIsListening(true);
       isListeningRef.current = true;
-      try { recognitionRef.current?.start(); await startAudio(); } catch {}
+      try { recognitionRef.current?.start(); await startAudio(); } catch { }
     }
   };
 
@@ -466,7 +466,7 @@ export default function AISplit() {
     const file = e.target.files?.[0];
     if (!file) return;
     setShowPlusMenu(false);
-    
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       setAttachedFile({
@@ -524,15 +524,15 @@ export default function AISplit() {
 
       await new Promise(r => setTimeout(r, 300));
       const allMessages = [...messages, userMsg];
-      
+
       recordChatQuestion();
 
-      const response = await aiService.streamChat(allMessages, { 
+      const response = await aiService.streamChat(allMessages, {
         currentPage: "ai",
         language: languageInstruction,
         ...contextData
       }, selectedModel, currentAttachedFile, { signal: abortController.signal });
-      
+
       if (!response.ok) throw new Error("Failed to stream response");
 
       // Add empty AI message placeholder
@@ -543,14 +543,14 @@ export default function AISplit() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split("\n");
-        
+
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const dataStr = line.slice(6);
@@ -568,7 +568,7 @@ export default function AISplit() {
               } else if (data.error) {
                 console.error("Stream Error:", data.error);
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         }
       }
@@ -605,15 +605,15 @@ export default function AISplit() {
       }
     } catch (err) {
       if (err.name === "AbortError" || err.message.includes("abort")) {
-         setMessages(prev => [...prev, {
-            role: "ai",
-            text: "Generation stopped by user.",
-         }]);
+        setMessages(prev => [...prev, {
+          role: "ai",
+          text: "Generation stopped by user.",
+        }]);
       } else {
-         setMessages(prev => [...prev, {
-            role: "ai",
-            text: "I had a brief connection issue. Please try again — I'm here to help!",
-         }]);
+        setMessages(prev => [...prev, {
+          role: "ai",
+          text: "I had a brief connection issue. Please try again — I'm here to help!",
+        }]);
       }
     } finally {
       setLoading(false);
@@ -680,8 +680,8 @@ export default function AISplit() {
 
   // Close menus on outside click
   useEffect(() => {
-    const h = (e) => { 
-      if (showPlusMenu && plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false); 
+    const h = (e) => {
+      if (showPlusMenu && plusMenuRef.current && !plusMenuRef.current.contains(e.target)) setShowPlusMenu(false);
       if (showModelMenu && modelMenuRef.current && !modelMenuRef.current.contains(e.target)) setShowModelMenu(false);
       if (showTemplates && templatesRef.current && !templatesRef.current.contains(e.target)) setShowTemplates(false);
       if (showLangMenu && langMenuRef.current && !langMenuRef.current.contains(e.target)) setShowLangMenu(false);
@@ -705,7 +705,7 @@ export default function AISplit() {
         if (e.results[i].isFinal) setInput(p => p + e.results[i][0].transcript + " ");
       }
     };
-    rec.onend = () => { if (isListeningRef.current) { try { rec.start(); } catch {} } };
+    rec.onend = () => { if (isListeningRef.current) { try { rec.start(); } catch { } } };
     rec.onerror = (e) => { if (e.error !== "no-speech") { setIsListening(false); stopAudio(); } };
     recognitionRef.current = rec;
   }, [aiLanguage, stopAudio]);
@@ -717,21 +717,21 @@ export default function AISplit() {
   }, []);
 
   const handleSave = useCallback(async (text, idx) => {
-  try {
-    await notesService.create({
-      name: "AI Note — " + new Date().toLocaleDateString(),
-      icon: "🧠",
-      category: "general",
-      fileType: "text",
-      content: text,
-    });
-    setSavedIdx(idx);
-    setTimeout(() => setSavedIdx(null), 2000);
-    toast.success("Saved to Notes");
-  } catch {
-    toast.error("Failed to save note.");
-  }
-}, []);
+    try {
+      await notesService.create({
+        name: "AI Note — " + new Date().toLocaleDateString(),
+        icon: "🧠",
+        category: "general",
+        fileType: "text",
+        content: text,
+      });
+      setSavedIdx(idx);
+      setTimeout(() => setSavedIdx(null), 2000);
+      toast.success("Saved to Notes");
+    } catch {
+      toast.error("Failed to save note.");
+    }
+  }, []);
 
   const handleQuiz = (text) => handleSend(`Please generate a short quiz (3-5 questions, MCQ + short answer) based on:\n"${text.slice(0, 400)}"`);
 
@@ -891,7 +891,7 @@ export default function AISplit() {
     try {
       const res = await notesService.getAll();
       const notes = res.data.notes || [];
-      const filtered = notes.filter(n => 
+      const filtered = notes.filter(n =>
         n.name.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 6);
       setMentionNotes(filtered);
@@ -1019,62 +1019,62 @@ export default function AISplit() {
       style={showSplit && !focusMode && !isMobile ? { "--artifact-width": `${artifactWidthPct}%` } : undefined}
     >
       <div className="sr-only" aria-live="polite" ref={liveRegionRef}>{ttsStatus}</div>
-      
+
       {/* ══ SIDEBAR — Chat History ══════════════════════════════════════ */}
       <AnimatePresence>
         {isSidebarOpen && (
           <>
             {/* Mobile Backdrop */}
-            <motion.div 
+            <motion.div
               className="ais-sidebar-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
             />
-            <motion.div 
+            <motion.div
               className="ais-sidebar"
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 260, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             >
-            <div className="ais-sidebar-header">
-              <button className="ais-new-chat-btn" onClick={handleNewChat}>
-                <MessageSquarePlus size={16} />
-                <span>New Chat</span>
-              </button>
-              <div className="ais-sidebar-search-container">
-                <Search size={14} className="search-icon" />
-                <input 
-                  type="text" 
-                  placeholder="Search chats..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ais-sidebar-search"
-                />
-              </div>
-            </div>
-            <div className="ais-sidebar-list">
-              <div className="ais-sidebar-group">Recent</div>
-              {sessions.filter(s => s.title?.toLowerCase().includes(searchQuery.toLowerCase())).map(session => (
-                <div 
-                  key={session._id} 
-                  className={`ais-sidebar-item ${activeSessionId === session._id ? 'active' : ''}`}
-                  onClick={() => loadSession(session._id)}
-                >
-                  <MessageSquare size={14} className="icon" />
-                  <span className="title">{session.title || "New Chat"}</span>
-                  <button className="delete-btn" onClick={(e) => handleDeleteChat(e, session._id)}>
-                    <Trash2 size={12} />
-                  </button>
+              <div className="ais-sidebar-header">
+                <button className="ais-new-chat-btn" onClick={handleNewChat}>
+                  <MessageSquarePlus size={16} />
+                  <span>New Chat</span>
+                </button>
+                <div className="ais-sidebar-search-container">
+                  <Search size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search chats..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="ais-sidebar-search"
+                  />
                 </div>
-              ))}
-              {sessions.length === 0 && (
-                <div className="ais-sidebar-empty">No previous chats</div>
-              )}
-            </div>
-          </motion.div>
+              </div>
+              <div className="ais-sidebar-list">
+                <div className="ais-sidebar-group">Recent</div>
+                {sessions.filter(s => s.title?.toLowerCase().includes(searchQuery.toLowerCase())).map(session => (
+                  <div
+                    key={session._id}
+                    className={`ais-sidebar-item ${activeSessionId === session._id ? 'active' : ''}`}
+                    onClick={() => loadSession(session._id)}
+                  >
+                    <MessageSquare size={14} className="icon" />
+                    <span className="title">{session.title || "New Chat"}</span>
+                    <button className="delete-btn" onClick={(e) => handleDeleteChat(e, session._id)}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+                {sessions.length === 0 && (
+                  <div className="ais-sidebar-empty">No previous chats</div>
+                )}
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
@@ -1088,8 +1088,8 @@ export default function AISplit() {
               </button>
             )}
             <div className="ais-model-selector" ref={modelMenuRef}>
-              <button 
-                className="ais-model-btn" 
+              <button
+                className="ais-model-btn"
                 onClick={() => setShowModelMenu(!showModelMenu)}
                 aria-expanded={showModelMenu}
                 aria-haspopup="listbox"
@@ -1097,10 +1097,10 @@ export default function AISplit() {
                 <span className="ais-model-chip">{selectedModelMeta.short}</span>
                 <ChevronDown size={14} className="icon-caret" />
               </button>
-              
+
               <AnimatePresence>
                 {showModelMenu && (
-                  <motion.div 
+                  <motion.div
                     className="ais-model-menu"
                     role="listbox"
                     initial={{ opacity: 0, y: -4, scale: 0.98 }}
@@ -1109,7 +1109,7 @@ export default function AISplit() {
                     transition={{ duration: 0.15 }}
                   >
                     {MODEL_OPTIONS.map(model => (
-                      <div 
+                      <div
                         key={model.id}
                         role="option"
                         aria-selected={selectedModel === model.id}
@@ -1211,9 +1211,9 @@ export default function AISplit() {
                   )}
                 </AnimatePresence>
               </div>
-              <button 
-                className={`ais-header-btn ${focusMode ? "active" : ""}`} 
-                onClick={() => setFocusMode(!focusMode)} 
+              <button
+                className={`ais-header-btn ${focusMode ? "active" : ""}`}
+                onClick={() => setFocusMode(!focusMode)}
                 title="Focus mode (Ctrl+F)"
                 aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
               >
@@ -1476,37 +1476,37 @@ export default function AISplit() {
                 onClick={() => setShowArtifact(false)}
               />
             )}
-          <motion.div
-            className={`ais-artifact-pane ${isMobile ? "ais-artifact-pane--sheet" : ""}`}
-            initial={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, width: 0 }}
-            animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, width: "var(--artifact-width, 48%)" }}
-            exit={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, width: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="ais-artifact-header">
-              <div className="ais-artifact-header-left">
-                <MessageSquare size={14} strokeWidth={2} />
-                <span>Artifact</span>
+            <motion.div
+              className={`ais-artifact-pane ${isMobile ? "ais-artifact-pane--sheet" : ""}`}
+              initial={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, width: 0 }}
+              animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, width: "var(--artifact-width, 48%)" }}
+              exit={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, width: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="ais-artifact-header">
+                <div className="ais-artifact-header-left">
+                  <MessageSquare size={14} strokeWidth={2} />
+                  <span>Artifact</span>
+                </div>
+                <button
+                  className="ais-header-btn"
+                  onClick={() => setShowArtifact(false)}
+                  title="Close artifact"
+                >
+                  <X size={14} />
+                </button>
               </div>
-              <button
-                className="ais-header-btn"
-                onClick={() => setShowArtifact(false)}
-                title="Close artifact"
-              >
-                <X size={14} />
-              </button>
-            </div>
 
-            <div className="ais-artifact-scroll">
-              <AnimatePresence mode="wait">
-                {artifact ? (
-                  <ArtifactRenderer key={artifact.type + artifact.content?.slice(0, 20)} artifact={artifact} />
-                ) : (
-                  <ArtifactEmpty />
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
+              <div className="ais-artifact-scroll">
+                <AnimatePresence mode="wait">
+                  {artifact ? (
+                    <ArtifactRenderer key={artifact.type + artifact.content?.slice(0, 20)} artifact={artifact} />
+                  ) : (
+                    <ArtifactEmpty />
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>

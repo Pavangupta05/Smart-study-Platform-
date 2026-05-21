@@ -168,8 +168,8 @@ body.dark .dash-search input {
   border-radius: 14px;
   padding: 10px 14px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 body.dark .chart-tooltip-glass {
@@ -255,7 +255,7 @@ body.dark .chart-tooltip-glass {
 /* ANALYTICS CHART */
 .analytics-card-modern {
   background: rgba(var(--surface-rgb), 0.5);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -463,8 +463,8 @@ body.dark .insight-icon.time   { background: rgba(16, 185, 129, 0.15); color: #3
 
 .doc-card-mini {
   background: rgba(var(--surface-rgb), 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   border: 1px solid rgba(var(--primary-rgb), 0.05);
   padding: 16px;
   border-radius: 18px;

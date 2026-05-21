@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { 
-  User, Bell, Palette, Lock, Sliders, Puzzle, 
-  CreditCard, MonitorSmartphone, Key, Zap, 
+import {
+  User, Bell, Palette, Lock, Sliders, Puzzle,
+  CreditCard, MonitorSmartphone, Key, Zap,
   Smartphone, Laptop, Copy, Search, Download
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,11 +25,11 @@ function Settings() {
   const [activeTab, setActiveTab] = useState(location.state?.tab || "general");
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Local states initialized from user context
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
-  
+
   // Settings States
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || user?.settings?.theme || "light");
   const [language, setLanguage] = useState(user?.settings?.language || "English (US)");
@@ -52,12 +52,12 @@ function Settings() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleThemeToggle = (nextTheme, e) => {
-    window.dispatchEvent(new CustomEvent("themeChange", { 
-      detail: { 
-        theme: nextTheme, 
-        clientX: e?.clientX, 
-        clientY: e?.clientY 
-      } 
+    window.dispatchEvent(new CustomEvent("themeChange", {
+      detail: {
+        theme: nextTheme,
+        clientX: e?.clientX,
+        clientY: e?.clientY
+      }
     }));
     updateSetting('theme', nextTheme);
   };
@@ -94,7 +94,7 @@ function Settings() {
     else if (key === 'emailReports') setEmailReports(value);
     else if (key === 'studyReminders') setStudyReminders(value);
     else if (key === 'aiDataUsage') setAiData(value);
-    
+
     try {
       const newSettings = { ...user.settings, [key]: value };
       const res = await settingsService.update({ settings: newSettings });
@@ -150,9 +150,9 @@ function Settings() {
         <div className="settings-sidebar">
           <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(120, 120, 120, 0.08)", padding: "8px 12px", borderRadius: "10px", marginBottom: "16px", flexShrink: 0 }}>
             <Search size={14} style={{ color: "var(--text-muted)" }} />
-            <input 
-              type="text" 
-              placeholder="Search settings..." 
+            <input
+              type="text"
+              placeholder="Search settings..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{ background: "transparent", border: "none", color: "var(--text)", outline: "none", fontSize: "13px", width: "100%" }}
@@ -165,7 +165,7 @@ function Settings() {
               <div key={idx}>
                 <div className="settings-tab-group-lbl">{group.label}</div>
                 {filteredItems.map(tab => (
-                  <button 
+                  <button
                     key={tab.id}
                     className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
                     onClick={() => setActiveTab(tab.id)}
@@ -182,13 +182,13 @@ function Settings() {
         {/* MAIN CONTENT AREA */}
         <div className="settings-main">
           <AnimatePresence mode="wait">
-            
+
             {/* GENERAL TAB */}
             {activeTab === "general" && (
               <motion.div key="general" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>General Settings</h2>
                 <p>Configure base application behavior.</p>
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info">
@@ -221,7 +221,7 @@ function Settings() {
               <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>My Profile</h2>
                 <p>Manage your public identity and personal details.</p>
-                
+
                 <div className="setting-card">
                   <div className="profile-edit">
                     <div className="profile-avatar-wrap">
@@ -252,7 +252,7 @@ function Settings() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="setting-card danger-zone">
                   <div className="setting-item">
                     <div className="setting-info">
@@ -283,7 +283,7 @@ function Settings() {
               <motion.div key="billing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Billing & Plans</h2>
                 <p>Manage your subscription and billing details.</p>
-                
+
                 {user?.plan === 'pro' ? (
                   <div className="plan-card">
                     <div>
@@ -301,7 +301,7 @@ function Settings() {
                     <button className="btn-primary-sm">Upgrade Now</button>
                   </div>
                 )}
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info">
@@ -330,7 +330,7 @@ function Settings() {
               <motion.div key="appearance" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Appearance</h2>
                 <p>Customize the look and feel of your workspace.</p>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
                   {/* Light Theme Preview */}
                   <div onClick={(e) => handleThemeToggle("light", e)} style={{ padding: "12px", border: theme === "light" ? "2px solid var(--primary)" : "2px solid rgba(120,120,120,0.1)", borderRadius: "12px", cursor: "pointer", background: "#f8fafc" }}>
@@ -387,7 +387,7 @@ function Settings() {
               <motion.div key="notifications" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Notifications</h2>
                 <p>Choose what we notify you about.</p>
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info">
@@ -413,7 +413,7 @@ function Settings() {
                       <p>Receive emails about new features and improvements.</p>
                     </div>
                     <div className="setting-action">
-                      <MinimalSwitch isOn={true} onToggle={() => {}} />
+                      <MinimalSwitch isOn={true} onToggle={() => { }} />
                     </div>
                   </div>
                 </div>
@@ -425,7 +425,7 @@ function Settings() {
               <motion.div key="integrations" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Integrations</h2>
                 <p>Connect StarNote with your favorite productivity tools.</p>
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info" style={{ display: "flex", gap: "16px", alignItems: "center" }}>
@@ -439,7 +439,7 @@ function Settings() {
                       <button className="btn-secondary-sm" onClick={() => toast.info("Integration coming soon!")}>Connect</button>
                     </div>
                   </div>
-                  
+
                   <div className="setting-item">
                     <div className="setting-info" style={{ display: "flex", gap: "16px", alignItems: "center" }}>
                       <div style={{ width: 44, height: 44, background: "#000", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "18px" }}>N</div>
@@ -461,7 +461,7 @@ function Settings() {
               <motion.div key="connections" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Connected Accounts</h2>
                 <p>Manage single sign-on providers linked to your account.</p>
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info">
@@ -490,7 +490,7 @@ function Settings() {
               <motion.div key="privacy" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Privacy & Data</h2>
                 <p>Manage how your data is used and shared.</p>
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info">
@@ -519,7 +519,7 @@ function Settings() {
               <motion.div key="devices" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Active Devices</h2>
                 <p>Manage the devices currently logged into your account.</p>
-                
+
                 <div className="setting-card">
                   <div className="device-item">
                     <div className="device-icon"><Laptop size={20} /></div>
@@ -546,7 +546,7 @@ function Settings() {
               <motion.div key="developer" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
                 <h2>Developer & API</h2>
                 <p>Manage your API keys for programmatic access.</p>
-                
+
                 <div className="setting-card">
                   <div className="setting-item">
                     <div className="setting-info">

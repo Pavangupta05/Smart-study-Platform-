@@ -85,7 +85,7 @@
     min-width: 460px; /* Slightly slimmer */
     padding: 8px 20px;
     background: var(--t-surface);
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(14px);
     border: 1px solid var(--t-border);
     border-radius: 40px; /* More pill-shaped */
     box-shadow: 0 15px 45px rgba(0,0,0,0.1);

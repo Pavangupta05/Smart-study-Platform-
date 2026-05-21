@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, NavLink } from "react-router-dom";
+import { useTimer } from "../context/TimerContext";
+import { useLocation } from "react-router-dom";
+
 import {
-  Maximize2, Minimize2, Sun, Moon, Search,
-  Home, Clock3, StickyNote, LibraryBig, Sparkles,
-  Menu, ChevronRight, Bell, Settings
+  Home, Clock3, StickyNote, LibraryBig, Sparkles, Settings, Eye, EyeOff
 } from "lucide-react";
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationsDropdown from "./NotificationsDropdown";
@@ -19,11 +19,11 @@ const PAGE_LABELS = {
   "/settings":   { label: "Settings",   Icon: Settings },
 };
 
-function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
+function Topbar({ theme, zenMode }) {
   const location = useLocation();
   const topbarRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
-
+  const { isVisible, setIsVisible } = useTimer(); // timer visibility
   // Derive page context from current route
   const currentPage = PAGE_LABELS[location.pathname] || PAGE_LABELS["/"];
   const PageIcon = currentPage.Icon;
@@ -36,21 +36,6 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
     mainEl.addEventListener("scroll", onScroll, { passive: true });
     return () => mainEl.removeEventListener("scroll", onScroll);
   }, [location.pathname]);
-
-  // Instant theme toggle — directly manipulates DOM before React re-render
-  const toggleTheme = (e) => {
-    const next = theme === "dark" ? "light" : "dark";
-    if (setTheme) {
-      setTheme(next, e);
-    }
-    window.dispatchEvent(new CustomEvent("themeChange", { 
-      detail: { 
-        theme: next,
-        clientX: e?.clientX,
-        clientY: e?.clientY
-      } 
-    }));
-  };
 
   const isDark = theme === "dark";
 
@@ -81,7 +66,10 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
 
         {/* Functional Notifications Dropdown */}
         <NotificationsDropdown />
-
+        {/* Timer visibility toggle */}
+        <button className="timer-toggle-btn" onClick={() => setIsVisible(!isVisible)} title={isVisible ? "Hide Timer" : "Show Timer"} style={{marginRight:"8px", background:"none", border:"none", cursor:"pointer"}}>
+          {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
         {/* Divider */}
         <div className="tv2-divider desktop-only" />
 

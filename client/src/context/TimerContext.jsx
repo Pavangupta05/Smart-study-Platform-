@@ -10,7 +10,7 @@ const initialState = {
   mode: "study", // study | shortBreak | longBreak
   soundEnabled: false,
   showControls: false,
-  isVisible: true,
+  isVisible: false,
 };
 
 function timerReducer(state, action) {
@@ -106,12 +106,21 @@ export const TimerProvider = React.memo(function TimerProvider({ children }) {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [state.isActive, state.minutes, state.seconds]);
+  }, [state.isActive, state.seconds, state.minutes]);
+
+  // ---------------------------------------------------------------------------
+  // Auto‑show timer when it becomes active
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (state.isActive) {
+      dispatch({ type: "SET_VISIBLE", payload: true });
+    }
+  }, [state.isActive]);
 
   // ---------------------------------------------------------------------------
   // Socket sync – broadcast local changes
   // ---------------------------------------------------------------------------
-  const syncState = () => {
+  useEffect(() => {
     if (socket) {
       socket.emit("timer_sync", {
         isActive: state.isActive,
@@ -120,22 +129,13 @@ export const TimerProvider = React.memo(function TimerProvider({ children }) {
         mode: state.mode,
       });
     }
-  };
+  }, [state.isActive, state.minutes, state.seconds, state.mode, socket]);
 
   // ---------------------------------------------------------------------------
   // Actions exposed to consumers
   // ---------------------------------------------------------------------------
   const toggleTimer = () => {
-    const nextActive = !state.isActive;
-    dispatch({ type: "SET_ACTIVE", payload: nextActive });
-    if (socket) {
-      socket.emit("timer_sync", {
-        isActive: nextActive,
-        minutes: state.minutes,
-        seconds: state.seconds,
-        mode: state.mode,
-      });
-    }
+    dispatch({ type: "SET_ACTIVE", payload: !state.isActive });
   };
 
   const resetTimer = () => {

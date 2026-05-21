@@ -42,10 +42,9 @@ function PageSkeleton() {
 
 function App() {
   const [loading, setLoading] = useState(true);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
+  const [isAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("sidebarOpen");
     return saved !== null ? JSON.parse(saved) : true;
@@ -164,7 +163,6 @@ function App() {
           theme={theme}
           isSidebarOpen={isSidebarOpen} 
           setIsSidebarOpen={setIsSidebarOpen} 
-          onOpenSearch={() => setIsSearchOpen(true)} 
         />
       )}
 

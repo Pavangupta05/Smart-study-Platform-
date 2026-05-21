@@ -143,8 +143,8 @@
 
 .block-main {
   background: rgba(var(--surface-rgb), 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(120, 120, 120, 0.15);
   border-radius: 20px;
   padding: 24px;
@@ -258,8 +258,8 @@ body.dark .btn-delete-task:hover {
 
 .control-card, .insight-card {
   background: rgba(var(--surface-rgb), 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(120, 120, 120, 0.15);
   border-radius: 24px;
   padding: 24px;

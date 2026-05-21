@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Music, Coffee, Brain, GripVertical } from "lucide-react";
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Music, Coffee, Brain, GripVertical, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimer } from "../context/TimerContext";
 import "./StudyTimer.css";
@@ -15,6 +15,7 @@ function StudyTimer() {
     showControls,
     setShowControls,
     isVisible,
+    setIsVisible,
     toggleTimer,
     resetTimer,
     changeMode
@@ -43,7 +44,14 @@ function StudyTimer() {
         <GripVertical size={14} className="drag-icon" />
       </div>
       
-      {/* Clickable pill content */}
+      {/* Close button to hide timer pill */}
+      <div
+        className="timer-close-button"
+        onClick={() => setIsVisible(false)}
+        style={{ position: "absolute", top: 4, right: 4, cursor: "pointer" }}
+      >
+        <X size={12} />
+      </div>
       <div 
         className="timer-pill-clickable"
         onClick={() => setShowControls(!showControls)}

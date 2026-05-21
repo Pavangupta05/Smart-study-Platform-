@@ -15,7 +15,7 @@
   user-select: none;
   cursor: grab;
   transition: border-color 0.2s, box-shadow 0.2s;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
 }
 
 .study-timer-floating-wrapper:active {
@@ -82,7 +82,7 @@
   flex-direction: column;
   gap: 12px;
   cursor: default;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
 }
 
 /* Mode Select buttons */

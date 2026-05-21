@@ -18,9 +18,19 @@
 }
 
 @keyframes springIcon {
-  0%   { transform: scale(0.8) translateY(2px); opacity: 0.5; }
-  50%  { transform: scale(1.15) translateY(-2px); }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
+  0% {
+    transform: scale(0.8) translateY(2px);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scale(1.15) translateY(-2px);
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 .dock-pill-item:hover .animated-dock-icon svg:not(.active-icon) {
@@ -28,11 +38,25 @@
 }
 
 @keyframes jiggle {
-  0%   { transform: rotate(0deg); }
-  25%  { transform: rotate(-8deg) scale(1.05); }
-  50%  { transform: rotate(8deg) scale(1.05); }
-  75%  { transform: rotate(-4deg); }
-  100% { transform: rotate(0deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-8deg) scale(1.05);
+  }
+
+  50% {
+    transform: rotate(8deg) scale(1.05);
+  }
+
+  75% {
+    transform: rotate(-4deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 /* ── Only render on mobile ── */
@@ -44,13 +68,23 @@
 }
 
 @media (max-width: 768px) {
-  .mobile-dock-v2  { display: flex;  }
-  .dock-fab-btn    { display: flex;  }
+  .mobile-dock-v2 {
+    display: flex;
+  }
+
+  .dock-fab-btn {
+    display: flex;
+  }
+
   .dock-fab-actions,
-  .dock-fab-backdrop { display: flex; }
+  .dock-fab-backdrop {
+    display: flex;
+  }
 
   /* Hide the OLD basic dock from Sidebar.jsx */
-  .mobile-dock { display: none !important; }
+  .mobile-dock {
+    display: none !important;
+  }
 }
 
 /* ══════════════════════════════════════
@@ -64,7 +98,8 @@
   z-index: 1200;
   align-items: center;
   gap: 14px;
-  transition: none !important; /* prevent global.css override */
+  transition: none !important;
+  /* prevent global.css override */
   pointer-events: all;
   width: max-content;
   max-width: calc(100vw - 32px);
@@ -76,9 +111,9 @@
   align-items: center;
   gap: 2px;
   padding: 7px 8px;
-  background: rgba(255, 255, 255, 0.15); /* Almost transparent, pure glass */
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  background: rgba(255, 255, 255, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
   box-shadow:
@@ -87,7 +122,8 @@
 }
 
 body.dark .dock-pill-wrapper {
-  background: rgba(0, 0, 0, 0.2); /* Almost transparent dark glass */
+  background: rgba(0, 0, 0, 0.2);
+  /* Almost transparent dark glass */
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
@@ -109,8 +145,13 @@ body.dark .dock-pill-wrapper {
   transition: color 0.22s ease;
 }
 
-.dock-pill-item:hover  { color: var(--text); }
-.dock-pill-item.active { color: var(--text); }
+.dock-pill-item:hover {
+  color: var(--text);
+}
+
+.dock-pill-item.active {
+  color: var(--text);
+}
 
 /* ── Inner layout container (Framer layout target) ── */
 .dock-pill-inner {
@@ -120,7 +161,8 @@ body.dark .dock-pill-wrapper {
   border-radius: 999px;
   overflow: hidden;
   white-space: nowrap;
-  position: relative; /* for pill-bg absolute positioning */
+  position: relative;
+  /* for pill-bg absolute positioning */
 }
 
 /* ── Animated active pill background (layoutId) ── */
@@ -162,7 +204,9 @@ body.dark .dock-pill-bg {
   z-index: 1;
 }
 
-body.dark .dock-pill-label { color: #fff; }
+body.dark .dock-pill-label {
+  color: #fff;
+}
 
 /* ══════════════════════════════════════
    CORAL FAB  (flex sibling, fixed relative to container)
@@ -193,9 +237,10 @@ body.dark .dock-pill-label { color: #fff; }
   background: linear-gradient(140deg, #ff7070 0%, #ee5252 45%, #e84393 100%);
   box-shadow:
     0 6px 24px rgba(238, 82, 82, 0.48),
-    0 2px 8px  rgba(238, 82, 82, 0.28),
+    0 2px 8px rgba(238, 82, 82, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
-  transition: none !important; /* Framer handles rotation */
+  transition: none !important;
+  /* Framer handles rotation */
 }
 
 /* Ambient pulse ring */
@@ -204,11 +249,9 @@ body.dark .dock-pill-label { color: #fff; }
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(255, 100, 100, 0.3) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle,
+      rgba(255, 100, 100, 0.3) 0%,
+      transparent 70%);
   animation: fab-pulse 2.6s ease-in-out infinite;
   pointer-events: none;
 }
@@ -218,18 +261,33 @@ body.dark .dock-pill-label { color: #fff; }
   background: linear-gradient(140deg, #2d2d35 0%, #1a1a22 100%);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
-.dock-fab-btn.open::before { animation: none; opacity: 0; }
+
+.dock-fab-btn.open::before {
+  animation: none;
+  opacity: 0;
+}
 
 body.dark .dock-fab-btn:not(.open) {
   box-shadow:
     0 6px 28px rgba(238, 82, 82, 0.58),
-    0 2px 8px  rgba(238, 82, 82, 0.38);
+    0 2px 8px rgba(238, 82, 82, 0.38);
 }
 
 @keyframes fab-pulse {
-  0%   { transform: scale(1);    opacity: 0.65; }
-  55%  { transform: scale(1.22); opacity: 0;    }
-  100% { transform: scale(1);    opacity: 0.65; }
+  0% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+
+  55% {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
 }
 
 /* ══════════════════════════════════════
@@ -240,8 +298,8 @@ body.dark .dock-fab-btn:not(.open) {
   inset: 0;
   z-index: 1190;
   background: rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   transition: none !important;
 }
 
@@ -287,7 +345,7 @@ body.dark .dock-fab-btn:not(.open) {
   order: 2;
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.22),
-    0 2px 6px  rgba(0, 0, 0, 0.14);
+    0 2px 6px rgba(0, 0, 0, 0.14);
 }
 
 .dock-fab-action-btn:active .dock-fab-action-icon {
@@ -307,8 +365,8 @@ body.dark .dock-fab-btn:not(.open) {
   padding: 6px 14px;
   border-radius: 999px;
   background: rgba(15, 15, 20, 0.84);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
 }
 
@@ -325,6 +383,7 @@ body.dark .dock-fab-btn:not(.open) {
    DESKTOP — hide everything
 ══════════════════════════════════════ */
 @media (min-width: 769px) {
+
   .mobile-dock-v2,
   .dock-fab-btn,
   .dock-fab-actions,
