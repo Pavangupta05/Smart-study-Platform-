@@ -1,6 +1,6 @@
 {
   "short_name": "StarNote",
-  "name": "StarNote - Smart Study Platform",
+  "name": "StarNote",
   "description": "Your ultimate, distraction-free study platform powered by AI.",
   "icons": [
     {
@@ -24,9 +24,9 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "theme_color": "#007AFF",
-  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
   "categories": ["education", "productivity"],
   "screenshots": [
     {

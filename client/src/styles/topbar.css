@@ -325,7 +325,6 @@
 /* ── Mobile (<= 600px) ── */
 @media (max-width: 600px) {
   .topbar-v2 {
-    /* Full-width bar at the very top, no margin, no pill radius */
     position: fixed;
     top: 0;
     left: 0;
@@ -335,15 +334,20 @@
     border-left: none;
     border-right: none;
     border-top: none;
-    height: calc(var(--tv2-h-mobile) + env(safe-area-inset-top));
-    padding: env(safe-area-inset-top) 14px 0 14px;
+    height: calc(56px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right));
     grid-template-columns: auto 1fr auto;
     gap: 0;
-    /* Slightly more opaque on mobile for readability */
-    background: rgba(255, 255, 255, 0.88);
+    background: rgba(250, 250, 250, 0.76);
+    border-bottom-color: rgba(0, 0, 0, 0.045);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.42) inset;
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
   }
   .topbar-v2.dark {
-    background: rgba(10, 10, 12, 0.9);
+    background: rgba(10, 10, 10, 0.68);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.055) inset;
   }
 
   /* Hide non-essential elements on small screens */
@@ -354,11 +358,8 @@
   .tv2-center { justify-content: center; }
   
   /* Compact icon buttons on mobile */
-  .tv2-icon-btn { width: 34px; height: 34px; border-radius: 10px; }
+  .tv2-icon-btn { width: 38px; height: 38px; border-radius: 14px; }
   .tv2-right { gap: 4px; }
-
-  /* Add body padding to prevent content going under fixed topbar */
-  /* (handled by main-content padding in global.css) */
 }
 
 /* ── iOS: Handle notched devices (iPhone X+) ── */
@@ -385,7 +386,7 @@
    ============================================================ */
 @media (max-width: 600px) {
   .main {
-    padding-top: calc(var(--tv2-h-mobile) + env(safe-area-inset-top)) !important;
+    padding-top: 0 !important;
   }
 }
 

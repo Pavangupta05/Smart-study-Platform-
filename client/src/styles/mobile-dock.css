@@ -1,14 +1,5 @@
-/* ═══════════════════════════════════════════════
-   STARNOTE — PREMIUM MOBILE DOCK V2
-   Inspired by macOS/iOS dock pill-expansion design
-   • Active tab pill with spring-animated background
-   • Separated coral FAB with radial action menu
-   • Full dark mode + iPhone safe area support
-═══════════════════════════════════════════════ */
+/* Premium mobile dock, separated pill + FAB visual */
 
-/* ══════════════════════════════════════
-   NATIVE CSS MICRO-ANIMATIONS (GPU ACCELERATED)
-══════════════════════════════════════ */
 .animated-dock-icon svg {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -59,7 +50,6 @@
   }
 }
 
-/* ── Only render on mobile ── */
 .mobile-dock-v2,
 .dock-fab-actions,
 .dock-fab-backdrop,
@@ -81,31 +71,25 @@
     display: flex;
   }
 
-  /* Hide the OLD basic dock from Sidebar.jsx */
   .mobile-dock {
     display: none !important;
   }
 }
 
-/* ══════════════════════════════════════
-   DOCK BAR  (centered pill container)
-══════════════════════════════════════ */
 .mobile-dock-v2 {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 1200;
   align-items: center;
   gap: 14px;
   transition: none !important;
-  /* prevent global.css override */
   pointer-events: all;
   width: max-content;
   max-width: calc(100vw - 32px);
 }
 
-/* ── Simplified pill track ── */
 .dock-pill-wrapper {
   display: flex;
   align-items: center;
@@ -164,9 +148,6 @@ body.dark .mobile-dock-v2:hover .dock-pill-wrapper {
     0 -1px 0 rgba(0, 0, 0, 0.4) inset;
 }
 
-/* ══════════════════════════════════════
-   NAV PILL ITEMS  (each tab)
-══════════════════════════════════════ */
 .dock-pill-item {
   display: flex;
   align-items: center;
@@ -175,7 +156,6 @@ body.dark .mobile-dock-v2:hover .dock-pill-wrapper {
   color: var(--text-muted);
   -webkit-tap-highlight-color: transparent;
   outline: none;
-  /* Let Framer Motion handle all movement */
   transition: color 0.22s ease;
 }
 
@@ -187,7 +167,6 @@ body.dark .mobile-dock-v2:hover .dock-pill-wrapper {
   color: var(--text);
 }
 
-/* ── Inner layout container (Framer layout target) ── */
 .dock-pill-inner {
   display: flex;
   align-items: center;
@@ -200,14 +179,12 @@ body.dark .mobile-dock-v2:hover .dock-pill-wrapper {
   transition:
     transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
     filter 320ms cubic-bezier(0.16, 1, 0.3, 1);
-  /* for pill-bg absolute positioning */
 }
 
 .dock-pill-item:hover .dock-pill-inner {
   transform: translateY(-1px) scale(1.045);
 }
 
-/* ── Animated active pill background (layoutId) ── */
 .dock-pill-bg {
   position: absolute;
   inset: 0;
@@ -235,7 +212,6 @@ body.dark .dock-pill-bg {
     0 -1px 0 rgba(0, 0, 0, 0.2) inset;
 }
 
-/* ── Icon wrapper ── */
 .dock-pill-icon {
   display: flex;
   align-items: center;
@@ -272,7 +248,6 @@ body.dark .dock-pill-bg {
     drop-shadow(0 0 12px rgba(125, 210, 255, 0.2));
 }
 
-/* ── Expanding label ── */
 .dock-pill-label {
   font-family: var(--font-sans);
   font-size: 12.5px;
@@ -293,9 +268,6 @@ body.dark .dock-pill-label {
   color: #fff;
 }
 
-/* ══════════════════════════════════════
-   CORAL FAB  (flex sibling, fixed relative to container)
-══════════════════════════════════════ */
 .dock-fab-container {
   position: relative;
   display: flex;
@@ -317,31 +289,24 @@ body.dark .dock-pill-label {
   color: #fff;
   outline: none;
   -webkit-tap-highlight-color: transparent;
-
-  /* Coral / salmon gradient — matches reference image */
   background: linear-gradient(140deg, #ff7070 0%, #ee5252 45%, #e84393 100%);
   box-shadow:
     0 6px 24px rgba(238, 82, 82, 0.48),
     0 2px 8px rgba(238, 82, 82, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
   transition: none !important;
-  /* Framer handles rotation */
 }
 
-/* Ambient pulse ring */
 .dock-fab-btn::before {
   content: "";
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  background: radial-gradient(circle,
-      rgba(255, 100, 100, 0.3) 0%,
-      transparent 70%);
+  background: radial-gradient(circle, rgba(255, 100, 100, 0.3) 0%, transparent 70%);
   animation: fab-pulse 2.6s ease-in-out infinite;
   pointer-events: none;
 }
 
-/* Closed → open: turns dark */
 .dock-fab-btn.open {
   background: linear-gradient(140deg, #2d2d35 0%, #1a1a22 100%);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
@@ -375,9 +340,6 @@ body.dark .dock-fab-btn:not(.open) {
   }
 }
 
-/* ══════════════════════════════════════
-   BACKDROP  (blur overlay when FAB open)
-══════════════════════════════════════ */
 .dock-fab-backdrop {
   position: fixed;
   inset: 0;
@@ -388,9 +350,6 @@ body.dark .dock-fab-btn:not(.open) {
   transition: none !important;
 }
 
-/* ══════════════════════════════════════
-   RADIAL ACTION BUTTONS
-══════════════════════════════════════ */
 .dock-fab-actions {
   position: absolute;
   bottom: calc(100% + 16px);
@@ -446,7 +405,6 @@ body.dark .dock-fab-btn:not(.open) {
   transform: scale(0.94);
 }
 
-/* Coloured circle */
 .dock-fab-action-icon {
   width: 50px;
   height: 50px;
@@ -467,7 +425,6 @@ body.dark .dock-fab-btn:not(.open) {
   filter: brightness(0.88);
 }
 
-/* Pill label to the left */
 .dock-fab-action-label {
   order: 1;
   font-family: var(--font-sans);
@@ -481,24 +438,29 @@ body.dark .dock-fab-btn:not(.open) {
   border-radius: 999px;
   background: rgba(24, 24, 28, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
-/* ══════════════════════════════════════
-   IPHONE SAFE AREA  (notch / home bar)
-══════════════════════════════════════ */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
+@media (max-width: 390px) {
   .mobile-dock-v2 {
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .dock-pill-wrapper {
+    padding: 6px;
+  }
+
+  .dock-pill-inner {
+    padding: 9px 10px;
+  }
+
+  .dock-fab-btn {
+    width: 50px;
+    height: 50px;
   }
 }
 
-/* ══════════════════════════════════════
-   DESKTOP — hide everything
-══════════════════════════════════════ */
 @media (min-width: 769px) {
-
   .mobile-dock-v2,
   .dock-fab-btn,
   .dock-fab-actions,

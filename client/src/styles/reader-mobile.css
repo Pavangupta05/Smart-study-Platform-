@@ -27,6 +27,7 @@ body.dark, .theme-dark {
 .reader-modern-mobile {
   position: fixed;
   inset: 0;
+  min-height: 100dvh;
   background: var(--m-bg);
   display: flex;
   flex-direction: column;
@@ -38,14 +39,22 @@ body.dark, .theme-dark {
 
 /* --- MOBILE HEADER --- */
 .mobile-reader-header {
-  height: 80px;
-  background: var(--m-surface);
-  border-bottom: 1px solid var(--m-border);
+  height: calc(58px + env(safe-area-inset-top));
+  background: rgba(255, 255, 255, 0.76);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
+  padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right));
   flex-shrink: 0;
+}
+
+body.dark .mobile-reader-header,
+.theme-dark .mobile-reader-header {
+  background: rgba(9, 9, 11, 0.72);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .m-header-left { display: flex; align-items: center; gap: 12px; }
@@ -78,8 +87,10 @@ body.dark, .theme-dark {
 /* --- SECONDARY TOOLBAR --- */
 .m-secondary-toolbar {
   height: 48px;
-  background: var(--m-surface);
-  border-bottom: 1px solid var(--m-border);
+  background: rgba(255, 255, 255, 0.58);
+  border-bottom: none;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -115,7 +126,8 @@ body.dark, .theme-dark {
   overflow: auto;
   display: flex;
   justify-content: center;
-  padding: 10px 0;
+  padding: 8px 0 calc(104px + env(safe-area-inset-bottom));
+  overscroll-behavior: contain;
 }
 
 .m-mobile-viewport.tablet-view {
@@ -145,7 +157,7 @@ body.dark, .theme-dark {
 /* --- BOTTOM TOOLBAR (FLOATING PILL) --- */
 .m-bottom-toolbar-wrapper {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;
@@ -168,8 +180,10 @@ body.dark, .theme-dark {
   left: auto !important;
   right: auto !important;
   height: 52px;
-  background: #ffffff;
-  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
   border-radius: 64px;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
   display: flex;
@@ -181,8 +195,8 @@ body.dark, .theme-dark {
 
 body.dark .m-bottom-toolbar-wrapper .m-bottom-toolbar.floating-pill,
 .theme-dark .m-bottom-toolbar-wrapper .m-bottom-toolbar.floating-pill {
-  background: #111827;
-  border-color: rgba(71, 85, 105, 0.9);
+  background: rgba(10, 10, 10, 0.74);
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
 }
 
@@ -197,7 +211,9 @@ body.dark .m-bottom-toolbar-wrapper .m-bottom-toolbar.floating-pill,
   height: 46px;
   border-radius: 50%;
   border: 1px solid rgba(148, 163, 184, 0.95);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   color: var(--m-muted);
   display: inline-flex;
   align-items: center;
@@ -424,7 +440,7 @@ body.dark .m-tool-btn.active::after,
   }
 
   .m-bottom-toolbar-wrapper {
-    bottom: 16px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
     gap: 10px;
   }
 
@@ -445,8 +461,8 @@ body.dark .m-tool-btn.active::after,
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 12px 20px 30px 20px;
-  background: var(--m-surface);
+  padding: 12px 20px calc(22px + env(safe-area-inset-bottom)) 20px;
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--m-border);
@@ -464,6 +480,11 @@ body.dark .m-tool-btn.active::after,
   overflow-y: auto;
   box-sizing: border-box;
   overscroll-behavior: contain;
+}
+
+body.dark .m-tool-options-panel,
+.theme-dark .m-tool-options-panel {
+  background: rgba(18, 18, 20, 0.9);
 }
 
 .m-close-options {

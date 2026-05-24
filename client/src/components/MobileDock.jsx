@@ -1,46 +1,44 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
   StickyNote,
   Sparkles,
   Clock3,
-  LibraryBig,
   Plus,
   FileText,
   Brain,
   CalendarPlus,
   BookMarked,
-  X,
-  User,
 } from "lucide-react";
 import { notesService } from "../services/index";
 import "../styles/mobile-dock.css";
 
-/* ─── Nav items matching Sidebar ─── */
 const NAV_ITEMS = [
-  { to: "/",  icon: Home,  label: "Home"    },
-  { to: "/planner", icon: Clock3,      label: "Planner" },
-  { to: "/notes", icon: StickyNote,  label: "Notes"   },
-  { to: "/ai", icon: Sparkles,    label: "AI"      },
+  { to: "/", icon: Home, label: "Home" },
+  { to: "/planner", icon: Clock3, label: "Planner" },
+  { to: "/notes", icon: StickyNote, label: "Notes" },
+  { to: "/ai", icon: Sparkles, label: "AI" },
 ];
 
-/* ─── FAB radial quick-actions ─── */
 const FAB_ACTIONS = [
-  { icon: FileText,     label: "New Note",  action: "note",      color: "#6366f1" },
-  { icon: Brain,        label: "AI Tutor",  action: "ai",        color: "#ec4899" },
-  { icon: CalendarPlus, label: "Add Event", action: "planner",   color: "#f59e0b" },
-  { icon: BookMarked,   label: "Flashcard", action: "flashcard", color: "#10b981" },
+  { icon: FileText, label: "New Note", action: "note", color: "#6366f1" },
+  { icon: Brain, label: "AI Tutor", action: "ai", color: "#ec4899" },
+  { icon: CalendarPlus, label: "Add Event", action: "planner", color: "#f59e0b" },
+  { icon: BookMarked, label: "Flashcard", action: "flashcard", color: "#10b981" },
 ];
 
-/* ─── Spring presets ─── */
-const spring    = { type: "spring", stiffness: 500, damping: 30 };
-const springFab = { type: "spring", stiffness: 400, damping: 28 };
+const spring = { type: "spring", stiffness: 500, damping: 30 };
 
 export default function MobileDock() {
   const [fabOpen, setFabOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
+
+  if (location.pathname.startsWith("/reader/")) {
+    return null;
+  }
 
   const handleFabAction = async (action) => {
     setFabOpen(false);
@@ -57,14 +55,13 @@ export default function MobileDock() {
       } catch {
         navigate("/notes");
       }
-    } else if (action === "ai")        navigate("/ai");
-    else if (action === "planner")     navigate("/planner");
-    else if (action === "flashcard")   navigate("/flashcards");
+    } else if (action === "ai") navigate("/ai");
+    else if (action === "planner") navigate("/planner");
+    else if (action === "flashcard") navigate("/flashcards");
   };
 
   return (
     <>
-      {/* ── Blur backdrop when FAB is open ── */}
       <AnimatePresence>
         {fabOpen && (
           <motion.div
@@ -78,9 +75,6 @@ export default function MobileDock() {
         )}
       </AnimatePresence>
 
-
-
-      {/* ── Nav pill dock bar ── */}
       <div className="mobile-dock-v2">
         <div className="dock-pill-wrapper">
           {NAV_ITEMS.map((item) => (
@@ -99,7 +93,6 @@ export default function MobileDock() {
                   layout
                   transition={spring}
                 >
-                  {/* Active pill bg */}
                   {isActive && (
                     <motion.div
                       className="dock-pill-bg"
@@ -140,11 +133,10 @@ export default function MobileDock() {
           ))}
         </div>
 
-        {/* ── FAB and its relative action menu ── */}
         <div className="dock-fab-container">
           <AnimatePresence>
             {fabOpen && (
-              <motion.div 
+              <motion.div
                 className="dock-fab-actions"
                 initial={{ opacity: 0, scale: 0.2, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -152,19 +144,14 @@ export default function MobileDock() {
                 transition={{ type: "spring", damping: 22, stiffness: 350 }}
                 style={{ transformOrigin: "bottom right" }}
               >
-                {FAB_ACTIONS.map((item, i) => (
+                {FAB_ACTIONS.map((item) => (
                   <button
                     key={item.action}
                     className={`dock-fab-action-btn dock-fab-action-btn--${item.action}`}
                     style={{ "--action-color": item.color }}
                     onClick={() => handleFabAction(item.action)}
                   >
-                    {/* Label to the left */}
-                    <span className="dock-fab-action-label">
-                      {item.label}
-                    </span>
-
-                    {/* Coloured circle icon */}
+                    <span className="dock-fab-action-label">{item.label}</span>
                     <div className="dock-fab-action-icon">
                       <item.icon size={20} />
                     </div>
