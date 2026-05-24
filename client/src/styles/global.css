@@ -280,7 +280,7 @@ body {
   .app {
     flex-direction: column-reverse; /* Bottom navigation on mobile */
     padding-bottom: 0;
-    background: #0a0a0a;
+    background: var(--bg);
   }
 }
 
@@ -306,33 +306,14 @@ body {
 @media (max-width: 768px) {
   :root {
     --mobile-topbar-height: 56px;
-    --mobile-dock-space: calc(112px + env(safe-area-inset-bottom));
   }
 
   .page-transition {
     min-height: 100dvh;
     padding-top: calc(var(--mobile-topbar-height) + env(safe-area-inset-top));
-    padding-bottom: var(--mobile-dock-space);
     background: var(--bg);
     border-radius: 0;
     overscroll-behavior: contain;
-  }
-
-  .page-transition:not(.page-transition--reader):not(.page-transition--ai) {
-    mask-image: linear-gradient(
-      to bottom,
-      #000 0%,
-      #000 calc(100% - 136px),
-      rgba(0, 0, 0, 0.56) calc(100% - 56px),
-      transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      #000 0%,
-      #000 calc(100% - 136px),
-      rgba(0, 0, 0, 0.56) calc(100% - 56px),
-      transparent 100%
-    );
   }
 
   .page-transition--reader,
@@ -340,13 +321,6 @@ body {
   .page-transition:has(.reader-modern-mobile) {
     padding: 0;
     background: #0a0a0a;
-    mask-image: none;
-    -webkit-mask-image: none;
-  }
-
-  .page-transition--ai {
-    mask-image: none;
-    -webkit-mask-image: none;
   }
 
   input,

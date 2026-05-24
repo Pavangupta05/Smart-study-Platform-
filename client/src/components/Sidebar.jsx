@@ -21,7 +21,7 @@ import {
   School,
   Binary,
   Shapes,
-  Zap,
+  Zap,  
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { notesService } from "../services/index";
