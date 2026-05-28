@@ -20,6 +20,7 @@ const flashcardsRoutes = require("./routes/flashcards.routes");
 const chatRoutes = require("./routes/chat.routes");
 const aiRoutes = require("./routes/ai.routes");
 const examRoutes = require("./routes/exam.routes");
+const notificationsRoutes = require("./routes/notifications.routes");
 
 const app = express();
 
@@ -97,6 +98,7 @@ app.use("/api/flashcards", flashcardsRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/exams", examRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

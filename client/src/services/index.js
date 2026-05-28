@@ -138,4 +138,18 @@ export const examService = {
   getById: (id) => api.get(`/exams/${id}`),
   create: (data) => api.post("/exams", data),
   delete: (id) => api.delete(`/exams/${id}`),
+  getStats: () => api.get("/exams/stats"),
+  getHistory: () => api.get("/exams/history"),
+  generate: (data) => api.post("/exams/generate", data),
+  submit: (id, answers) => api.post(`/exams/${id}/submit`, { answers }),
+  getDetails: (id) => api.get(`/exams/${id}`),
+};
+
+// NOTIFICATIONS
+export const notificationsService = {
+  getAll: () => api.get("/notifications"),
+  markAllRead: () => api.patch("/notifications/read-all"),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  clearAll: () => api.delete("/notifications/clear"),
+  clear: (id) => api.delete(`/notifications/${id}`),
 };

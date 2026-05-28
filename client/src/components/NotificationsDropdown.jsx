@@ -1,38 +1,40 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Check, Trash2, Info, Flame, Sparkles, CheckCircle2 } from "lucide-react";
+import { Bell, Check, Trash2, Info, Flame, Sparkles, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { toast } from "sonner";
+import { notificationsService } from "../services";
 import "../styles/notifications.css";
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    title: "AI Analysis Ready",
-    text: "Your 'Physics Ch. 4' summary is ready for review.",
-    time: "2m ago",
-    type: "ai",
-    read: false,
-    Icon: Sparkles
-  },
-  {
-    id: 2,
-    title: "New Study Streak!",
-    text: "You've studied for 5 days in a row. Keep it up!",
-    time: "1h ago",
-    type: "streak",
-    read: false,
-    Icon: Flame
-  }
-];
+const ICONS = {
+  ai: Sparkles,
+  streak: Flame,
+  info: Info,
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  error: XCircle
+};
 
 export default function NotificationsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
-  const { socket } = useUser();
+  const { socket, user } = useUser();
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    if (user) fetchNotifications();
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await notificationsService.getAll();
+      setNotifications(res.data.notifications || []);
+    } catch (err) {
+      console.error("Failed to fetch notifications", err);
+    }
+  };
 
   // Handle clicking outside to close
   useEffect(() => {
@@ -49,31 +51,13 @@ export default function NotificationsDropdown() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewNotification = (data) => {
-      // Create a unified icon mapper
-      const icons = {
-        ai: Sparkles,
-        streak: Flame,
-        info: Info,
-        success: CheckCircle2
-      };
-      
-      const newNotif = {
-        id: Date.now(),
-        title: data.title || "New Notification",
-        text: data.message || "",
-        time: "Just now",
-        type: data.type || "info",
-        read: false,
-        Icon: icons[data.type] || Info
-      };
+    const handleNewNotification = (notifDoc) => {
+      setNotifications((prev) => [notifDoc, ...prev]);
 
-      setNotifications((prev) => [newNotif, ...prev]);
-
-      // Trigger a beautiful rich toast
-      toast(newNotif.title, {
-        description: newNotif.text,
-        icon: <newNotif.Icon size={16} className={newNotif.type} />,
+      const Icon = ICONS[notifDoc.type] || Info;
+      toast(notifDoc.title, {
+        description: notifDoc.message,
+        icon: <Icon size={16} className={notifDoc.type} />,
         duration: 4000
       });
     };
@@ -85,12 +69,32 @@ export default function NotificationsDropdown() {
     };
   }, [socket]);
 
-  const markAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAllRead = async () => {
+    try {
+      await notificationsService.markAllRead();
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const clearAll = () => {
-    setNotifications([]);
+  const clearAll = async () => {
+    try {
+      await notificationsService.clearAll();
+      setNotifications([]);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const markSingleRead = async (id, currentReadState) => {
+    if (currentReadState) return;
+    try {
+      await notificationsService.markRead(id);
+      setNotifications(notifications.map(n => n._id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -103,7 +107,7 @@ export default function NotificationsDropdown() {
         <div className="tv2-icon-btn-bg" />
         <Bell size={18} strokeWidth={2.0} />
         {unreadCount > 0 && (
-          <span className="tv2-badge">{unreadCount}</span>
+          <span className="tv2-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
         )}
       </button>
 
@@ -133,21 +137,31 @@ export default function NotificationsDropdown() {
 
             <div className="notif-body">
               {notifications.length > 0 ? (
-                notifications.map((notif) => (
-                  <div key={notif.id} className={`notif-item ${notif.read ? 'read' : 'unread'}`}>
-                    <div className={`notif-icon-circle ${notif.type}`}>
-                      <notif.Icon size={16} />
-                    </div>
-                    <div className="notif-content">
-                      <div className="notif-item-header">
-                        <h4>{notif.title}</h4>
-                        <span className="notif-time">{notif.time}</span>
+                notifications.map((notif) => {
+                  const Icon = ICONS[notif.type] || Info;
+                  // Simple relative time approximation for demo
+                  const timeStr = new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                  
+                  return (
+                    <div 
+                      key={notif._id} 
+                      className={`notif-item ${notif.read ? 'read' : 'unread'}`}
+                      onClick={() => markSingleRead(notif._id, notif.read)}
+                    >
+                      <div className={`notif-icon-circle ${notif.type}`}>
+                        <Icon size={16} />
                       </div>
-                      <p>{notif.text}</p>
+                      <div className="notif-content">
+                        <div className="notif-item-header">
+                          <h4>{notif.title}</h4>
+                          <span className="notif-time">{timeStr}</span>
+                        </div>
+                        <p>{notif.message}</p>
+                      </div>
+                      {!notif.read && <div className="unread-dot" />}
                     </div>
-                    {!notif.read && <div className="unread-dot" />}
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="notif-empty">
                   <Bell size={40} className="empty-bell" />
