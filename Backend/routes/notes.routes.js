@@ -5,6 +5,7 @@ const { validate } = require("../middleware/validation");
 const { getMockMode } = require("../config/db");
 const { mockNotes } = require("../utils/mockStore");
 const multer = require("multer");
+const sendNotification = require("../utils/sendNotification");
 const path = require("path");
 const fs = require("fs");
 
@@ -110,12 +111,25 @@ router.post("/", protect, ensureModel, upload.single("file"), validate([
   if (getMockMode()) {
     const note = await mockNotes.create(data);
     req.app.get("io")?.to(req.userId).emit("sync_notes");
-    req.app.get("io")?.to(req.userId).emit("notification", { title: "Note Created", message: `Successfully saved '${note.name}'`, type: "success" });
+    await sendNotification(
+      req.app.get("io"), 
+      req.userId, 
+      "Note Created", 
+      `Successfully saved '${note.name}'`, 
+      "success"
+    );
     return res.status(201).json({ success: true, note });
   }
   const note = await Note.create(data);
   req.app.get("io")?.to(req.userId).emit("sync_notes");
-  req.app.get("io")?.to(req.userId).emit("notification", { title: "Note Created", message: `Successfully saved '${note.name}'`, type: "success" });
+  await sendNotification(
+    req.app.get("io"), 
+    req.userId, 
+    "Note Created", 
+    `Successfully saved '${note.name}'`, 
+    "success",
+    `/reader/${note._id}`
+  );
   res.status(201).json({ success: true, note });
 });
 
