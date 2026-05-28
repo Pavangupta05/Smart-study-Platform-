@@ -18,6 +18,8 @@ const NoteSchema = new mongoose.Schema({
   isTrashed: { type: Boolean, default: false },
   trashedAt: { type: Date, default: null },
   tags: [{ type: String }],
+  isPublic: { type: Boolean, default: false },
+  shareId: { type: String, default: null },
 }, { timestamps: true });
 
 // Auto-delete trash after 30 days

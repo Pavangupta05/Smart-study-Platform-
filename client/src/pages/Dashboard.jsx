@@ -87,25 +87,36 @@ function Dashboard() {
   const CHART_COLOR = { tasks: "#8b5cf6", notes: "#f59e0b", focus: "#10b981" };
   const CHART_LABEL = { tasks: "Tasks Done", notes: "Notes Created", focus: "Focus Mins" };
 
-  // Load tasks from backend
+  const isCloudSyncEnabled = user?.settings?.cloudSync ?? true;
+
+  // Load tasks from backend or local
   const fetchTasks = () => {
+    if (!isCloudSyncEnabled) {
+      const saved = localStorage.getItem("starNote_tasks");
+      if (saved) setTasks(JSON.parse(saved));
+      return;
+    }
     tasksService.getAll()
       .then(res => setTasks(res.data.tasks || []))
       .catch(err => {
         console.error("Fetch tasks error:", err);
-        toast.error("Connecting to server failed. Using local tasks.");
         const saved = localStorage.getItem("starNote_tasks");
         if (saved) setTasks(JSON.parse(saved));
       });
   };
 
-  // Load notes from backend
+  // Load notes from backend or local
   const fetchNotes = () => {
+    if (!isCloudSyncEnabled) {
+      const saved = localStorage.getItem("starNote_files");
+      if (saved) setRecentFiles(JSON.parse(saved));
+      setIsLoading(false);
+      return;
+    }
     notesService.getAll()
       .then(res => setRecentFiles(res.data.notes || []))
       .catch(err => {
         console.error("Fetch notes error:", err);
-        toast.error("Connecting to server failed. Using local materials.");
         const saved = localStorage.getItem("starNote_files");
         if (saved) setRecentFiles(JSON.parse(saved));
       })
@@ -158,13 +169,22 @@ function Dashboard() {
     if (!newTask.trim()) return;
     const text = newTask;
     setNewTask("");
+    
+    if (!isCloudSyncEnabled) {
+      setTasks(prev => {
+        const newTasks = [{ _id: Date.now(), text, completed: false }, ...prev];
+        localStorage.setItem("starNote_tasks", JSON.stringify(newTasks));
+        return newTasks;
+      });
+      return;
+    }
+
     try {
       const res = await tasksService.create({ text });
       setTasks(prev => [res.data.task, ...prev]);
     } catch (err) {
       console.error("Add task error:", err);
       toast.error("Failed to sync task with server.");
-      // Optimistic fallback
       setTasks(prev => [{ _id: Date.now(), text, completed: false }, ...prev]);
     }
   };
@@ -173,29 +193,43 @@ function Dashboard() {
     const task = tasks.find(t => (t._id || t.id) === id);
     if (!task) return;
     const completed = !task.completed;
-    setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed } : t));
-    try {
-      await tasksService.toggle(id, completed);
-    } catch (err) {
-      console.error("Toggle task error:", err);
-      toast.error("Failed to update task status.");
-      // Rollback
-      setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !completed } : t));
+    
+    setTasks(prev => {
+      const updated = prev.map(t => (t._id || t.id) === id ? { ...t, completed } : t);
+      if (!isCloudSyncEnabled) localStorage.setItem("starNote_tasks", JSON.stringify(updated));
+      return updated;
+    });
+
+    if (isCloudSyncEnabled) {
+      try {
+        await tasksService.toggle(id, completed);
+      } catch (err) {
+        console.error("Toggle task error:", err);
+        toast.error("Failed to update task status.");
+        setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !completed } : t));
+      }
     }
   };
 
   const deleteTask = async (id) => {
     const taskToDelete = tasks.find(t => (t._id || t.id) === id);
     if (!taskToDelete) return;
-    setTasks(prev => prev.filter(t => (t._id || t.id) !== id));
-    try { 
-      await tasksService.delete(id); 
-      toast.success("Task removed");
-    } catch (err) { 
-      console.error("Delete task error:", err);
-      toast.error("Failed to delete task.");
-      // Rollback
-      setTasks(prev => [taskToDelete, ...prev]);
+    
+    setTasks(prev => {
+      const updated = prev.filter(t => (t._id || t.id) !== id);
+      if (!isCloudSyncEnabled) localStorage.setItem("starNote_tasks", JSON.stringify(updated));
+      return updated;
+    });
+
+    if (isCloudSyncEnabled) {
+      try { 
+        await tasksService.delete(id); 
+        toast.success("Task removed");
+      } catch (err) { 
+        console.error("Delete task error:", err);
+        toast.error("Failed to delete task.");
+        setTasks(prev => [taskToDelete, ...prev]);
+      }
     }
   };
 

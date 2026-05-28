@@ -27,6 +27,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const MindMap = lazy(() => import("./pages/MindMap"));
 const Exam = lazy(() => import("./pages/Exam"));
 const ExamHistory = lazy(() => import("./pages/ExamHistory"));
+const PublicReader = lazy(() => import("./pages/PublicReader"));
 
 function PageSkeleton() {
   return (
@@ -190,6 +191,7 @@ function App() {
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/resetpassword/:token" element={<ResetPassword />} />
+            <Route path="/share/:shareId" element={<PublicReader />} />
             <Route path="*" element={<Landing />} />
           </Routes>
         </Suspense>

@@ -1235,6 +1235,29 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     });
   };
 
+  const handleShare = async () => {
+    try {
+      const isPublic = !file.isPublic;
+      const res = await notesService.toggleShare(id, isPublic);
+      if (res.data.success) {
+        setFile(res.data.note);
+        if (isPublic) {
+          // If testing locally, map localhost to production Vercel URL to avoid broken links
+          const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+          const baseUrl = import.meta.env.VITE_FRONTEND_URL || (isLocalhost ? "https://starnote-ai.vercel.app" : window.location.origin);
+          
+          const shareLink = `${baseUrl}/share/${res.data.note.shareId}`;
+          navigator.clipboard.writeText(shareLink);
+          toast.success("Public link copied to clipboard!");
+        } else {
+          toast.success("Note is now private.");
+        }
+      }
+    } catch (err) {
+      toast.error("Failed to update share settings.");
+    }
+  };
+
   if (error) return (
     <div className="reader-error">
       <AlertCircle size={48} />
@@ -1373,6 +1396,15 @@ Be precise, highly informative, use clean formatting with bold headings and bull
               <span>{fontSize}px</span>
               <button onClick={() => setFontSize(Math.min(24, fontSize + 2))}>A+</button>
             </div>
+            
+            <button
+              className="focus-mode-toggle"
+              onClick={handleShare}
+              title={file?.isPublic ? "Shared Publicly" : "Share Note"}
+              style={{ background: file?.isPublic ? 'rgba(16,185,129,0.1)' : 'var(--reader-surface-alt)', color: file?.isPublic ? '#10b981' : 'var(--reader-text)' }}
+            >
+              <Share2 size={16} /> <span className="m-hide-mobile">{file?.isPublic ? "Shared" : "Share"}</span>
+            </button>
 
             <button className="focus-mode-toggle" onClick={() => setZenMode(true)}>
               <Maximize2 size={16} /> <span>Focus</span>

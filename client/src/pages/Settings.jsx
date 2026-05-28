@@ -37,6 +37,7 @@ function Settings() {
   const [emailReports, setEmailReports] = useState(user?.settings?.emailReports ?? true);
   const [studyReminders, setStudyReminders] = useState(user?.settings?.studyReminders ?? false);
   const [aiData, setAiData] = useState(user?.settings?.aiDataUsage ?? false);
+  const [cloudSync, setCloudSync] = useState(user?.settings?.cloudSync ?? true);
   const [publicMap, setPublicMap] = useState(false);
 
   // Sync name/email when user context changes
@@ -94,6 +95,7 @@ function Settings() {
     else if (key === 'emailReports') setEmailReports(value);
     else if (key === 'studyReminders') setStudyReminders(value);
     else if (key === 'aiDataUsage') setAiData(value);
+    else if (key === 'cloudSync') setCloudSync(value);
 
     try {
       const newSettings = { ...user.settings, [key]: value };
@@ -499,6 +501,15 @@ function Settings() {
                     </div>
                     <div className="setting-action">
                       <MinimalSwitch isOn={aiData} onToggle={() => updateSetting('aiDataUsage', !aiData)} />
+                    </div>
+                  </div>
+                  <div className="setting-item">
+                    <div className="setting-info">
+                      <label>Cloud Sync</label>
+                      <p>Sync your tasks and notes to the cloud. If disabled, new items will only be saved locally.</p>
+                    </div>
+                    <div className="setting-action">
+                      <MinimalSwitch isOn={cloudSync} onToggle={() => updateSetting('cloudSync', !cloudSync)} />
                     </div>
                   </div>
                   <div className="setting-item">

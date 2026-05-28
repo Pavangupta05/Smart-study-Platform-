@@ -19,6 +19,8 @@ export const notesService = {
   trash: (id) => api.delete(`/notes/${id}`),
   restore: (id) => api.post(`/notes/${id}/restore`),
   deletePermanent: (id) => api.delete(`/notes/${id}/permanent`),
+  toggleShare: (id, isPublic) => api.patch(`/notes/${id}/share`, { isPublic }),
+  getShared: (shareId) => api.get(`/notes/shared/${shareId}`),
 };
 
 // TASKS

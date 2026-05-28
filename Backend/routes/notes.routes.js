@@ -8,26 +8,12 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Ensure uploads dir exists
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer storage with validation
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configure multer to use memory storage (Compatible with Vercel serverless)
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for Vercel/MongoDB safety
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|pdf|txt|markdown|md|doc|docx/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -96,7 +82,8 @@ router.post("/", protect, ensureModel, upload.single("file"), validate([
   let { name, icon, category, content, blobUrl, fileType, size, pages } = req.body;
   
   if (req.file) {
-    blobUrl = `/uploads/${req.file.filename}`;
+    const base64Str = req.file.buffer.toString("base64");
+    blobUrl = `data:${req.file.mimetype};base64,${base64Str}`;
   }
 
   // Parse JSON arrays if sent via FormData
@@ -188,6 +175,45 @@ router.post("/:id/restore", protect, ensureModel, async (req, res) => {
   const note = await Note.findOneAndUpdate({ _id: req.params.id, user: req.userId }, { isTrashed: false, trashedAt: null }, { new: true });
   req.app.get("io")?.to(req.userId).emit("sync_notes");
   res.json({ success: true, note });
+});
+
+// GET /api/notes/shared/:shareId - Public route (No protect middleware)
+router.get("/shared/:shareId", ensureModel, async (req, res) => {
+  try {
+    if (getMockMode()) {
+      return res.status(404).json({ success: false, message: "Public sharing not available in mock mode." });
+    }
+    const note = await Note.findOne({ shareId: req.params.shareId, isPublic: true, isTrashed: false })
+                           .populate("user", "name avatar");
+    if (!note) return res.status(404).json({ success: false, message: "Note not found or is not public." });
+    res.json({ success: true, note });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching public note." });
+  }
+});
+
+// PATCH /api/notes/:id/share - Toggle public sharing
+router.patch("/:id/share", protect, ensureModel, async (req, res) => {
+  try {
+    if (getMockMode()) {
+      return res.status(400).json({ success: false, message: "Public sharing not available in mock mode." });
+    }
+    
+    const { isPublic } = req.body;
+    let note = await Note.findOne({ _id: req.params.id, user: req.userId });
+    if (!note) return res.status(404).json({ success: false, message: "Note not found." });
+
+    note.isPublic = isPublic;
+    if (isPublic && !note.shareId) {
+      const crypto = require("crypto");
+      note.shareId = crypto.randomBytes(8).toString("hex");
+    }
+    
+    await note.save();
+    res.json({ success: true, note });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error updating share settings." });
+  }
 });
 
 module.exports = router;

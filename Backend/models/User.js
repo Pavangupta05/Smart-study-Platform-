@@ -19,6 +19,7 @@ const UserSchema = new mongoose.Schema({
     hapticsEnabled: { type: Boolean, default: true },
     autoSave: { type: Boolean, default: true },
     aiDataUsage: { type: Boolean, default: true },
+    cloudSync: { type: Boolean, default: true },
   },
   studyStats: {
     streak: { type: Number, default: 0 },
