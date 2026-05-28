@@ -48,20 +48,6 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
     >
       {/* ── LEFT: sidebar toggle + breadcrumb ── */}
       <div className="tv2-left">
-        {/* Sidebar Toggle (Mobile/Tablet) */}
-        <button 
-          className="tv2-icon-btn sidebar-toggle"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          title="Toggle Sidebar"
-          style={{ display: 'flex' }}
-        >
-          <div className="tv2-icon-btn-bg"></div>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
 
         {/* Page breadcrumb pill */}
         <div className="tv2-breadcrumb m-hide-mobile">
