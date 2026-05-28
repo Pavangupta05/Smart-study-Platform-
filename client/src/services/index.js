@@ -39,11 +39,13 @@ export const settingsService = {
 
 export const flashcardsService = {
   getAll: () => api.get("/flashcards"),
+  getDue: () => api.get("/flashcards/due"),
   create: (data) => api.post("/flashcards", data),
   bulkCreate: (cards, deck) => api.post("/flashcards/bulk", { cards, deck }),
   update: (id, data) => api.put(`/flashcards/${id}`, data),
   delete: (id) => api.delete(`/flashcards/${id}`),
   markMastered: (id) => api.put(`/flashcards/${id}`, { mastered: true }),
+  review: (id, grade) => api.post(`/flashcards/${id}/review`, { grade }),
 };
 
 // CHATS
@@ -62,9 +64,10 @@ export const aiService = {
    * Standard chat — returns full response at once
    * @param {Array} messages - [{role, text}]
    * @param {Object} context - {currentPage, currentNote, selection, document}
+   * @param {Array} contextNoteIds - optional array of note IDs for multi-doc context
    */
-  chat: (messages, context = {}, provider = null, options = {}) =>
-    api.post("/ai/chat", { messages, context, provider }, options),
+  chat: (messages, context = {}, provider = null, options = {}, contextNoteIds = []) =>
+    api.post("/ai/chat", { messages, context, provider, contextNoteIds }, options),
 
   /**
    * Generate flashcards for a topic
@@ -109,5 +112,28 @@ export const aiService = {
       context: { ...context, systemPrompt },
       provider,
     }),
+
+  /** Generate an AI mind map from note content */
+  generateMindMap: (noteContent, provider = null) =>
+    api.post("/ai/mindmap", { noteContent, provider }),
+
+  /** Generate a podcast dialogue script for a topic */
+  generatePodcast: (topic, length = "short", provider = null) =>
+    api.post("/ai/podcast", { topic, length, provider }),
+
+  /** Generate a mock exam from note content */
+  generateExam: (noteContent, numQuestions = 5, examType = "mixed", provider = null) =>
+    api.post("/ai/exam/generate", { noteContent, numQuestions, examType, provider }),
+
+  /** AI-grade a completed exam */
+  gradeExam: (questions, answers, noteContent = "", provider = null) =>
+    api.post("/ai/exam/grade", { questions, answers, noteContent, provider }),
 };
 
+// EXAM SERVICE
+export const examService = {
+  getAll: () => api.get("/exams"),
+  getById: (id) => api.get(`/exams/${id}`),
+  create: (data) => api.post("/exams", data),
+  delete: (id) => api.delete(`/exams/${id}`),
+};

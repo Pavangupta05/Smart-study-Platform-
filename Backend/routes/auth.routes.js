@@ -133,8 +133,9 @@ router.post("/forgotpassword", async (req, res) => {
     await user.save();
   }
 
-  // Create reset URL
-  const resetUrl = `http://localhost:5173/resetpassword/${resetToken}`;
+  // Create reset URL (dynamically use the request origin to support both localhost and Vercel)
+  const clientUrl = req.headers.origin || process.env.CLIENT_URL?.split(",")[0] || "http://localhost:5173";
+  const resetUrl = `${clientUrl}/resetpassword/${resetToken}`;
 
   // Log to console instead of sending email (since SMTP is not configured)
   console.log("\n==================================================");

@@ -436,59 +436,119 @@
 /* Message Bubble */
 .ais-msg {
   display: flex;
-  gap: 16px;
-  max-width: 760px;
+  gap: 14px;
+  max-width: 820px;
   margin: 0 auto;
   width: 100%;
-  padding: 16px 24px;
+  padding: 6px 24px;
   position: relative;
+}
+
+/* ── AI message: avatar on left, full-width body ── */
+.ais-msg--ai {
+  align-items: flex-start;
+  flex-direction: row;
+}
+
+/* ── User message: bubble pushed to the right ── */
+.ais-msg--user {
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  gap: 0;
 }
 
 .ais-msg:hover .ais-msg-actions {
   opacity: 1;
 }
 
+/* Avatar (only shown for AI) */
 .ais-msg-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.ais-msg--user .ais-msg-avatar {
-  background: var(--surface);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
+  margin-top: 4px;
 }
 
 .ais-msg--ai .ais-msg-avatar {
   background: linear-gradient(135deg, var(--primary), #a855f7);
   color: white;
-  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.3);
 }
 
+/* Body wrapper */
 .ais-msg-body {
-  flex: 1;
   min-width: 0;
 }
 
-.ais-msg-sender {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-  display: block;
+/* AI body: fills remaining width */
+.ais-msg--ai .ais-msg-body {
+  flex: 1;
 }
 
-.ais-msg-content {
+/* User body: auto width (shrinks to content) */
+.ais-msg--user .ais-msg-body {
+  max-width: 72%;
+}
+
+.ais-msg-sender {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: block;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* AI message content: plain text style */
+.ais-msg--ai .ais-msg-content {
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.7;
   color: var(--text-secondary);
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* User message content: pill bubble */
+.ais-msg--user .ais-msg-content {
+  background: linear-gradient(135deg, var(--primary), #7c3aed);
+  color: #fff;
+  border-radius: 20px 20px 4px 20px;
+  padding: 12px 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.25);
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* User bubble text: no markdown, just paragraph */
+.ais-msg--user .ais-msg-content p {
+  margin: 0;
+  color: #fff;
+}
+
+/* "You" label above user bubble — right-aligned */
+.ais-msg-sender--user {
+  text-align: right;
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* Vertical spacing between messages of different roles */
+.ais-msg--ai + .ais-msg--user,
+.ais-msg--user + .ais-msg--ai {
+  margin-top: 12px;
 }
 
 .ais-msg-content p {
@@ -1039,19 +1099,62 @@ body:not(.dark) .ais-input-pill {
   gap: 12px;
 }
 
-.ais-voice-wave {
+/* Premium Siri Orb Voice Visualizer */
+.siri-orb-container {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  height: 40px;
+  height: 60px;
+  position: relative;
+  overflow: hidden;
 }
 
-.ais-voice-bar {
-  width: 3px;
-  border-radius: 2px;
-  background: var(--primary);
+.siri-orb-core {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(255,255,255,0.05);
+}
+
+.orb-blur {
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  animation: orbMorph 4s ease-in-out infinite alternate;
+  opacity: 0.8;
+}
+
+.orb-red {
+  background: #ff2a5f;
+  animation-delay: 0s;
+  top: -10%; left: -10%;
+}
+
+.orb-blue {
+  background: #0099ff;
+  animation-delay: -1s;
+  bottom: -10%; right: -10%;
+}
+
+.orb-purple {
+  background: #8b5cf6;
+  animation-delay: -2s;
+  top: 10%; left: 10%;
+}
+
+@keyframes orbMorph {
+  0% { transform: scale(1) rotate(0deg) translate(0, 0); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+  50% { transform: scale(1.1) rotate(90deg) translate(2px, -2px); border-radius: 60% 40% 30% 70% / 50% 40% 50% 60%; }
+  100% { transform: scale(0.9) rotate(180deg) translate(-2px, 2px); border-radius: 50% 50% 40% 60% / 60% 50% 40% 50%; }
 }
 
 .ais-listening-actions {
@@ -1265,6 +1368,20 @@ body:not(.dark) .ais-input-pill {
 .artifact-header-btn:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+.artifact-header-btn:active {
+  transform: scale(0.97);
+}
+
+.artifact-header-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .artifact-header-left {

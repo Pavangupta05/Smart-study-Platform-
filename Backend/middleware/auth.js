@@ -9,6 +9,13 @@ const protect = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
+    
+    // Validate ObjectId if not in mock mode
+    const mongoose = require("mongoose");
+    if (!mongoose.Types.ObjectId.isValid(req.userId) && process.env.USE_MOCK_DB !== "true") {
+       return res.status(401).json({ success: false, message: "Invalid session ID format. Please log in again." });
+    }
+    
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: "Token invalid or expired." });

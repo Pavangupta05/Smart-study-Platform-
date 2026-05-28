@@ -57,7 +57,70 @@ router.put("/:id", protect, async (req, res) => {
   res.json({ success: true, card });
 });
 
-// DELETE /api/flashcards/:id
+// GET /api/flashcards/due — cards due for review today
+router.get("/due", protect, async (req, res) => {
+  const now = new Date();
+  if (getMockMode()) {
+    const all = await mockFlashcards.find({ user: req.userId });
+    const due = all.filter(c => !c.nextReviewDate || new Date(c.nextReviewDate) <= now);
+    return res.json({ success: true, cards: due, count: due.length });
+  }
+  const cards = await Flashcard.find({ user: req.userId, nextReviewDate: { $lte: now } }).sort({ nextReviewDate: 1 });
+  res.json({ success: true, cards, count: cards.length });
+});
+
+// POST /api/flashcards/:id/review — SM-2 spaced repetition review
+// grade: 0=Again, 1=Hard, 2=Good, 3=Easy
+router.post("/:id/review", protect, async (req, res) => {
+  const { grade } = req.body;
+  if (grade === undefined || grade < 0 || grade > 3) {
+    return res.status(400).json({ success: false, message: "Grade must be 0-3." });
+  }
+
+  // SM-2 algorithm
+  function sm2(card, grade) {
+    let { easeFactor = 2.5, interval = 0, repetitions = 0 } = card;
+    if (grade < 2) {
+      // Fail — reset to relearn
+      repetitions = 0;
+      interval = 1;
+    } else {
+      if (repetitions === 0) interval = 1;
+      else if (repetitions === 1) interval = 6;
+      else interval = Math.round(interval * easeFactor);
+      repetitions += 1;
+    }
+    // Clamp ease factor
+    easeFactor = Math.max(1.3, easeFactor + 0.1 - (3 - grade) * (0.08 + (3 - grade) * 0.02));
+    const nextReviewDate = new Date();
+    nextReviewDate.setDate(nextReviewDate.getDate() + interval);
+    return { easeFactor, interval, repetitions, nextReviewDate, lastReviewed: new Date(), mastered: repetitions >= 3 && grade >= 2 };
+  }
+
+  try {
+    if (getMockMode()) {
+      const card = await mockFlashcards.findOne({ _id: req.params.id, user: req.userId });
+      if (!card) return res.status(404).json({ success: false, message: "Card not found." });
+      const updates = sm2(card, grade);
+      const updated = await mockFlashcards.findOneAndUpdate({ _id: req.params.id, user: req.userId }, updates);
+      return res.json({ success: true, card: { ...updated, ...updates } });
+    }
+    const card = await Flashcard.findOne({ _id: req.params.id, user: req.userId });
+    if (!card) return res.status(404).json({ success: false, message: "Card not found." });
+    const updates = sm2(card, grade);
+    const updated = await Flashcard.findOneAndUpdate(
+      { _id: req.params.id, user: req.userId },
+      { ...updates },
+      { new: true }
+    );
+    res.json({ success: true, card: updated });
+  } catch (err) {
+    console.error("SRS review error:", err);
+    res.status(500).json({ success: false, message: "Failed to record review." });
+  }
+});
+
+
 router.delete("/:id", protect, async (req, res) => {
   if (getMockMode()) {
     await mockFlashcards.findOneAndDelete({ _id: req.params.id, user: req.userId });

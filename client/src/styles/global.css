@@ -197,19 +197,21 @@ body.dark {
 
 .bg-light {
   background: 
-    radial-gradient(circle at 80% 15%, rgba(24, 24, 27, 0.03) 0%, transparent 55%),
-    radial-gradient(circle at 15% 85%, rgba(161, 161, 170, 0.04) 0%, transparent 45%),
-    linear-gradient(135deg, #ffffff 0%, #f4f4f5 50%, #e4e4e7 100%);
-  animation: meshFlow 40s ease-in-out infinite alternate;
+    radial-gradient(circle at 80% 15%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 15% 85%, rgba(236, 72, 153, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+    linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+  animation: meshFlow 24s ease-in-out infinite alternate;
   opacity: 1;
 }
 
 .bg-dark {
   background: 
-    radial-gradient(circle at 80% 15%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
-    radial-gradient(circle at 15% 85%, rgba(113, 113, 122, 0.05) 0%, transparent 45%),
-    linear-gradient(135deg, #000000 0%, #09090b 50%, #18181b 100%);
-  animation: meshFlow 40s ease-in-out infinite alternate;
+    radial-gradient(circle at 80% 15%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 15% 85%, rgba(236, 72, 153, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+    linear-gradient(135deg, #020617 0%, #09090b 50%, #0f172a 100%);
+  animation: meshFlow 24s ease-in-out infinite alternate;
   opacity: 0;
 }
 
@@ -227,9 +229,10 @@ body.dark {
 }
 
 @keyframes meshFlow {
-  0% { transform: scale(1) translate(0, 0); filter: hue-rotate(0deg); }
-  50% { transform: scale(1.1) translate(-1%, -1%); filter: hue-rotate(10deg); }
-  100% { transform: scale(1.05) translate(1%, 1%); filter: hue-rotate(-5deg); }
+  0% { transform: scale(1) translate(0, 0) rotate(0deg); filter: hue-rotate(0deg); }
+  33% { transform: scale(1.1) translate(-2%, 2%) rotate(1deg); filter: hue-rotate(15deg); }
+  66% { transform: scale(1.05) translate(2%, -1%) rotate(-1deg); filter: hue-rotate(-10deg); }
+  100% { transform: scale(1.15) translate(-1%, -2%) rotate(2deg); filter: hue-rotate(5deg); }
 }
 
 h1, h2, h3, .h1, .h2, .h3 {
@@ -788,4 +791,42 @@ label {
 .view-transitioning,
 .view-transitioning * {
   transition: none !important;
+}
+
+/* ===== PRINT & PDF EXPORT STYLES ===== */
+@media print {
+  /* Hide non-essential UI */
+  .sidebar, .topbar, .mobile-dock, .header-main .page-meta, .ais-sidebar, .artifact-header-btn {
+    display: none !important;
+  }
+
+  /* Reset global layout constraints */
+  html, body, #root, .app, .main, .page-transition, .reader-page {
+    height: auto !important;
+    min-height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+    position: relative !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Allow internal scroll containers to expand */
+  .scroll-container, .ai-chat-scroll, .doc-list, .planner-view, .document-viewport-modern, .m-mobile-viewport, .notes-page, .notes-content, .reader-content, .ais-root, .ais-split-container, .ais-chat-pane, .ais-messages, .artifact-renderer {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    display: block !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Improve artifact renderer specifically */
+  .artifact-renderer {
+    width: 100% !important;
+    max-width: none !important;
+    transform: none !important;
+  }
 }

@@ -6,7 +6,12 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { authService, settingsService } from "../services/index";
 import { io } from "socket.io-client";
 
-const socket = io(import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000", {
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const SOCKET_URL = isLocalhost 
+  ? `http://${window.location.hostname}:5000` 
+  : "https://starnote-backend.onrender.com";
+
+const socket = io(SOCKET_URL, {
   autoConnect: false,
 });
 

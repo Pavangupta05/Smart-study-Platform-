@@ -1,0 +1,316 @@
+/* ── VoiceTutor Component Styles ─────────────────────────────────────────── */
+.vt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 24px;
+}
+
+.vt-panel {
+  width: min(520px, 95vw);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.vt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(99,102,241,0.08), transparent);
+}
+
+.vt-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vt-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.vt-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+
+.vt-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.vt-header-right {
+  display: flex;
+  gap: 6px;
+}
+
+.vt-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vt-icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* Settings */
+.vt-settings {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-hover);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vt-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vt-setting-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 80px;
+}
+
+.vt-setting-row select,
+.vt-setting-row input[type="range"] {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+/* Tabs */
+.vt-tabs {
+  display: flex;
+  padding: 12px 20px 0;
+  gap: 6px;
+}
+
+.vt-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vt-tab:hover { background: var(--surface-hover); color: var(--text); }
+.vt-tab.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border-color: transparent;
+}
+
+/* Content */
+.vt-content { padding: 16px 20px; }
+
+.vt-textarea {
+  width: 100%;
+  resize: none;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-hover);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.vt-textarea:focus { border-color: #6366f1; }
+
+/* Podcast */
+.vt-podcast-area { display: flex; flex-direction: column; gap: 12px; }
+
+.vt-podcast-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.vt-podcast-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-hover);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+
+.vt-podcast-input:focus { border-color: #6366f1; }
+
+.vt-gen-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.vt-gen-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.vt-script {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.vt-script-line {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.vt-speaker {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.prof .vt-speaker { background: rgba(99,102,241,0.12); color: #6366f1; }
+.student .vt-speaker { background: rgba(16,185,129,0.12); color: #10b981; }
+
+.vt-line-text { font-size: 12px; color: var(--text); line-height: 1.55; }
+
+/* Player */
+.vt-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.vt-waveform {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 32px;
+}
+
+.vt-bar {
+  width: 3px;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+  flex-shrink: 0;
+}
+
+.vt-controls { display: flex; gap: 8px; align-items: center; }
+
+.vt-control-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vt-control-btn.play {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+}
+
+.vt-control-btn.pause {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+}
+
+.vt-control-btn.stop {
+  width: 30px;
+  height: 30px;
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.vt-control-btn:hover:not(:disabled) { transform: scale(1.08); }
+.vt-control-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.vt-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

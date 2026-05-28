@@ -9,49 +9,41 @@ const initialState = {
   isActive: false,
   mode: "study", // study | shortBreak | longBreak
   soundEnabled: false,
+  soundType: "lofi", // lofi | rain | cafe
   showControls: false,
   isVisible: false,
 };
 
 function timerReducer(state, action) {
   switch (action.type) {
-    case "SET_MINUTES":
-      return { ...state, minutes: action.payload };
-    case "SET_SECONDS":
-      return { ...state, seconds: action.payload };
-    case "SET_ACTIVE":
-      return { ...state, isActive: action.payload };
-    case "SET_MODE":
-      return { ...state, mode: action.payload };
-    case "SET_SOUND":
-      return { ...state, soundEnabled: action.payload };
-    case "SET_SHOW_CONTROLS":
-      return { ...state, showControls: action.payload };
-    case "SET_VISIBLE":
-      return { ...state, isVisible: action.payload };
+    case "SET_MINUTES": return { ...state, minutes: action.payload };
+    case "SET_SECONDS": return { ...state, seconds: action.payload };
+    case "SET_ACTIVE": return { ...state, isActive: action.payload };
+    case "SET_MODE": return { ...state, mode: action.payload };
+    case "SET_SOUND": return { ...state, soundEnabled: action.payload };
+    case "SET_SOUND_TYPE": return { ...state, soundType: action.payload };
+    case "SET_SHOW_CONTROLS": return { ...state, showControls: action.payload };
+    case "SET_VISIBLE": return { ...state, isVisible: action.payload };
     case "RESET":
-      return { ...initialState, minutes: action.payload };
+      return { 
+        ...state, 
+        minutes: action.payload,
+        seconds: 0,
+        isActive: false
+      };
     default:
       return state;
   }
 }
 
-// -----------------------------------------------------------------------------
-// Provider component (memoized for performance)
-// -----------------------------------------------------------------------------
 export const TimerProvider = React.memo(function TimerProvider({ children }) {
   const { socket } = useUser();
   const [state, dispatch] = useReducer(timerReducer, initialState);
   const audioRef = useRef(null);
 
-  // ---------------------------------------------------------------------------
-  // Helper – play alarm (hoisted above effects for safety)
-  // ---------------------------------------------------------------------------
   const playAlarm = () => {
     try {
-      const alarm = new Audio(
-        "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
-      );
+      const alarm = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg");
       alarm.volume = 0.5;
       alarm.play();
     } catch (e) {
@@ -60,17 +52,30 @@ export const TimerProvider = React.memo(function TimerProvider({ children }) {
   };
 
   // ---------------------------------------------------------------------------
-  // Ambient rain sound (controlled by soundEnabled flag)
+  // Zen Focus Room (Ambient sounds)
   // ---------------------------------------------------------------------------
+  const soundUrls = {
+    lofi: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
+    rain: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3",
+    cafe: "https://cdn.pixabay.com/download/audio/2022/02/07/audio_27606daaa7.mp3",
+  };
+
   useEffect(() => {
     if (state.soundEnabled) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(
-          "https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3"
-        );
+      if (audioRef.current) {
+        // If sound changed, pause old one
+        if (audioRef.current.src !== soundUrls[state.soundType]) {
+          audioRef.current.pause();
+          audioRef.current = new Audio(soundUrls[state.soundType]);
+          audioRef.current.loop = true;
+          audioRef.current.volume = 0.3;
+        }
+      } else {
+        audioRef.current = new Audio(soundUrls[state.soundType]);
         audioRef.current.loop = true;
-        audioRef.current.volume = 0.4;
+        audioRef.current.volume = 0.3;
       }
+      
       audioRef.current.play().catch(err => {
         console.error("Autoplay prevented:", err);
         dispatch({ type: "SET_SOUND", payload: false });
@@ -78,12 +83,7 @@ export const TimerProvider = React.memo(function TimerProvider({ children }) {
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
-    return () => {
-      if (audioRef.current && !state.soundEnabled) {
-        audioRef.current.pause();
-      }
-    };
-  }, [state.soundEnabled]);
+  }, [state.soundEnabled, state.soundType]);
 
   // ---------------------------------------------------------------------------
   // Countdown timer logic
@@ -191,10 +191,13 @@ export const TimerProvider = React.memo(function TimerProvider({ children }) {
       isActive: state.isActive,
       mode: state.mode,
       soundEnabled: state.soundEnabled,
+      soundType: state.soundType,
       showControls: state.showControls,
       isVisible: state.isVisible,
       setSoundEnabled: enabled =>
         dispatch({ type: "SET_SOUND", payload: enabled }),
+      setSoundType: type =>
+        dispatch({ type: "SET_SOUND_TYPE", payload: type }),
       setShowControls: flag =>
         dispatch({ type: "SET_SHOW_CONTROLS", payload: flag }),
       setIsVisible: flag =>

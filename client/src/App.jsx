@@ -24,6 +24,9 @@ const Flashcards = lazy(() => import("./pages/Flashcards"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
+const MindMap = lazy(() => import("./pages/MindMap"));
+const Exam = lazy(() => import("./pages/Exam"));
+const ExamHistory = lazy(() => import("./pages/ExamHistory"));
 
 function PageSkeleton() {
   return (
@@ -86,6 +89,27 @@ function App() {
     document.body.classList.add(theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  // Global Mouse Tracker for Card Glow Effects
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      // Set global coordinates for backgrounds
+      document.documentElement.style.setProperty("--mouse-x", `${e.clientX}px`);
+      document.documentElement.style.setProperty("--mouse-y", `${e.clientY}px`);
+
+      // Find if we are hovering over a glow-enabled card
+      const targetCard = e.target.closest('.card, .glass-card, .doc-card-mini, .insight-card, .study-card, .ss-card');
+      if (targetCard) {
+        const rect = targetCard.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        targetCard.style.setProperty("--local-mouse-x", `${x}px`);
+        targetCard.style.setProperty("--local-mouse-y", `${y}px`);
+      }
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   const triggerThemeTransition = (nextTheme, clientX, clientY) => {
     const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -212,6 +236,9 @@ function App() {
               <Route path="/templates" element={<PageTransition><Templates /></PageTransition>} />
               <Route path="/trash" element={<PageTransition><Trash /></PageTransition>} />
               <Route path="/reader/:id" element={<PageTransition><Reader zenMode={zenMode} setZenMode={setZenMode} /></PageTransition>} />
+              <Route path="/mindmap/:noteId" element={<PageTransition><MindMap /></PageTransition>} />
+              <Route path="/exam" element={<PageTransition><Exam /></PageTransition>} />
+              <Route path="/exams" element={<PageTransition><ExamHistory /></PageTransition>} />
               <Route path="*" element={<PageTransition><Dashboard /></PageTransition>} />
             </Routes>
           </Suspense>
@@ -227,30 +254,31 @@ function App() {
   );
 }
 
-// Reusable transition wrapper
+// Reusable premium transition wrapper
 function PageTransition({ children }) {
   const { pathname } = useLocation();
   const isAIPage = pathname === "/ai";
   const isReaderPage = pathname.startsWith("/reader/");
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
+      initial={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+      exit={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className={[
         "page-transition",
         isAIPage ? "page-transition--ai" : "",
         isReaderPage ? "page-transition--reader" : "",
       ].filter(Boolean).join(" ")}
       style={{
+        width: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         flex: 1,
-        height: "100%",
-        width: "100%",
+        position: "relative",
         overflowY: isAIPage ? "hidden" : "auto",
-        overflowX: "hidden",
+        overflowX: "hidden"
       }}
     >
       {children}

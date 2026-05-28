@@ -12,7 +12,9 @@ function PomodoroWidget() {
     resetTimer,
     changeMode,
     soundEnabled,
-    setSoundEnabled
+    setSoundEnabled,
+    soundType,
+    setSoundType
   } = useTimer();
 
   const totalTime = mode === "study" ? 25 * 60 : mode === "shortBreak" ? 5 * 60 : 15 * 60;
@@ -26,14 +28,29 @@ function PomodoroWidget() {
   return (
     <div className="pomodoro-widget">
       <div className="pomo-header">
-        <div className="pomo-tabs">
+        <div className={`pomo-tabs mode-${mode}`}>
+          <div className="pomo-tab-indicator" />
           <button className={mode === "study" ? "active" : ""} onClick={() => changeMode("study")}>Focus</button>
           <button className={mode === "shortBreak" ? "active" : ""} onClick={() => changeMode("shortBreak")}>Short Break</button>
           <button className={mode === "longBreak" ? "active" : ""} onClick={() => changeMode("longBreak")}>Long Break</button>
         </div>
-        <button className={`btn-lofi ${soundEnabled ? "active" : ""}`} onClick={() => setSoundEnabled(!soundEnabled)}>
-          <Headphones size={16} /> Lofi
-        </button>
+        
+        <div className="zen-room-controls">
+          {soundEnabled && (
+            <select 
+              className="zen-sound-select" 
+              value={soundType} 
+              onChange={(e) => setSoundType(e.target.value)}
+            >
+              <option value="lofi">🎶 Lofi</option>
+              <option value="rain">🌧️ Rain</option>
+              <option value="cafe">☕ Cafe</option>
+            </select>
+          )}
+          <button className={`btn-lofi ${soundEnabled ? "active" : ""}`} onClick={() => setSoundEnabled(!soundEnabled)}>
+            <Headphones size={16} /> {soundEnabled ? "Zen Mode" : "Focus Room"}
+          </button>
+        </div>
       </div>
 
       <div className="pomo-body">

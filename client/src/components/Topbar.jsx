@@ -3,8 +3,9 @@ import { useTimer } from "../context/TimerContext";
 import { useLocation } from "react-router-dom";
 
 import {
-  Home, Clock3, StickyNote, LibraryBig, Sparkles, Settings, Eye, EyeOff
+  Home, Clock3, StickyNote, LibraryBig, Sparkles, Settings, Eye, EyeOff, Sun, Moon
 } from "lucide-react";
+import { motion } from "framer-motion";
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationsDropdown from "./NotificationsDropdown";
 import "../styles/topbar.css";
@@ -19,7 +20,7 @@ const PAGE_LABELS = {
   "/settings":   { label: "Settings",   Icon: Settings },
 };
 
-function Topbar({ theme, zenMode }) {
+function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSidebarOpen }) {
   const location = useLocation();
   const topbarRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
@@ -63,12 +64,32 @@ function Topbar({ theme, zenMode }) {
       {/* ── RIGHT: actions cluster ── */}
       <div className="tv2-right">
 
+        {/* Theme Toggle (Premium Animated) */}
+        <button 
+          className="theme-toggle-btn" 
+          onClick={(e) => setTheme(isDark ? "light" : "dark", e)}
+          title={`Switch to ${isDark ? "Light" : "Dark"} Mode`}
+          style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "8px", color: "var(--text-muted)", transition: "background 0.2s, color 0.2s" }}
+          onMouseOver={(e) => { e.currentTarget.style.background = "var(--surface-hover)"; e.currentTarget.style.color = "var(--text)"; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-muted)"; }}
+        >
+          <motion.div
+            initial={false}
+            animate={{ rotate: isDark ? 180 : 0, scale: isDark ? 0.9 : 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          >
+            {isDark ? <Moon size={18} strokeWidth={2.5} /> : <Sun size={18} strokeWidth={2.5} />}
+          </motion.div>
+        </button>
 
         {/* Functional Notifications Dropdown */}
         <NotificationsDropdown />
         {/* Timer visibility toggle */}
-        <button className="timer-toggle-btn" onClick={() => setIsVisible(!isVisible)} title={isVisible ? "Hide Timer" : "Show Timer"} style={{marginRight:"8px", background:"none", border:"none", cursor:"pointer"}}>
-          {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+        <button className="timer-toggle-btn" onClick={() => setIsVisible(!isVisible)} title={isVisible ? "Hide Timer" : "Show Timer"} style={{marginRight:"8px", background:"none", border:"none", cursor:"pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "8px", color: "var(--text-muted)", transition: "background 0.2s, color 0.2s"}}
+          onMouseOver={(e) => { e.currentTarget.style.background = "var(--surface-hover)"; e.currentTarget.style.color = "var(--text)"; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-muted)"; }}
+        >
+          {isVisible ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
         </button>
         {/* Divider */}
         <div className="tv2-divider desktop-only" />

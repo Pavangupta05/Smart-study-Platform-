@@ -19,11 +19,15 @@ const settingsRoutes = require("./routes/settings.routes");
 const flashcardsRoutes = require("./routes/flashcards.routes");
 const chatRoutes = require("./routes/chat.routes");
 const aiRoutes = require("./routes/ai.routes");
+const examRoutes = require("./routes/exam.routes");
 
 const app = express();
 
 // Apply security middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  frameguard: false // Allow the frontend to embed PDFs in an iframe
+}));
 
 // Rate limiting: max 120 requests per minute per IP
 const apiLimiter = rateLimit({
@@ -92,6 +96,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/flashcards", flashcardsRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/exams", examRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -106,7 +111,7 @@ app.use((req, res) => {
 // Global Error Handler
 app.use(errorHandler);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 StarNote API Server running on http://localhost:${PORT}`);
   console.log(`📚 Health Check: http://localhost:${PORT}/api/health\n`);
 });

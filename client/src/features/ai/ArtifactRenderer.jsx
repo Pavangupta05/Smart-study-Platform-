@@ -18,6 +18,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { flashcardsService } from "../../services/index";
+import { exportArtifactToPDF } from "../../utils/pdfExport";
 import CodeSandbox from "../../components/CodeSandbox";
 
 // ── Type metadata ────────────────────────────────────────────────────────────
@@ -192,6 +193,23 @@ function CodeViewer({ content, lang }) {
 
 // ── Main ArtifactRenderer ────────────────────────────────────────────────────
 export default function ArtifactRenderer({ artifact }) {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!artifact || exporting) return;
+    setExporting(true);
+    try {
+      const title = artifact.meta?.title || "StarNote AI Export";
+      await exportArtifactToPDF(artifact, title);
+      toast.success("PDF exported successfully!");
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast.error("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!artifact) return null;
 
   const { type, content, meta } = artifact;
@@ -237,11 +255,13 @@ export default function ArtifactRenderer({ artifact }) {
         </div>
         <button 
           className="artifact-header-btn" 
-          onClick={() => window.print()} 
+          onClick={handleExport} 
           title="Export to PDF"
+          disabled={exporting}
+          style={{ opacity: exporting ? 0.6 : 1, cursor: exporting ? 'wait' : 'pointer' }}
         >
-          <Download size={14} />
-          <span>Export</span>
+          <Download size={14} style={{ animation: exporting ? 'spin 1s linear infinite' : 'none' }} />
+          <span>{exporting ? "Exporting…" : "Export PDF"}</span>
         </button>
       </div>
       <div className="artifact-content">

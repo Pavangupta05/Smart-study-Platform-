@@ -3,18 +3,39 @@ const router = express.Router();
 const { protect } = require("../middleware/auth");
 const { getProvider } = require("../services/ai/ai.provider");
 
+let Note;
+try { Note = require("../models/Note"); } catch (_) {}
+
 // ── POST /api/ai/chat ────────────────────────────────────────────────────────
-// Full chat with context awareness
+// Full chat with context awareness + optional multi-doc context
 router.post("/chat", protect, async (req, res) => {
-  const { messages = [], context = {}, provider: reqProvider } = req.body;
+  const { messages = [], context = {}, provider: reqProvider, contextNoteIds = [] } = req.body;
 
   if (!messages.length) {
     return res.status(400).json({ success: false, message: "Messages array is required." });
   }
 
+  // Fetch multi-doc context notes and inject into context
+  let enrichedContext = { ...context };
+  if (contextNoteIds.length > 0 && Note) {
+    try {
+      const notes = await Note.find({ _id: { $in: contextNoteIds }, user: req.userId });
+      const contextText = notes.map(n => {
+        const text = [n.content, ...(n.pages || [])].filter(Boolean).join("\n");
+        return `### [Source: ${n.name}]\n${text.substring(0, 3000)}`;
+      }).join("\n\n---\n\n");
+      if (contextText) {
+        enrichedContext.multiDocContext = contextText;
+        enrichedContext.contextNoteNames = notes.map(n => n.name);
+      }
+    } catch (err) {
+      console.warn("Multi-doc context fetch error:", err.message);
+    }
+  }
+
   try {
     const provider = getProvider(reqProvider);
-    const text = await provider.chat(messages, context);
+    const text = await provider.chat(messages, enrichedContext);
     res.json({ success: true, data: { text } });
   } catch (err) {
     console.error("AI Chat Error:", err.message);
@@ -101,4 +122,139 @@ router.post("/optimize-schedule", protect, async (req, res) => {
   }
 });
 
+// ── POST /api/ai/mindmap ─────────────────────────────────────────────────────
+// Generate a JSON mind map from note content
+router.post("/mindmap", protect, async (req, res) => {
+  const { noteContent, provider: reqProvider } = req.body;
+  if (!noteContent?.trim()) {
+    return res.status(400).json({ success: false, message: "noteContent is required." });
+  }
+  try {
+    const provider = getProvider(reqProvider);
+    const prompt = `Analyze the following study content and extract the key concepts as a mind map.
+Return ONLY a valid JSON object (no markdown, no explanation) in this exact format:
+{
+  "nodes": [{"id": "1", "label": "Main Topic", "type": "main"}, {"id": "2", "label": "Sub-concept", "type": "concept"}],
+  "edges": [{"from": "1", "to": "2"}]
+}
+Types: "main" (1 only), "concept", "definition", "example"
+Max 15 nodes. Make labels concise (1-5 words).
+
+Content:
+${noteContent.substring(0, 4000)}`;
+    const rawText = await provider.chat([{ role: "user", text: prompt }], {});
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    const graph = JSON.parse(jsonMatch[0]);
+    res.json({ success: true, data: graph });
+  } catch (err) {
+    console.error("Mindmap error:", err.message);
+    res.status(500).json({ success: false, message: "Failed to generate mind map." });
+  }
+});
+
+// ── POST /api/ai/podcast ─────────────────────────────────────────────────────
+// Generate a dialogue-style podcast script
+router.post("/podcast", protect, async (req, res) => {
+  const { topic, length = "short", provider: reqProvider } = req.body;
+  if (!topic?.trim()) {
+    return res.status(400).json({ success: false, message: "Topic is required." });
+  }
+  const wordTarget = length === "long" ? 600 : 300;
+  try {
+    const provider = getProvider(reqProvider);
+    const prompt = `Create an engaging educational podcast script about: "${topic}".
+Format as a dialogue between "Professor" and "Student". About ${wordTarget} words total.
+Return ONLY a JSON array (no markdown):
+[{"speaker": "Professor", "line": "..."}, {"speaker": "Student", "line": "..."}, ...]
+Make it educational, natural, and engaging.`;
+    const rawText = await provider.chat([{ role: "user", text: prompt }], {});
+    const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("No JSON array in response");
+    const script = JSON.parse(jsonMatch[0]);
+    res.json({ success: true, data: { script, topic } });
+  } catch (err) {
+    console.error("Podcast error:", err.message);
+    res.status(500).json({ success: false, message: "Failed to generate podcast." });
+  }
+});
+
+// ── POST /api/ai/exam/generate ───────────────────────────────────────────────
+// Generate a structured mock exam
+router.post("/exam/generate", protect, async (req, res) => {
+  const { noteContent, numQuestions = 5, examType = "mixed", provider: reqProvider } = req.body;
+  if (!noteContent?.trim()) {
+    return res.status(400).json({ success: false, message: "noteContent is required." });
+  }
+  try {
+    const provider = getProvider(reqProvider);
+    const prompt = `Create a ${examType} mock exam with exactly ${numQuestions} questions based on this content.
+Return ONLY a JSON array (no markdown, no explanation):
+[{
+  "id": 1,
+  "type": "mcq",
+  "question": "...",
+  "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+  "correctAnswer": "A",
+  "explanation": "..."
+}, {
+  "id": 2,
+  "type": "short",
+  "question": "...",
+  "sampleAnswer": "...",
+  "keyPoints": ["point1", "point2"]
+}]
+Types: "mcq" (multiple choice) or "short" (short answer). Mix both if examType is "mixed".
+Content:
+${noteContent.substring(0, 5000)}`;
+    const rawText = await provider.chat([{ role: "user", text: prompt }], {});
+    const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    const questions = JSON.parse(jsonMatch[0]);
+    res.json({ success: true, data: { questions } });
+  } catch (err) {
+    console.error("Exam generate error:", err.message);
+    res.status(500).json({ success: false, message: "Failed to generate exam." });
+  }
+});
+
+// ── POST /api/ai/exam/grade ──────────────────────────────────────────────────
+// AI-grade a completed exam
+router.post("/exam/grade", protect, async (req, res) => {
+  const { questions = [], answers = {}, noteContent = "", provider: reqProvider } = req.body;
+  if (!questions.length) {
+    return res.status(400).json({ success: false, message: "Questions are required." });
+  }
+  try {
+    const provider = getProvider(reqProvider);
+    const qaText = questions.map((q, i) => {
+      const userAnswer = answers[q.id] || answers[i] || "(no answer)";
+      return `Q${i+1} [${q.type}]: ${q.question}\nUser Answer: ${userAnswer}\n${q.type === "mcq" ? `Correct: ${q.correctAnswer}` : `Sample Answer: ${q.sampleAnswer || ""}`}`;
+    }).join("\n\n");
+
+    const prompt = `You are an expert exam grader. Grade these exam answers and return ONLY a JSON object (no markdown):
+{
+  "score": 75,
+  "totalQuestions": 5,
+  "correctCount": 3,
+  "feedback": "Overall feedback about performance...",
+  "weakTopics": ["topic1", "topic2"],
+  "questionFeedback": [{"id": 1, "correct": true, "feedback": "..."}, ...],
+  "studyRecommendations": ["Recommendation 1", "Recommendation 2"]
+}
+
+Questions and Answers:
+${qaText}`;
+    const rawText = await provider.chat([{ role: "user", text: prompt }], {});
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    const result = JSON.parse(jsonMatch[0]);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error("Exam grade error:", err.message);
+    res.status(500).json({ success: false, message: "Failed to grade exam." });
+  }
+});
+
 module.exports = router;
+

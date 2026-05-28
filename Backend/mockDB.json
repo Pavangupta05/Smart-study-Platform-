@@ -56,6 +56,31 @@
         "lastStudied": null
       },
       "createdAt": "2026-05-03T10:17:56.459Z"
+    },
+    {
+      "_id": "mppqrf0h4bcm9ta8xpk",
+      "name": "test",
+      "email": "test@test.com",
+      "password": "$2b$12$Y78Vh6LgZXSYufuRtgeiueqT7a3Ckyrqf8A8x4U8vr6plhSbrMiCa",
+      "plan": "free",
+      "avatar": "",
+      "bio": "",
+      "settings": {
+        "theme": "light",
+        "language": "English (US)",
+        "emailReports": true,
+        "studyReminders": true,
+        "hapticsEnabled": true,
+        "autoSave": true,
+        "aiDataUsage": true
+      },
+      "studyStats": {
+        "streak": 0,
+        "cardsMastered": 0,
+        "focusTime": 0,
+        "lastStudied": null
+      },
+      "createdAt": "2026-05-28T17:02:52.098Z"
     }
   ],
   "notes": [

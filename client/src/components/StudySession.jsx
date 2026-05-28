@@ -150,19 +150,52 @@ function StudySession({ deck, onExit }) {
         </div>
       </div>
 
-      <div className="card-container">
-        <div className={`flashcard-wrapper ${isFlipped ? "flipped" : ""}`} onClick={() => setIsFlipped(!isFlipped)}>
-          <div className="flashcard-front">
-            <div className="card-tag">QUESTION</div>
-            <div className="card-text">{cards[currentIndex].front || cards[currentIndex].q}</div>
-            <div className="card-hint">Click to flip</div>
-          </div>
-          <div className="flashcard-back">
-            <div className="card-tag">ANSWER</div>
-            <div className="card-text">{cards[currentIndex].back || cards[currentIndex].a}</div>
-            <div className="card-hint">Click to see question</div>
-          </div>
-        </div>
+      <div className="card-container" style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
+        <AnimatePresence mode="popLayout">
+          {cards.map((card, index) => {
+            if (index < currentIndex || index > currentIndex + 2) return null;
+            const isTopCard = index === currentIndex;
+            const offsetIndex = index - currentIndex;
+
+            return (
+              <motion.div
+                key={card._id || card.id || index}
+                className={`flashcard-wrapper ${isTopCard && isFlipped ? "flipped" : ""}`}
+                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, margin: "auto", cursor: isTopCard ? "grab" : "default" }}
+                initial={{ scale: 0.9, y: 30, opacity: 0 }}
+                animate={{
+                  scale: 1 - offsetIndex * 0.05,
+                  y: offsetIndex * 20,
+                  opacity: 1 - offsetIndex * 0.3,
+                  zIndex: 10 - offsetIndex
+                }}
+                exit={{ x: isTopCard ? (Math.random() > 0.5 ? 300 : -300) : 0, opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                drag={isTopCard ? "x" : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                onDragEnd={(e, { offset, velocity }) => {
+                  if (offset.x > 100) {
+                    handleFeedback(3); // Swipe Right = Good
+                  } else if (offset.x < -100) {
+                    handleFeedback(1); // Swipe Left = Again
+                  }
+                }}
+                onClick={() => { if (isTopCard) setIsFlipped(!isFlipped); }}
+              >
+                <div className="flashcard-front">
+                  <div className="card-tag">QUESTION</div>
+                  <div className="card-text">{card.front || card.q}</div>
+                  <div className="card-hint">Swipe L/R or Click to flip</div>
+                </div>
+                <div className="flashcard-back">
+                  <div className="card-tag">ANSWER</div>
+                  <div className="card-text">{card.back || card.a}</div>
+                  <div className="card-hint">Swipe L/R or Click to flip</div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
 
       <div className="session-footer">

@@ -21,7 +21,10 @@ import {
   School,
   Binary,
   Shapes,
-  Zap,  
+  Zap,
+  ClipboardList,
+  GitBranch,
+  History,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { notesService } from "../services/index";
@@ -33,6 +36,8 @@ const CORE_NAV = [
   { to: "/planner", Icon: Clock3, label: "Planner" },
   { to: "/notes", Icon: StickyNote, label: "Notes" },
   { to: "/flashcards", Icon: LibraryBig, label: "Flashcards" },
+  { to: "/exam", Icon: ClipboardList, label: "Mock Exam" },
+  { to: "/exams", Icon: History, label: "Exam History" },
   { to: "/ai", Icon: Sparkles, label: "AI Tutor" },
 ];
 

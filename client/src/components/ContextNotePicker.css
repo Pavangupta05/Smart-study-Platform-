@@ -1,0 +1,157 @@
+/* ── ContextNotePicker Styles ─────────────────────────────────────────────── */
+.cnp-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cnp-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.cnp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 10px;
+  border-radius: 20px;
+  background: rgba(99,102,241,0.12);
+  color: #6366f1;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(99,102,241,0.2);
+}
+
+.cnp-pill-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  padding: 1px;
+  border-radius: 50%;
+  transition: background 0.1s;
+}
+
+.cnp-pill-remove:hover { background: rgba(99,102,241,0.2); }
+
+.cnp-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  text-align: left;
+}
+
+.cnp-trigger:hover { background: var(--surface-hover); color: var(--text); }
+.cnp-trigger.active { border-color: #6366f1; color: #6366f1; }
+.cnp-trigger.has-context { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.06); color: #6366f1; }
+
+.cnp-trigger span { flex: 1; }
+
+.cnp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.cnp-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.cnp-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.cnp-clear {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cnp-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.cnp-search {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.cnp-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.cnp-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+  color: var(--text);
+}
+
+.cnp-item:hover { background: var(--surface-hover); }
+.cnp-item.selected { background: rgba(99,102,241,0.08); }
+
+.cnp-item-icon { font-size: 14px; }
+.cnp-item-name { flex: 1; font-size: 13px; font-weight: 500; }
+.cnp-check { color: #6366f1; flex-shrink: 0; }
+
+.cnp-loading, .cnp-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}

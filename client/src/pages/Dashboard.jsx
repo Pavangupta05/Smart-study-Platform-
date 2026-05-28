@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { 
   Play, Plus, CheckCircle2, Circle, Trash2,
   Sparkles, ArrowRight, Layout, Flame, Layers,
-  FileText, Clock, TrendingUp, TrendingDown, BarChart2, Brain
+  FileText, Clock, TrendingUp, TrendingDown, BarChart2, Brain,
+  Upload, Zap, Target, BookOpen, Award, Calendar, Edit2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,23 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [chartTab, setChartTab] = useState("tasks");
   const [hoveredIndex, setHoveredIndex] = useState(null);
+
+  // Exam Countdown State
+  const [examDateStr, setExamDateStr] = useState(() => {
+    const saved = localStorage.getItem("starNote_examDate");
+    if (saved) return saved;
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [isEditingExam, setIsEditingExam] = useState(false);
+
+  // Gamification XP Calculation
+  const userXP = (user?.studyStats?.cardsMastered || 0) * 10 + Math.round((user?.studyStats?.focusTime || 0) / 60 * 5) + (tasks.filter(t=>t.completed).length * 15);
+  const currentLevel = Math.floor(userXP / 100) + 1;
+  const xpForNextLevel = currentLevel * 100;
+  const currentLevelXP = userXP % 100;
+  const xpProgress = (currentLevelXP / 100) * 100;
 
   // Build last-7-days data from real tasks & notes
   const { weeklyData, weekChange } = useMemo(() => {
@@ -217,6 +235,54 @@ function Dashboard() {
         </div>
       </header>
 
+      {/* QUICK START ACTION HUB */}
+      <motion.section 
+        className="quick-start-hub"
+        variants={containerVars}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/notes")}>
+          <div className="qa-icon" style={{ background: "rgba(99, 102, 241, 0.1)", color: "#6366f1" }}>
+            <Upload size={24} />
+          </div>
+          <div className="qa-text">
+            <h3>Upload PDF</h3>
+            <p>Read & annotate</p>
+          </div>
+        </motion.div>
+        
+        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/flashcards")}>
+          <div className="qa-icon" style={{ background: "rgba(236, 72, 153, 0.1)", color: "#ec4899" }}>
+            <Zap size={24} />
+          </div>
+          <div className="qa-text">
+            <h3>AI Flashcards</h3>
+            <p>Generate from notes</p>
+          </div>
+        </motion.div>
+        
+        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/ai")}>
+          <div className="qa-icon" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>
+            <Target size={24} />
+          </div>
+          <div className="qa-text">
+            <h3>Mock Exam</h3>
+            <p>Test your knowledge</p>
+          </div>
+        </motion.div>
+        
+        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/notes")}>
+          <div className="qa-icon" style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" }}>
+            <BookOpen size={24} />
+          </div>
+          <div className="qa-text">
+            <h3>Blank Note</h3>
+            <p>Start writing</p>
+          </div>
+        </motion.div>
+      </motion.section>
+
       {/* STUDY INSIGHTS */}
       <motion.section 
         className="study-insights"
@@ -261,6 +327,36 @@ function Dashboard() {
         animate="show"
       >
         <motion.div variants={itemVars} className="dash-main">
+
+          {/* AI DAILY STUDY BRIEF & FACT */}
+          <div className="daily-insights-widget">
+            <div className="di-header">
+              <Sparkles size={18} className="di-icon" />
+              <h3>AI Daily Brief</h3>
+            </div>
+            <div className="di-content">
+              <p className="di-brief">
+                {tasks.filter(t => !t.completed).length > 0 
+                  ? `You have ${tasks.filter(t => !t.completed).length} tasks to tackle today. Let's start with the most important one! Keep your momentum going.` 
+                  : `Great job, you're all caught up on tasks! Time to review some flashcards or take a well-deserved break.`}
+              </p>
+              <div className="di-fact">
+                <div className="di-fact-label">💡 Daily Brain Fact</div>
+                <div className="di-fact-text">
+                  {[
+                    "Spaced repetition can improve long-term retention by up to 200%.",
+                    "Taking a 5-minute break every 25 minutes (Pomodoro) maximizes focus.",
+                    "Your brain processes visual information 60,000 times faster than text.",
+                    "Sleep is crucial for memory consolidation—don't pull an all-nighter!",
+                    "Teaching a concept to someone else is the best way to master it.",
+                    "Listening to binaural beats can help induce a state of deep focus.",
+                    "Drinking water increases cognitive performance by up to 14%."
+                  ][new Date().getDay()]}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ACTIVE RECALL DUE TODAY ALERT */}
           {dueCardsCount > 0 && (
             <motion.div 
@@ -504,6 +600,81 @@ function Dashboard() {
 
         {/* TASK SIDEBAR */}
         <motion.div variants={itemVars} className="dash-sidebar">
+          
+          {/* GAMIFICATION WIDGET */}
+          <section className="dash-section gamification-widget">
+            <div className="gamification-header">
+              <div className="gamification-title">
+                <Award size={18} className="icon-award" />
+                <h2>Level {currentLevel} Scholar</h2>
+              </div>
+              <span className="gamification-xp">{currentLevelXP} / 100 XP</span>
+            </div>
+            <div className="xp-progress-bar">
+              <motion.div 
+                className="xp-progress-fill"
+                initial={{ width: 0 }}
+                animate={{ width: `${xpProgress}%` }}
+                transition={{ duration: 1, type: "spring" }}
+              />
+            </div>
+            <p className="gamification-hint">Earn XP by finishing tasks and reviewing cards!</p>
+          </section>
+
+          {/* EXAM COUNTDOWN WIDGET */}
+          <section className="dash-section exam-countdown-widget">
+            <div className="section-header" style={{ marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Calendar size={16} color="var(--primary)" />
+                <h2>Next Big Goal</h2>
+              </div>
+              <button className="btn-icon-small" onClick={() => setIsEditingExam(!isEditingExam)}>
+                <Edit2 size={14} />
+              </button>
+            </div>
+            
+            {isEditingExam ? (
+              <div className="exam-edit-mode">
+                <input 
+                  type="date" 
+                  value={examDateStr}
+                  onChange={(e) => {
+                    setExamDateStr(e.target.value);
+                    localStorage.setItem("starNote_examDate", e.target.value);
+                  }}
+                  className="exam-date-input"
+                />
+                <button className="btn-primary-small" onClick={() => setIsEditingExam(false)}>Save</button>
+              </div>
+            ) : (
+              <div className="exam-display-mode">
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  const target = new Date(examDateStr);
+                  const diffTime = target - today;
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  if (diffDays < 0) return <div className="exam-days">Goal Passed! 🎉</div>;
+                  if (diffDays === 0) return <div className="exam-days">It's Today! 🚀</div>;
+                  
+                  return (
+                    <>
+                      <div className="exam-days-count">
+                        <span className="exam-number">{diffDays}</span>
+                        <span className="exam-label">Days Left</span>
+                      </div>
+                      <div className="exam-target-date">
+                        Target: {target.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </section>
+
+          {/* TASKS LIST */}
           <section className="dash-section">
             <div className="section-header">
               <h2>Tasks</h2>

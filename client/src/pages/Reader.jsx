@@ -46,6 +46,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 import { notesService, flashcardsService, tasksService } from "../services/index";
+import { exportNoteToPDF } from "../utils/pdfExport";
+import VoiceTutor from "../components/VoiceTutor";
 import "../styles/reader.css";
 import "../styles/reader-mobile.css";
 import "../styles/reader-tablet.css";
@@ -62,6 +64,7 @@ function Reader({ zenMode, setZenMode }) {
   const [activeTool, setActiveTool] = useState("select");
   const [file, setFile] = useState(null);
   const [error, setError] = useState(false);
+  const contentRef = useRef(null);
   
   const [pages, setPages] = useState([""]);
   const [currentPage, setCurrentPage] = useState(0); // Tracks visible page index in viewport
@@ -128,6 +131,7 @@ function Reader({ zenMode, setZenMode }) {
 
   const [selection, setSelection] = useState({ text: "", x: 0, y: 0, show: false });
   const [stickyContextMenu, setStickyContextMenu] = useState(null);
+  const [showVoiceTutor, setShowVoiceTutor] = useState(false);
 
   const notesRef = useRef([]);
   const canvasImagesRef = useRef([]);
@@ -351,9 +355,10 @@ function Reader({ zenMode, setZenMode }) {
     }
 
     if (file.blobUrl.startsWith("/uploads/")) {
-      const backendUrl = import.meta.env.VITE_API_URL 
-        ? import.meta.env.VITE_API_URL.replace("/api", "") 
-        : "http://localhost:5000";
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const backendUrl = isLocalhost
+        ? `http://${window.location.hostname}:5000`
+        : "https://starnote-backend.onrender.com";
       return `${backendUrl}${file.blobUrl}`;
     }
 
@@ -1211,8 +1216,15 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     });
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      toast.info("Generating PDF… please wait.");
+      await exportNoteToPDF(contentRef, file?.name || "My Note");
+      toast.success("PDF exported successfully!");
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast.error("Export failed. Please try again.");
+    }
   };
 
   const toggleMobileTheme = () => {
@@ -1365,9 +1377,39 @@ Be precise, highly informative, use clean formatting with bold headings and bull
             <button className="focus-mode-toggle" onClick={() => setZenMode(true)}>
               <Maximize2 size={16} /> <span>Focus</span>
             </button>
+
+            <button
+              className="focus-mode-toggle"
+              onClick={() => navigate(`/mindmap/${id}`)}
+              title="AI Mind Map"
+              style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', borderColor: 'rgba(99,102,241,0.2)' }}
+            >
+              <Play size={16} /> <span>Mind Map</span>
+            </button>
+
+            <button
+              className="focus-mode-toggle"
+              onClick={() => setShowVoiceTutor(true)}
+              title="Voice Tutor"
+              style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.2)' }}
+            >
+              <Volume2 size={16} /> <span>Listen</span>
+            </button>
           </div>
         </header>
       )}
+
+      {/* Voice Tutor Modal */}
+      <AnimatePresence>
+        {showVoiceTutor && (
+          <VoiceTutor
+            isOpen={showVoiceTutor}
+            onClose={() => setShowVoiceTutor(false)}
+            initialText={pages.join(" ")}
+            initialTopic={file?.name || ""}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Main layout: left rail, page panel, reading workspace, right AI workspace */}
       <div className="reader-layout-modern">
@@ -1627,6 +1669,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
           {/* Reading Canvas viewport - Stacks all notebook pages vertically */}
           <div 
+            ref={contentRef}
             className="document-viewport-modern"
             onScroll={handleViewportScroll}
             onClick={() => setStickyContextMenu(null)}

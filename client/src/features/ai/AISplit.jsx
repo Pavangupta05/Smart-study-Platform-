@@ -29,6 +29,7 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import { notesService, chatService, aiService, flashcardsService } from "../../services/index";
 import { detectArtifact, parseFlashcards } from "./artifactDetector";
 import ArtifactRenderer from "./ArtifactRenderer";
+import ContextNotePicker from "../../components/ContextNotePicker";
 import { useAIContext } from "../../context/AIContext";
 import StreamingText from "../../components/StreamingText";
 import { useHotkeys } from "../../hooks/useHotkeys";
@@ -42,19 +43,28 @@ import "../../styles/ai-split.css";
 const LANG_STORAGE_KEY = "starNote_aiLanguage";
 
 
-// ── Voice visualizer ─────────────────────────────────────────────────────────
-const VoiceVisualizer = memo(({ volumes }) => (
-  <div className="ais-voice-wave">
-    {volumes.slice(4, 20).map((vol, i) => (
-      <motion.div
-        key={i}
-        className="ais-voice-bar"
-        animate={{ height: vol, opacity: 0.5 + (vol / 56) * 0.5 }}
-        transition={{ type: "spring", stiffness: 600, damping: 18 }}
-      />
-    ))}
-  </div>
-));
+// ── Premium Siri-Style Voice Visualizer ──────────────────────────────────────────
+const VoiceVisualizer = memo(({ volumes }) => {
+  // Average the recent volumes for a smooth orb scale
+  const recentVols = volumes.slice(0, 10);
+  const avgVol = recentVols.length ? recentVols.reduce((a, b) => a + b, 0) / recentVols.length : 0;
+  // Map volume (0-60 approx) to a scale factor (1 to 1.6)
+  const scale = 1 + Math.min(avgVol / 60, 0.6);
+
+  return (
+    <div className="siri-orb-container">
+      <motion.div 
+        className="siri-orb-core"
+        animate={{ scale }}
+        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+      >
+        <div className="orb-blur orb-red" />
+        <div className="orb-blur orb-blue" />
+        <div className="orb-blur orb-purple" />
+      </motion.div>
+    </div>
+  );
+});
 
 function displayText(msg, summarizeMap) {
   const sum = summarizeMap?.[msg._idx];
@@ -83,13 +93,14 @@ const MessageBubble = memo(({
   return (
     <motion.div
       className={`ais-msg ${isAI ? "ais-msg--ai" : "ais-msg--user"} ${speakingIdx === index ? "ais-msg--speaking" : ""}`}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
       tabIndex={0}
       role="article"
       aria-label={isAI ? "AI message" : "Your message"}
     >
+      {/* AI avatar — only rendered for AI messages on the LEFT */}
       {isAI && (
         <div className={`ais-msg-avatar ${speakingIdx === index ? "speaking" : ""}`}>
           <IconSlot size={14}>
@@ -97,10 +108,13 @@ const MessageBubble = memo(({
           </IconSlot>
         </div>
       )}
+
       <div className="ais-msg-body">
-        {isAI && (
-          <span className="ais-msg-sender">StarNote AI</span>
-        )}
+        {/* AI label */}
+        {isAI && <span className="ais-msg-sender">StarNote AI</span>}
+        {!isAI && <span className="ais-msg-sender ais-msg-sender--user">You</span>}
+
+        {/* Message content */}
         <div className={`ais-msg-content ${isStreaming && isLast ? "ais-msg-content--streaming" : ""}`}>
           {isAI ? (
             isStreaming && isLast ? (
@@ -112,6 +126,8 @@ const MessageBubble = memo(({
             <p>{msg.text}</p>
           )}
         </div>
+
+        {/* AI action toolbar */}
         {isAI && msg.text && !isStreaming && (
           <div className="ais-msg-actions" role="toolbar" aria-label="Message actions">
             <button
@@ -318,9 +334,12 @@ export default function AISplit() {
   const analyserRef = useRef(null);
   const sourceRef = useRef(null);
   const rafRef = useRef(null);
+  const { currentNote, selection: ctxSelection, currentPage } = useAIContext() || {};
+  const contextData = { currentNote, selection: ctxSelection, currentPage };
+
+  const [contextNoteIds, setContextNoteIds] = useState([]);
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const contextData = useAIContext();
   const [webSearch, setWebSearch] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState(null);
@@ -530,6 +549,7 @@ export default function AISplit() {
       const response = await aiService.streamChat(allMessages, {
         currentPage: "ai",
         language: languageInstruction,
+        contextNoteIds,
         ...contextData
       }, selectedModel, currentAttachedFile, { signal: abortController.signal });
 
@@ -1125,6 +1145,11 @@ export default function AISplit() {
                 )}
               </AnimatePresence>
             </div>
+
+            <ContextNotePicker 
+              selectedIds={contextNoteIds} 
+              onChange={setContextNoteIds} 
+            />
           </div>
           <div className="ais-chat-pane-header-right">
             {!focusMode && (

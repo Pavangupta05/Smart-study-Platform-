@@ -84,6 +84,42 @@ body.dark .sidebar {
   box-shadow: var(--simple-elevated-shadow) !important;
 }
 
+/* Premium Card Glow Effect */
+.card, .glass-card, .doc-card-mini, .insight-card, .study-card, .ss-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before, .glass-card::before, .doc-card-mini::before, .insight-card::before, .study-card::before, .ss-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    400px circle at var(--local-mouse-x) var(--local-mouse-y), 
+    rgba(99, 102, 241, 0.08),
+    transparent 40%
+  );
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+body.dark .card::before, body.dark .glass-card::before, body.dark .doc-card-mini::before, body.dark .insight-card::before, body.dark .study-card::before, body.dark .ss-card::before {
+  background: radial-gradient(
+    400px circle at var(--local-mouse-x) var(--local-mouse-y), 
+    rgba(255, 255, 255, 0.06),
+    transparent 40%
+  );
+}
+
+.card:hover::before, .glass-card:hover::before, .doc-card-mini:hover::before, .insight-card:hover::before, .study-card:hover::before, .ss-card:hover::before {
+  opacity: 1;
+}
+
 .focus-card {
   background-image: none !important;
 }
