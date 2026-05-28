@@ -3,7 +3,7 @@ import { useTimer } from "../context/TimerContext";
 import { useLocation } from "react-router-dom";
 
 import {
-  Home, Clock3, StickyNote, LibraryBig, Sparkles, Settings, Eye, EyeOff, Sun, Moon
+  Home, Clock3, StickyNote, LibraryBig, Sparkles, Settings, Eye, EyeOff, Sun, Moon, Search
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileDropdown from "./ProfileDropdown";
@@ -48,10 +48,23 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
     >
       {/* ── LEFT: sidebar toggle + breadcrumb ── */}
       <div className="tv2-left">
-
+        {/* Sidebar Toggle (Mobile/Tablet) */}
+        <button 
+          className="tv2-icon-btn sidebar-toggle"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          title="Toggle Sidebar"
+          style={{ display: 'flex' }}
+        >
+          <div className="tv2-icon-btn-bg"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
 
         {/* Page breadcrumb pill */}
-        <div className="tv2-breadcrumb">
+        <div className="tv2-breadcrumb m-hide-mobile">
           <PageIcon size={15} strokeWidth={2.25} className="bc-icon" />
           <span className="bc-label">{currentPage.label}</span>
         </div>
@@ -63,6 +76,16 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
 
       {/* ── RIGHT: actions cluster ── */}
       <div className="tv2-right">
+
+        {/* Global Search / Command Palette Toggle */}
+        <button 
+          className="tv2-icon-btn" 
+          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+          title="Search (Cmd+K)"
+        >
+          <div className="tv2-icon-btn-bg"></div>
+          <Search size={18} strokeWidth={2.5} />
+        </button>
 
         {/* Theme Toggle (Premium Animated) */}
         <button 
