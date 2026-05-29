@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { notesService, aiService, examService } from "../services/index";
-import "../styles/exam.css";
+//import "../styles/exam.css";
 
 // ── Phase 1: Setup ─────────────────────────────────────────────────────────────
 function ExamSetup({ onStart }) {
