@@ -11,4 +11,8 @@ const TaskSchema = new mongoose.Schema({
   type: { type: String, enum: ["task", "break"], default: "task" }
 }, { timestamps: true });
 
+// Indexes for common task queries
+TaskSchema.index({ user: 1, createdAt: -1 });  // Main listing query
+TaskSchema.index({ user: 1, completed: 1 });    // Filter by completion
+
 module.exports = mongoose.model("Task", TaskSchema);

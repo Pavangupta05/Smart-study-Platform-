@@ -222,7 +222,7 @@ body.dark .timer-controls-card {
 /* Mobile safety boundaries */
 @media (max-width: 768px) {
   .study-timer-floating-wrapper {
-    bottom: 90px;
+    bottom: 120px;
     right: 16px;
     padding: 6px 12px 6px 6px;
   }

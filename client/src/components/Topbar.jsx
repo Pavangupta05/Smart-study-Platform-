@@ -43,7 +43,7 @@ function Topbar({ theme, setTheme, zenMode, setZenMode, isSidebarOpen, setIsSide
   return (
     <header
       ref={topbarRef}
-      className={`topbar-v2 ${isDark ? "dark" : "light"} ${scrolled ? "elevated" : ""} ${zenMode ? "zen" : ""}`}
+      className={`topbar-v2 glass-nav ${isDark ? "dark" : "light"} ${scrolled ? "elevated" : ""} ${zenMode ? "zen" : ""}`}
       data-no-transition-init
     >
       {/* ── LEFT: sidebar toggle + breadcrumb ── */}

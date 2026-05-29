@@ -108,6 +108,7 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
       <aside
         className={[
           "sidebar",
+          "glass-panel",
           theme,
           isMobileMenuOpen ? "mobile-open" : "",
           isCollapsed ? "collapsed" : "",

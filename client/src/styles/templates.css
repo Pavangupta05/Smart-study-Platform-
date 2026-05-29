@@ -2,9 +2,10 @@
 
 .templates-page {
   padding: var(--page-padding);
-  flex: 1; /* Fix height overlap */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  background: transparent; /* Show global mesh */
+  background: transparent;
 }
 
 .templates-container {

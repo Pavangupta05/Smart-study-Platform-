@@ -13,4 +13,8 @@ const FlashcardSchema = new mongoose.Schema({
   nextReviewDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 
+// Indexes for common flashcard queries
+FlashcardSchema.index({ user: 1, nextReviewDate: 1 }); // Due cards query
+FlashcardSchema.index({ user: 1, createdAt: -1 });      // Listing query
+
 module.exports = mongoose.model("Flashcard", FlashcardSchema);

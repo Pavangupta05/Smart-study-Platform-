@@ -4,8 +4,10 @@ const express = require("express");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
+const morgan = require('morgan');
 
 const path = require("path");
+
 const http = require("http");
 const { Server } = require("socket.io");
 const { connectDB } = require("./config/db");
@@ -23,6 +25,10 @@ const examRoutes = require("./routes/exam.routes");
 const notificationsRoutes = require("./routes/notifications.routes");
 
 const app = express();
+
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
 
 // Apply security middlewares
 app.use(helmet({
@@ -83,8 +89,9 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true,
 }));
-app.use(express.json({ limit: "50mb" })); // 50mb to allow base64 file uploads
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "1mb" })); // Default 1mb; file upload route uses its own limit
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

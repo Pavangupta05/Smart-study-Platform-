@@ -24,6 +24,7 @@ const IconSlot = ({ children, size = 14 }) => (
   </span>
 );
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import { toast } from "sonner";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { notesService, chatService, aiService, flashcardsService } from "../../services/index";
@@ -120,7 +121,7 @@ const MessageBubble = memo(({
             isStreaming && isLast ? (
               <StreamingText text={msg.text} isStreaming />
             ) : (
-              <ReactMarkdown>{text}</ReactMarkdown>
+              <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{text}</ReactMarkdown>
             )
           ) : (
             <p>{msg.text}</p>
@@ -555,10 +556,10 @@ export default function AISplit() {
 
       if (!response.ok) throw new Error("Failed to stream response");
 
-      // Add empty AI message placeholder
-      setMessages(prev => [...prev, { role: "ai", text: "", versions: [], versionIndex: 0 }]);
-      const msgIndex = allMessages.length;
-      setStreamingMsgIndex(msgIndex);
+      // Use a unique ID for the streaming message so concurrent messages don't corrupt each other
+      const streamingId = `streaming_${Date.now()}_${Math.random()}`;
+      setMessages(prev => [...prev, { role: "ai", text: "", versions: [], versionIndex: 0, _streamId: streamingId }]);
+      setStreamingMsgIndex(streamingId);
       let aiText = "";
 
       const reader = response.body.getReader();
@@ -579,12 +580,10 @@ export default function AISplit() {
               const data = JSON.parse(dataStr);
               if (data.text) {
                 aiText += data.text;
-                // Incrementally update the UI
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[msgIndex] = { role: "ai", text: aiText };
-                  return newMsgs;
-                });
+                // Update by matching the unique streamingId, not a fragile array index
+                setMessages(prev => prev.map(m =>
+                  m._streamId === streamingId ? { ...m, text: aiText } : m
+                ));
               } else if (data.error) {
                 console.error("Stream Error:", data.error);
               }
@@ -594,15 +593,11 @@ export default function AISplit() {
       }
 
       const versionEntry = { text: aiText, at: Date.now() };
-      setMessages((prev) => {
-        const next = [...prev];
-        const cur = next[msgIndex];
-        if (cur?.role === "ai") {
-          const versions = [...(cur.versions || []), versionEntry];
-          next[msgIndex] = { ...cur, text: aiText, versions, versionIndex: versions.length - 1 };
-        }
-        return next;
-      });
+      setMessages(prev => prev.map(m => {
+        if (m._streamId !== streamingId) return m;
+        const versions = [...(m.versions || []), versionEntry];
+        return { ...m, text: aiText, versions, versionIndex: versions.length - 1, _streamId: undefined };
+      }));
       await chatService.sendMessage(currentSessionId, "ai", aiText);
 
       recordAIStudySession();
@@ -613,7 +608,7 @@ export default function AISplit() {
       const detected = detectArtifact(aiText);
       if (detected) {
         setArtifact(detected);
-        setArtifactSource(msgIndex);
+        setArtifactSource(streamingId);
         setShowArtifact(true);
         toast.success(`${detected.type.charAt(0).toUpperCase() + detected.type.slice(1)} artifact ready`, {
           description: "Open the side panel to study or save it.",
@@ -640,6 +635,7 @@ export default function AISplit() {
       setStreamingMsgIndex(null);
       abortControllerRef.current = null;
     }
+
   }, [input, loading, messages, isListening, activeSessionId, selectedModel, languageInstruction, contextData, attachedFile, webSearch]);
 
   // Load chat history + shared session link
@@ -1321,7 +1317,7 @@ export default function AISplit() {
                     msg={msg}
                     index={i}
                     isLast={i === messages.length - 1 && msg.role === "ai"}
-                    isStreaming={loading && streamingMsgIndex === i}
+                    isStreaming={loading && msg._streamId === streamingMsgIndex}
                     onCopy={handleCopy}
                     onSave={handleSave}
                     onQuiz={handleQuiz}

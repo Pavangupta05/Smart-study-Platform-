@@ -47,17 +47,29 @@ router.put("/", protect, async (req, res) => {
 // PUT /api/settings/stats
 router.put("/stats", protect, async (req, res) => {
   const { streak, cardsMastered, focusTime } = req.body;
-  const update = {};
-  if (streak !== undefined) update["studyStats.streak"] = streak;
-  if (cardsMastered !== undefined) update["studyStats.cardsMastered"] = cardsMastered;
-  if (focusTime !== undefined) update["studyStats.focusTime"] = focusTime;
+  const setUpdate = {};
+  const incUpdate = {};
+
+  // streak and cardsMastered are absolute values (set them directly)
+  if (streak !== undefined) setUpdate["studyStats.streak"] = streak;
+  if (cardsMastered !== undefined) setUpdate["studyStats.cardsMastered"] = cardsMastered;
+  // focusTime is additive — each call increments the running total
+  if (focusTime !== undefined) incUpdate["studyStats.focusTime"] = focusTime;
+
+  const mongoUpdate = {};
+  if (Object.keys(setUpdate).length) mongoUpdate.$set = setUpdate;
+  if (Object.keys(incUpdate).length) mongoUpdate.$inc = incUpdate;
+
+  if (!Object.keys(mongoUpdate).length)
+    return res.status(400).json({ success: false, message: "No stats provided." });
 
   if (getMockMode()) {
-    const user = await mockUsers.findByIdAndUpdate(req.userId, update);
+    const user = await mockUsers.findByIdAndUpdate(req.userId, mongoUpdate);
     return res.json({ success: true, studyStats: user?.studyStats || {} });
   }
-  const user = await User.findByIdAndUpdate(req.userId, { $set: update }, { new: true });
+  const user = await User.findByIdAndUpdate(req.userId, mongoUpdate, { new: true });
   res.json({ success: true, studyStats: user.studyStats });
 });
+
 
 module.exports = router;

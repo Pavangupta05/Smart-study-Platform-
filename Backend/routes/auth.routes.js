@@ -5,6 +5,8 @@ const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const { getMockMode } = require("../config/db");
 const { mockUsers } = require("../utils/mockStore");
+const sendEmail = require("../utils/sendEmail");
+
 
 // Conditionally require mongoose model
 let User;
@@ -37,6 +39,15 @@ router.post("/register", registerLimiter, async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ success: false, message: "All fields are required." });
+
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email))
+    return res.status(400).json({ success: false, message: "Please provide a valid email address." });
+
+  // Password minimum length
+  if (password.length < 8)
+    return res.status(400).json({ success: false, message: "Password must be at least 8 characters." });
 
   if (getMockMode()) {
     // MOCK MODE
@@ -116,8 +127,9 @@ router.post("/forgotpassword", async (req, res) => {
     user = await User.findOne({ email });
   }
 
+  // Do NOT reveal whether email exists — prevents user enumeration attacks
   if (!user) {
-    return res.status(404).json({ success: false, message: "There is no user with that email." });
+    return res.status(200).json({ success: true, message: "If this email is registered, you will receive a reset link. Check your server console." });
   }
 
   // Generate token
@@ -137,14 +149,27 @@ router.post("/forgotpassword", async (req, res) => {
   const clientUrl = req.headers.origin || process.env.CLIENT_URL?.split(",")[0] || "http://localhost:5173";
   const resetUrl = `${clientUrl}/resetpassword/${resetToken}`;
 
-  // Log to console instead of sending email (since SMTP is not configured)
-  console.log("\n==================================================");
-  console.log("🔒 PASSWORD RESET REQUESTED");
-  console.log(`Email: ${user.email}`);
-  console.log(`Reset URL: ${resetUrl}`);
-  console.log("==================================================\n");
-
-  res.status(200).json({ success: true, message: "Email sent (Check server console for the reset link!)" });
+  // Send Email using Nodemailer
+  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Password reset token",
+      message,
+    });
+    console.log(`✉️ Password reset email sent to ${user.email}`);
+    res.status(200).json({ success: true, message: "Email sent" });
+  } catch (err) {
+    console.error("Email send failed:", err);
+    if (getMockMode()) {
+      await mockUsers.findByIdAndUpdate(user._id || user.id, { resetPasswordToken: undefined, resetPasswordExpire: undefined });
+    } else {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+    }
+    return res.status(500).json({ success: false, message: "Email could not be sent. Check SMTP configuration in .env" });
+  }
 });
 
 // ── PUT /api/auth/resetpassword/:resettoken ──────────────────────────────────

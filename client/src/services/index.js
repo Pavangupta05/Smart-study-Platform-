@@ -94,7 +94,11 @@ export const aiService = {
    */
   streamChat: async (messages, context = {}, provider = null, file = null, options = {}) => {
     const token = localStorage.getItem("starNote_token");
-    const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    // Use the same hostname detection as api.js to ensure production URLs work correctly
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const BASE_URL = isLocalhost
+      ? `http://${window.location.hostname}:5000/api`
+      : "https://starnote-backend.onrender.com/api";
     const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
       method: "POST",
       headers: {

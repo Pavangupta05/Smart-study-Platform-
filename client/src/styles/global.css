@@ -5,7 +5,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent; /* iOS optimization */
+  -webkit-tap-highlight-color: transparent; 
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -24,8 +24,6 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  position: fixed; /* iOS Safari scroll bounce fix */
-  inset: 0;
 }
 
 /* Hide scrollbar for Chrome, Safari, Edge */
@@ -134,36 +132,37 @@ html, body {
 }
 
 body.dark {
-  /* DARK MODE (Athenaeum Nightfall) */
-  --bg: #09090b;
-  --bg-rgb: 9, 9, 11;
-  --surface: #18181b; /* Deep charcoal surface */
-  --surface-rgb: 24, 24, 27;
-  --surface-hover: #27272a;
-  --text: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  /* DARK MODE (Midnight Glass) */
+  --bg: #030712; /* Deep midnight */
+  --bg-rgb: 3, 7, 18;
+  --surface: #0f172a; /* Slate 900 for cards */
+  --surface-rgb: 15, 23, 42;
+  --surface-hover: #1e293b; /* Slate 800 */
+  --text: #f8fafc; /* Slate 50 */
+  --text-secondary: #94a3b8; /* Slate 400 */
+  --text-muted: #64748b; /* Slate 500 */
 
-  --primary: #fafafa; /* Minimal off-white */
-  --primary-hover: #ffffff;
-  --primary-weak: #27272a;
-  --primary-foreground: #09090b;
-  --primary-rgb: 250, 250, 250;
+  --primary: #38bdf8; /* Sky 400 - vibrant accent */
+  --primary-hover: #7dd3fc;
+  --primary-weak: #0f172a; /* Slate 900 */
+  --primary-foreground: #020617;
+  --primary-rgb: 56, 189, 248;
   
-  --accent-blue: #3b82f6;
-  --accent-amber: #f59e0b;
-  --accent-emerald: #10b981;
+  --accent-blue: #60a5fa; /* Blue 400 */
+  --accent-amber: #fbbf24; /* Amber 400 */
+  --accent-emerald: #34d399; /* Emerald 400 */
   
-  --border: rgba(255, 255, 255, 0.08);
-  --border-focus: #fafafa;
-  --ring: rgba(250, 250, 250, 0.2);
+  --border: rgba(255, 255, 255, 0.08); /* Soft, subtle borders */
+  --border-focus: #38bdf8;
+  --ring: rgba(56, 189, 248, 0.25);
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(255, 255, 255, 0.04) inset;
+  --shadow-lg: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(255, 255, 255, 0.05) inset;
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
 
-  --mesh-color: rgba(255, 255, 255, 0.03); /* Subtle mesh in dark mode */
+  --mesh-color: rgba(56, 189, 248, 0.03); /* Subtle primary tint in mesh */
+
 
   /* Legacy aliases override for dark mode */
   --bg-main: var(--bg);
@@ -792,6 +791,38 @@ label {
 .view-transitioning * {
   transition: none !important;
 }
+
+/* ===== PREMIUM UI UTILITIES (Glassmorphism & Micro-animations) ===== */
+.glass-panel {
+  background: rgba(var(--surface-rgb), 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(var(--primary-rgb), 0.08);
+  box-shadow: var(--shadow-lg);
+}
+
+.glass-nav {
+  background: rgba(var(--bg-rgb), 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.hover-lift {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.premium-gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 
 /* ===== PRINT & PDF EXPORT STYLES ===== */
 @media print {

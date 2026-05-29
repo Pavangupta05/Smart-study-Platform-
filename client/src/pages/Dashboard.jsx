@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { 
   Play, Plus, CheckCircle2, Circle, Trash2,
   Sparkles, ArrowRight, Layout, Flame, Layers,
@@ -89,8 +89,8 @@ function Dashboard() {
 
   const isCloudSyncEnabled = user?.settings?.cloudSync ?? true;
 
-  // Load tasks from backend or local
-  const fetchTasks = () => {
+  // Memoize fetch functions so socket cleanup correctly detaches the same reference
+  const fetchTasks = useCallback(() => {
     if (!isCloudSyncEnabled) {
       const saved = localStorage.getItem("starNote_tasks");
       if (saved) setTasks(JSON.parse(saved));
@@ -103,10 +103,10 @@ function Dashboard() {
         const saved = localStorage.getItem("starNote_tasks");
         if (saved) setTasks(JSON.parse(saved));
       });
-  };
+  }, [isCloudSyncEnabled]);
 
   // Load notes from backend or local
-  const fetchNotes = () => {
+  const fetchNotes = useCallback(() => {
     if (!isCloudSyncEnabled) {
       const saved = localStorage.getItem("starNote_files");
       if (saved) setRecentFiles(JSON.parse(saved));
@@ -121,15 +121,16 @@ function Dashboard() {
         if (saved) setRecentFiles(JSON.parse(saved));
       })
       .finally(() => setIsLoading(false));
-  };
+  }, [isCloudSyncEnabled]);
 
   const [flashcards, setFlashcards] = useState([]);
 
-  const fetchFlashcards = () => {
+  const fetchFlashcards = useCallback(() => {
     flashcardsService.getAll()
       .then(res => setFlashcards(res.data.cards || []))
       .catch(err => console.error("Fetch flashcards error:", err));
-  };
+  }, []);
+
 
   const dueCardsCount = useMemo(() => {
     const today = new Date();
@@ -139,15 +140,15 @@ function Dashboard() {
     }).length;
   }, [flashcards]);
 
-  // Initial Fetch
+  // Initial Fetch — re-runs if cloud sync setting changes
   useEffect(() => {
     setIsLoading(true);
     fetchTasks();
     fetchNotes();
     fetchFlashcards();
-  }, []);
+  }, [fetchTasks, fetchNotes, fetchFlashcards]);
 
-  // Real-time synchronization
+  // Real-time synchronization — stable references prevent duplicate listener accumulation
   useEffect(() => {
     if (!socket) return;
     socket.on("sync_tasks", fetchTasks);
@@ -158,7 +159,7 @@ function Dashboard() {
       socket.off("sync_notes", fetchNotes);
       socket.off("sync_flashcards", fetchFlashcards);
     };
-  }, [socket]);
+  }, [socket, fetchTasks, fetchNotes, fetchFlashcards]);
 
   const filteredFiles = recentFiles.filter(f => 
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -276,7 +277,7 @@ function Dashboard() {
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/notes")}>
+        <motion.div variants={itemVars} className="quick-action-card glass-panel hover-lift" onClick={() => navigate("/notes")}>
           <div className="qa-icon" style={{ background: "rgba(99, 102, 241, 0.1)", color: "#6366f1" }}>
             <Upload size={24} />
           </div>
@@ -286,7 +287,7 @@ function Dashboard() {
           </div>
         </motion.div>
         
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/flashcards")}>
+        <motion.div variants={itemVars} className="quick-action-card glass-panel hover-lift" onClick={() => navigate("/flashcards")}>
           <div className="qa-icon" style={{ background: "rgba(236, 72, 153, 0.1)", color: "#ec4899" }}>
             <Zap size={24} />
           </div>
@@ -296,7 +297,7 @@ function Dashboard() {
           </div>
         </motion.div>
         
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/ai")}>
+        <motion.div variants={itemVars} className="quick-action-card glass-panel hover-lift" onClick={() => navigate("/ai")}>
           <div className="qa-icon" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>
             <Target size={24} />
           </div>

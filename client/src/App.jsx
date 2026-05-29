@@ -69,7 +69,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
-  const [isAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
+  // Check both the flag AND the actual token — prevents UI bypass via DevTools
+  const [isAuthenticated] = useState(() => 
+    localStorage.getItem("isAuthenticated") === "true" &&
+    !!localStorage.getItem("starNote_token")
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("sidebarOpen");
     return saved !== null ? JSON.parse(saved) : true;
@@ -81,7 +85,8 @@ function App() {
   }, [isSidebarOpen]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 2000);
+    // Minimum 400ms to prevent jarring flash; clears quickly on fast connections
+    const timer = setTimeout(() => setLoading(false), 400);
     return () => clearTimeout(timer);
   }, []);
 

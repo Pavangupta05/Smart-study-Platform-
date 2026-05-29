@@ -22,6 +22,10 @@ const NoteSchema = new mongoose.Schema({
   shareId: { type: String, default: null },
 }, { timestamps: true });
 
+// Compound indexes for common query patterns
+NoteSchema.index({ user: 1, isTrashed: 1, updatedAt: -1 }); // Main notes listing
+NoteSchema.index({ shareId: 1 }, { sparse: true });           // Public note lookup
+
 // Auto-delete trash after 30 days
 NoteSchema.index({ trashedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
 

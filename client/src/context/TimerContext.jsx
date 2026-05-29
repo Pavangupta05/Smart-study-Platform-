@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useReducer, useMemo, useCallback, memo } from "react";
 import { useUser } from "./UserContext";
+import { settingsService } from "../services/index";
 
 const TimerContext = createContext(null);
 
@@ -88,25 +89,38 @@ export const TimerProvider = React.memo(function TimerProvider({ children }) {
   // ---------------------------------------------------------------------------
   // Countdown timer logic
   // ---------------------------------------------------------------------------
+  const sessionDurationRef = useRef(0); // Tracks seconds elapsed in study mode
+
   useEffect(() => {
     let interval = null;
     if (state.isActive) {
       interval = setInterval(() => {
         if (state.seconds > 0) {
           dispatch({ type: "SET_SECONDS", payload: state.seconds - 1 });
+          if (state.mode === "study") sessionDurationRef.current += 1;
         } else if (state.minutes > 0) {
           dispatch({ type: "SET_MINUTES", payload: state.minutes - 1 });
           dispatch({ type: "SET_SECONDS", payload: 59 });
+          if (state.mode === "study") sessionDurationRef.current += 1;
         } else {
           dispatch({ type: "SET_ACTIVE", payload: false });
           playAlarm();
+          // Persist focus time when study session completes
+          if (state.mode === "study" && sessionDurationRef.current > 0) {
+            const minutesCompleted = Math.round(sessionDurationRef.current / 60);
+            sessionDurationRef.current = 0;
+            settingsService.updateStats({ focusTime: minutesCompleted }).catch(() => {
+              // Silently fail — stats are non-critical
+            });
+          }
         }
       }, 1000);
     } else {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [state.isActive, state.seconds, state.minutes]);
+  }, [state.isActive, state.seconds, state.minutes, state.mode]);
+
 
   // ---------------------------------------------------------------------------
   // Auto‑show timer when it becomes active

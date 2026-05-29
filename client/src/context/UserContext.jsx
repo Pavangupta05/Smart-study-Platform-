@@ -55,11 +55,11 @@ export function UserProvider({ children }) {
     } else {
       socket.disconnect();
     }
-    
-    return () => {
-      socket.disconnect();
-    };
+    // Only disconnect on full unmount — not on every user state change
+    // This prevents repeated connect/disconnect cycles when settings are updated
+    return () => {};
   }, [user?._id, user?.id]);
+
 
   const updateUser = useCallback((updates) => {
     setUser(prev => {

@@ -34,11 +34,11 @@ export default function SlashEditor({ initialContent, onChange, onBlur, onSummar
       setContent(newText);
       onChange(newText);
       
-      // Reset cursor position
-      setTimeout(() => {
+      // Reset cursor position reliably after React renders
+      requestAnimationFrame(() => {
         el.selectionStart = el.selectionEnd = slashIndex + prefix.length;
         el.focus();
-      }, 0);
+      });
     }
     setShowMenu(false);
   };

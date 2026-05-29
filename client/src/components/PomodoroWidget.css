@@ -35,13 +35,13 @@
 }
 
 .pomo-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   position: relative;
-  gap: 0; /* Remove gap so flex 1 calculations are perfect */
   background: var(--primary-weak);
   padding: 4px;
   border-radius: 12px;
-  width: 240px; /* fixed width to ensure predictable sliding */
+  min-width: 260px;
 }
 
 .pomo-tab-indicator {
@@ -62,7 +62,7 @@
 .pomo-tabs.mode-longBreak .pomo-tab-indicator { transform: translateX(200%); }
 
 .pomo-tabs button {
-  flex: 1;
+  width: 100%;
   position: relative;
   z-index: 2;
   background: transparent;

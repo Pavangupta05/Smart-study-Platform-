@@ -71,8 +71,8 @@ router.get("/:id", protect, ensureModel, async (req, res) => {
   res.json({ success: true, note });
 });
 
-// POST /api/notes
-router.post("/", protect, ensureModel, upload.single("file"), validate([
+// POST /api/notes — allows large base64 uploads (override the 1mb global limit for this route only)
+router.post("/", protect, ensureModel, express.json({ limit: "10mb" }), upload.single("file"), validate([
     // Basic payload validation – all fields are optional but must be strings if present
     require('express-validator').body('name').optional().isString(),
     require('express-validator').body('icon').optional().isString(),
@@ -147,7 +147,15 @@ router.put("/:id", protect, ensureModel, validate([
     req.app.get("io")?.to(req.userId).emit("sync_notes");
     return res.json({ success: true, note });
   }
-  const note = await Note.findOneAndUpdate({ _id: req.params.id, user: req.userId }, req.body, { new: true });
+  // Explicit field allowlist — prevents MongoDB operator injection via req.body
+  const { name, icon, category, content, blobUrl, fileType, size, pages, tags,
+          notes, connectors, canvasImages, bookmarks, drawHistory, isPublic } = req.body;
+  const safeUpdate = { name, icon, category, content, blobUrl, fileType, size,
+    pages, tags, notes, connectors, canvasImages, bookmarks, drawHistory, isPublic };
+  // Strip undefined fields so we don't accidentally null out existing values
+  Object.keys(safeUpdate).forEach(k => safeUpdate[k] === undefined && delete safeUpdate[k]);
+
+  const note = await Note.findOneAndUpdate({ _id: req.params.id, user: req.userId }, safeUpdate, { new: true });
   if (!note) return res.status(404).json({ success: false, message: "Note not found." });
   req.app.get("io")?.to(req.userId).emit("sync_notes");
   res.json({ success: true, note });
