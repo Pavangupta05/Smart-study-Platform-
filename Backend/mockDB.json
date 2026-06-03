@@ -81,6 +81,31 @@
         "lastStudied": null
       },
       "createdAt": "2026-05-28T17:02:52.098Z"
+    },
+    {
+      "_id": "mpybpas7mvvdcykipma",
+      "name": "a",
+      "email": "a",
+      "password": "$2b$12$HmUNj/N0HdBc6YK5KiyDeOxQl7bswA6x5.UC.7ntEb06m2gACN5yu",
+      "plan": "free",
+      "avatar": "",
+      "bio": "",
+      "settings": {
+        "theme": "light",
+        "language": "English (US)",
+        "emailReports": true,
+        "studyReminders": true,
+        "hapticsEnabled": true,
+        "autoSave": true,
+        "aiDataUsage": true
+      },
+      "studyStats": {
+        "streak": 0,
+        "cardsMastered": 0,
+        "focusTime": 0,
+        "lastStudied": null
+      },
+      "createdAt": "2026-06-03T17:11:14.647Z"
     }
   ],
   "notes": [

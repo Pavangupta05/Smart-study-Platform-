@@ -42,7 +42,7 @@ const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(","
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: function(origin, callback) { callback(null, true); },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }
@@ -80,7 +80,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function(origin, callback) { callback(null, true); },
   credentials: true,
 }));
 app.use(express.json({ limit: "50mb" })); // 50mb to allow base64 file uploads

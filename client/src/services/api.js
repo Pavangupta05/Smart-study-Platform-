@@ -2,9 +2,7 @@ import axios from "axios";
 import { toast } from "sonner";
 
 const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const BASE_URL = isLocalhost 
-  ? `http://${window.location.hostname}:5000/api` 
-  : "https://starnote-backend.onrender.com/api";
+const BASE_URL = import.meta.env.VITE_API_URL || (isLocalhost ? `http://${window.location.hostname}:5000/api` : "https://starnote-backend.onrender.com/api");
 
 const api = axios.create({
   baseURL: BASE_URL,

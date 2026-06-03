@@ -12,7 +12,8 @@ const protect = (req, res, next) => {
     
     // Validate ObjectId if not in mock mode
     const mongoose = require("mongoose");
-    if (!mongoose.Types.ObjectId.isValid(req.userId) && process.env.USE_MOCK_DB !== "true") {
+    const { getMockMode } = require("../config/db");
+    if (!mongoose.Types.ObjectId.isValid(req.userId) && !getMockMode()) {
        return res.status(401).json({ success: false, message: "Invalid session ID format. Please log in again." });
     }
     

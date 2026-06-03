@@ -8,6 +8,7 @@ import Preloader from "./components/Preloader";
 import CommandPalette from "./components/CommandPalette";
 import MobileDock from "./components/MobileDock";
 import StudyTimer from "./components/StudyTimer";
+import { useUser } from "./context/UserContext";
 import "./styles/simple-ui.css";
 
 // Lazy-loaded pages — code split for faster initial load
@@ -69,7 +70,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const [zenMode, setZenMode] = useState(() => localStorage.getItem("zenMode") === "true");
-  const [isAuthenticated] = useState(() => localStorage.getItem("isAuthenticated") === "true");
+  const { user, loading: userLoading } = useUser();
+  // isAuthenticated is driven ONLY by UserContext (the single source of truth).
+  // UserContext hydrates from localStorage on init and clears it on session expiry.
+  // Do NOT check localStorage here — it causes race conditions when a bad token is being cleared.
+  const isAuthenticated = !!user;
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("sidebarOpen");
     return saved !== null ? JSON.parse(saved) : true;
@@ -176,7 +181,7 @@ function App() {
     };
   }, []);
 
-  if (loading) return <Preloader />;
+  if (loading || userLoading) return <Preloader />;
 
   if (!isAuthenticated) {
     return (

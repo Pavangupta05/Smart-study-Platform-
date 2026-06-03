@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { 
   Play, Plus, CheckCircle2, Circle, Trash2,
   Sparkles, ArrowRight, Layout, Flame, Layers,
@@ -90,7 +90,7 @@ function Dashboard() {
   const isCloudSyncEnabled = user?.settings?.cloudSync ?? true;
 
   // Load tasks from backend or local
-  const fetchTasks = () => {
+  const fetchTasks = useCallback(() => {
     if (!isCloudSyncEnabled) {
       const saved = localStorage.getItem("starNote_tasks");
       if (saved) setTasks(JSON.parse(saved));
@@ -103,10 +103,10 @@ function Dashboard() {
         const saved = localStorage.getItem("starNote_tasks");
         if (saved) setTasks(JSON.parse(saved));
       });
-  };
+  }, [isCloudSyncEnabled]);
 
   // Load notes from backend or local
-  const fetchNotes = () => {
+  const fetchNotes = useCallback(() => {
     if (!isCloudSyncEnabled) {
       const saved = localStorage.getItem("starNote_files");
       if (saved) setRecentFiles(JSON.parse(saved));
@@ -121,15 +121,15 @@ function Dashboard() {
         if (saved) setRecentFiles(JSON.parse(saved));
       })
       .finally(() => setIsLoading(false));
-  };
+  }, [isCloudSyncEnabled]);
 
   const [flashcards, setFlashcards] = useState([]);
 
-  const fetchFlashcards = () => {
+  const fetchFlashcards = useCallback(() => {
     flashcardsService.getAll()
       .then(res => setFlashcards(res.data.cards || []))
       .catch(err => console.error("Fetch flashcards error:", err));
-  };
+  }, []);
 
   const dueCardsCount = useMemo(() => {
     const today = new Date();
@@ -145,7 +145,7 @@ function Dashboard() {
     fetchTasks();
     fetchNotes();
     fetchFlashcards();
-  }, []);
+  }, [fetchTasks, fetchNotes, fetchFlashcards]);
 
   // Real-time synchronization
   useEffect(() => {
@@ -158,7 +158,7 @@ function Dashboard() {
       socket.off("sync_notes", fetchNotes);
       socket.off("sync_flashcards", fetchFlashcards);
     };
-  }, [socket]);
+  }, [socket, fetchTasks, fetchNotes, fetchFlashcards]);
 
   const filteredFiles = recentFiles.filter(f => 
     f.name.toLowerCase().includes(searchQuery.toLowerCase())

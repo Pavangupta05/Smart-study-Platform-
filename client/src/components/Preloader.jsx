@@ -1,7 +1,16 @@
 import { motion } from "framer-motion";
 import "../styles/preloader.css";
+import { useUser } from "../context/UserContext";
 
 function Preloader() {
+  let slowStart = false;
+  try {
+    const userCtx = useUser();
+    slowStart = userCtx?.isSlowStart;
+  } catch (e) {
+    // If used outside UserProvider, fallback to false
+  }
+
   return (
     <div className="preloader-container">
       <div className="preloader-content">
@@ -14,6 +23,17 @@ function Preloader() {
           <div className="logo-pulse"></div>
           <span className="logo-text">STARNOTE</span>
         </motion.div>
+        
+        {slowStart && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            style={{ marginTop: '20px', color: 'var(--primary)', fontSize: '14px', fontWeight: 500 }}
+          >
+            Our server is waking up (free tier). This takes ~30 seconds...
+          </motion.div>
+        )}
         
         <div className="preloader-bar-container">
           <motion.div 

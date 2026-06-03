@@ -59,6 +59,45 @@ router.get("/trash", protect, ensureModel, async (req, res) => {
   res.json({ success: true, notes });
 });
 
+// GET /api/notes/shared/:shareId - Public route (No protect middleware)
+router.get("/shared/:shareId", ensureModel, async (req, res) => {
+  try {
+    if (getMockMode()) {
+      return res.status(404).json({ success: false, message: "Public sharing not available in mock mode." });
+    }
+    const note = await Note.findOne({ shareId: req.params.shareId, isPublic: true, isTrashed: false })
+                           .populate("user", "name avatar");
+    if (!note) return res.status(404).json({ success: false, message: "Note not found or is not public." });
+    res.json({ success: true, note });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching public note." });
+  }
+});
+
+// PATCH /api/notes/:id/share - Toggle public sharing
+router.patch("/:id/share", protect, ensureModel, async (req, res) => {
+  try {
+    if (getMockMode()) {
+      return res.status(400).json({ success: false, message: "Public sharing not available in mock mode." });
+    }
+    
+    const { isPublic } = req.body;
+    let note = await Note.findOne({ _id: req.params.id, user: req.userId });
+    if (!note) return res.status(404).json({ success: false, message: "Note not found." });
+
+    note.isPublic = isPublic;
+    if (isPublic && !note.shareId) {
+      const crypto = require("crypto");
+      note.shareId = crypto.randomBytes(8).toString("hex");
+    }
+    
+    await note.save();
+    res.json({ success: true, note });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error updating share settings." });
+  }
+});
+
 // GET /api/notes/:id
 router.get("/:id", protect, ensureModel, async (req, res) => {
   if (getMockMode()) {
@@ -191,43 +230,6 @@ router.post("/:id/restore", protect, ensureModel, async (req, res) => {
   res.json({ success: true, note });
 });
 
-// GET /api/notes/shared/:shareId - Public route (No protect middleware)
-router.get("/shared/:shareId", ensureModel, async (req, res) => {
-  try {
-    if (getMockMode()) {
-      return res.status(404).json({ success: false, message: "Public sharing not available in mock mode." });
-    }
-    const note = await Note.findOne({ shareId: req.params.shareId, isPublic: true, isTrashed: false })
-                           .populate("user", "name avatar");
-    if (!note) return res.status(404).json({ success: false, message: "Note not found or is not public." });
-    res.json({ success: true, note });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Error fetching public note." });
-  }
-});
 
-// PATCH /api/notes/:id/share - Toggle public sharing
-router.patch("/:id/share", protect, ensureModel, async (req, res) => {
-  try {
-    if (getMockMode()) {
-      return res.status(400).json({ success: false, message: "Public sharing not available in mock mode." });
-    }
-    
-    const { isPublic } = req.body;
-    let note = await Note.findOne({ _id: req.params.id, user: req.userId });
-    if (!note) return res.status(404).json({ success: false, message: "Note not found." });
-
-    note.isPublic = isPublic;
-    if (isPublic && !note.shareId) {
-      const crypto = require("crypto");
-      note.shareId = crypto.randomBytes(8).toString("hex");
-    }
-    
-    await note.save();
-    res.json({ success: true, note });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Error updating share settings." });
-  }
-});
 
 module.exports = router;

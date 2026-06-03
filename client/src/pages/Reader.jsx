@@ -43,7 +43,6 @@ import {
   Cloud
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 import { notesService, flashcardsService, tasksService } from "../services/index";
 import { exportNoteToPDF } from "../utils/pdfExport";
@@ -54,8 +53,7 @@ import "../styles/reader-tablet.css";
 import SlashEditor from "../components/SlashEditor";
 import NotebookPagePanel from "../components/NotebookPagePanel";
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_KEY);
-const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+// The backend AI service is used for all AI calls now to keep keys secure.
 
 function Reader({ zenMode, setZenMode }) {
   const { id } = useParams();
