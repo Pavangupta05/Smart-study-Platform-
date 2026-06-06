@@ -143,15 +143,13 @@ function Dashboard() {
         if (!f.updatedAt && !f.createdAt) return false;
         return new Date(f.updatedAt || f.createdAt).toDateString() === dayStr;
       }).length;
-      // Focus = weighted estimate (25 min/task + 15 min/note) with slight variation per day
-      const seed = d.getDate() + d.getMonth() * 31;
-      const variation = 0.8 + ((seed % 7) / 7) * 0.4;
+      // Focus = strict weighted estimate based on real activity (25 min/task + 15 min/note)
       return {
         day: days[d.getDay()],
         date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
         tasks: tasksDone,
         notes: notesCount,
-        focus: Math.round((tasksDone * 25 + notesCount * 15) * variation),
+        focus: Math.round(tasksDone * 25 + notesCount * 15),
         isToday: d.toDateString() === today.toDateString(),
       };
     });

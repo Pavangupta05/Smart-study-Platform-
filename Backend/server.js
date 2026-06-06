@@ -92,8 +92,8 @@ connectDB();
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "50mb" })); // 50mb to allow base64 file uploads
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "10mb" })); // Reduced from 50mb to prevent DoS via payload exhaustion
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
