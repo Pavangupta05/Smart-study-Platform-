@@ -211,7 +211,7 @@ function Dashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="btn-resume" onClick={() => navigate("/ai")}>
+          <button className="btn-resume" aria-label="Ask AI Tutor" onClick={() => navigate("/ai")}>
             <Sparkles size={16} />
             <span>Ask AI Tutor</span>
           </button>
@@ -597,7 +597,7 @@ function Dashboard() {
                 <Calendar size={16} color="var(--primary)" />
                 <h2>Next Big Goal</h2>
               </div>
-              <button className="btn-icon-small" onClick={() => setIsEditingExam(!isEditingExam)}>
+              <button className="btn-icon-small" aria-label="Edit Exam Date" onClick={() => setIsEditingExam(!isEditingExam)}>
                 <Edit2 size={14} />
               </button>
             </div>
@@ -659,21 +659,11 @@ function Dashboard() {
             </form>
 
             <div className="dashboard-task-list">
-              {tasks.map(task => {
-                const taskId = task._id || task.id;
-                return (
-                  <div key={taskId} className={`dash-task-item ${task.completed ? 'is-done' : ''}`}>
-                    <button className="btn-check" onClick={() => toggleTask(taskId)}>
-                      {task.completed ? <CheckCircle2 size={18} className="icon-done" /> : <Circle size={18} />}
-                    </button>
-                    <span className="task-text">{task.text}</span>
-                    <button className="btn-del-task" onClick={() => deleteTask(taskId)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                );
-              })}
-              {tasks.length === 0 && (
+              {tasksLoading ? (
+                [1, 2, 3].map(i => (
+                  <div key={i} className="dash-task-item skeleton" style={{ height: '48px', marginBottom: '8px', border: 'none' }}></div>
+                ))
+              ) : tasks.length === 0 ? (
                 <div className="empty-state-premium small">
                   <div className="empty-state-visual small">
                     <div className="blob bg-green"></div>
@@ -682,6 +672,21 @@ function Dashboard() {
                   <h3>All caught up!</h3>
                   <p>You have no pending tasks today.</p>
                 </div>
+              ) : (
+                tasks.map(task => {
+                  const taskId = task._id || task.id;
+                  return (
+                    <div key={taskId} className={`dash-task-item ${task.completed ? 'is-done' : ''}`}>
+                      <button className="btn-check" aria-label="Toggle Task" onClick={() => toggleTask(taskId)}>
+                        {task.completed ? <CheckCircle2 size={18} className="icon-done" /> : <Circle size={18} />}
+                      </button>
+                      <span className="task-text">{task.text}</span>
+                      <button className="btn-del-task" aria-label="Delete Task" onClick={() => deleteTask(taskId)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </section>

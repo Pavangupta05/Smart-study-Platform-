@@ -72,13 +72,25 @@
 /* ── Weekly Calendar Horizontal Scroll ── */
 .weekly-calendar-scroll {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
   overflow-x: auto;
-  padding-bottom: 0.5rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
 }
-.weekly-calendar-scroll::-webkit-scrollbar { display: none; }
+.weekly-calendar-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.weekly-calendar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.weekly-calendar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+}
+.weekly-calendar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(99, 102, 241, 0.6);
+}
 
 .day-pill {
   min-width: 64px;
