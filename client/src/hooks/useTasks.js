@@ -1,112 +1,144 @@
 /**
- * useTasks — centralized task management hook.
+ * useTasks — centralized task management hook using React Query.
  * Handles fetch / add / toggle / delete with localStorage fallback.
- * Used by Dashboard, Planner, and any other page that needs tasks.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tasksService } from "../services/index";
 import { toast } from "sonner";
 
 export function useTasks(cloudSyncEnabled = true) {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchTasks = useCallback(() => {
-    if (!cloudSyncEnabled) {
-      const saved = localStorage.getItem("starNote_tasks");
-      if (saved) {
-        try { setTasks(JSON.parse(saved)); } catch (_) {}
-      }
-      setLoading(false);
-      return;
-    }
-    tasksService.getAll()
-      .then(res => {
-        setTasks(res.data.tasks || []);
-      })
-      .catch(() => {
-        // Fall back to localStorage if backend is unreachable
+  // 1. Fetch Tasks
+  const { data: tasks = [], isLoading: loading, refetch: fetchTasks } = useQuery({
+    queryKey: ["tasks", cloudSyncEnabled],
+    queryFn: async () => {
+      if (!cloudSyncEnabled) {
         const saved = localStorage.getItem("starNote_tasks");
-        if (saved) {
-          try { setTasks(JSON.parse(saved)); } catch (_) {}
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [cloudSyncEnabled]);
+        return saved ? JSON.parse(saved) : [];
+      }
+      try {
+        const res = await tasksService.getAll();
+        return res.data.tasks || [];
+      } catch (err) {
+        // Fallback to local
+        const saved = localStorage.getItem("starNote_tasks");
+        return saved ? JSON.parse(saved) : [];
+      }
+    },
+  });
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
-
-  const addTask = useCallback(async (text) => {
-    if (!text?.trim()) return;
-    const optimistic = { _id: `local_${Date.now()}`, text, completed: false };
-
+  // Helper to update local storage if needed
+  const updateLocal = (newTasks) => {
     if (!cloudSyncEnabled) {
-      setTasks(prev => {
-        const next = [optimistic, ...prev];
-        localStorage.setItem("starNote_tasks", JSON.stringify(next));
-        return next;
-      });
-      return;
+      localStorage.setItem("starNote_tasks", JSON.stringify(newTasks));
     }
+  };
 
-    // Optimistic update
-    setTasks(prev => [optimistic, ...prev]);
-    try {
+  // 2. Add Task Mutation
+  const addMutation = useMutation({
+    mutationFn: async (text) => {
+      if (!cloudSyncEnabled) return { _id: `local_${Date.now()}`, text, completed: false };
       const res = await tasksService.create({ text });
-      // Replace optimistic entry with server response
-      setTasks(prev => prev.map(t => t._id === optimistic._id ? res.data.task : t));
-    } catch {
-      toast.error("Failed to sync task with server.");
-      setTasks(prev => prev.filter(t => t._id !== optimistic._id));
+      return res.data.task;
+    },
+    onMutate: async (text) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previousTasks = queryClient.getQueryData(["tasks", cloudSyncEnabled]);
+      const optimistic = { _id: `temp_${Date.now()}`, text, completed: false };
+      
+      const newTasks = [optimistic, ...(previousTasks || [])];
+      queryClient.setQueryData(["tasks", cloudSyncEnabled], newTasks);
+      updateLocal(newTasks);
+      
+      return { previousTasks };
+    },
+    onError: (err, text, context) => {
+      toast.error("Failed to add task.");
+      queryClient.setQueryData(["tasks", cloudSyncEnabled], context.previousTasks);
+      updateLocal(context.previousTasks);
+    },
+    onSuccess: (newTask, text, context) => {
+      if (cloudSyncEnabled) {
+        // Replace temp ID with real ID
+        queryClient.setQueryData(["tasks", cloudSyncEnabled], (old) => 
+          old.map(t => t._id?.startsWith('temp_') ? newTask : t)
+        );
+      }
     }
-  }, [cloudSyncEnabled]);
+  });
 
-  const toggleTask = useCallback(async (id) => {
+  // 3. Toggle Task Mutation
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, completed }) => {
+      if (!cloudSyncEnabled) return { id, completed };
+      await tasksService.toggle(id, completed);
+      return { id, completed };
+    },
+    onMutate: async ({ id, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previousTasks = queryClient.getQueryData(["tasks", cloudSyncEnabled]);
+      
+      const newTasks = (previousTasks || []).map(t => 
+        (t._id || t.id) === id ? { ...t, completed } : t
+      );
+      queryClient.setQueryData(["tasks", cloudSyncEnabled], newTasks);
+      updateLocal(newTasks);
+      
+      return { previousTasks };
+    },
+    onError: (err, variables, context) => {
+      toast.error("Failed to update task.");
+      queryClient.setQueryData(["tasks", cloudSyncEnabled], context.previousTasks);
+      updateLocal(context.previousTasks);
+    }
+  });
+
+  // 4. Delete Task Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      if (!cloudSyncEnabled) return id;
+      await tasksService.delete(id);
+      return id;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previousTasks = queryClient.getQueryData(["tasks", cloudSyncEnabled]);
+      
+      const newTasks = (previousTasks || []).filter(t => (t._id || t.id) !== id);
+      queryClient.setQueryData(["tasks", cloudSyncEnabled], newTasks);
+      updateLocal(newTasks);
+      
+      return { previousTasks };
+    },
+    onError: (err, id, context) => {
+      toast.error("Failed to delete task.");
+      queryClient.setQueryData(["tasks", cloudSyncEnabled], context.previousTasks);
+      updateLocal(context.previousTasks);
+    }
+  });
+
+  // Simplified public API
+  const addTask = (text) => addMutation.mutate(text);
+  const toggleTask = (id) => {
     const task = tasks.find(t => (t._id || t.id) === id);
-    if (!task) return;
-    const completed = !task.completed;
-
-    setTasks(prev => {
-      const next = prev.map(t => (t._id || t.id) === id ? { ...t, completed } : t);
-      if (!cloudSyncEnabled) localStorage.setItem("starNote_tasks", JSON.stringify(next));
-      return next;
-    });
-
-    if (cloudSyncEnabled) {
-      try {
-        await tasksService.toggle(id, completed);
-      } catch {
-        toast.error("Failed to update task.");
-        setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !completed } : t));
-      }
-    }
-  }, [tasks, cloudSyncEnabled]);
-
-  const deleteTask = useCallback(async (id) => {
-    const taskToDelete = tasks.find(t => (t._id || t.id) === id);
-    if (!taskToDelete) return;
-
-    setTasks(prev => {
-      const next = prev.filter(t => (t._id || t.id) !== id);
-      if (!cloudSyncEnabled) localStorage.setItem("starNote_tasks", JSON.stringify(next));
-      return next;
-    });
-
-    if (cloudSyncEnabled) {
-      try {
-        await tasksService.delete(id);
-      } catch {
-        toast.error("Failed to delete task.");
-        setTasks(prev => [taskToDelete, ...prev]);
-      }
-    }
-  }, [tasks, cloudSyncEnabled]);
+    if (task) toggleMutation.mutate({ id, completed: !task.completed });
+  };
+  const deleteTask = (id) => deleteMutation.mutate(id);
 
   const completedCount = tasks.filter(t => t.completed).length;
   const pendingCount = tasks.filter(t => !t.completed).length;
   const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
 
-  return { tasks, loading, fetchTasks, addTask, toggleTask, deleteTask, completedCount, pendingCount, progress };
+  return { 
+    tasks, 
+    loading, 
+    fetchTasks, 
+    addTask, 
+    toggleTask, 
+    deleteTask, 
+    completedCount, 
+    pendingCount, 
+    progress 
+  };
 }

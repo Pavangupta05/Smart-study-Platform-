@@ -1,50 +1,48 @@
 /**
- * useNotes — centralized notes fetching hook.
+ * useNotes — centralized notes fetching hook using React Query.
  * Supports optional pagination (page, limit) and localStorage fallback.
- * Used by Dashboard (paginated) and Notes page (full list).
  */
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { notesService } from "../services/index";
 
 export function useNotes({ page = 0, limit = 0, cloudSyncEnabled = true } = {}) {
-  const [notes, setNotes] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchNotes = useCallback(() => {
-    setLoading(true);
-
-    if (!cloudSyncEnabled) {
-      const saved = localStorage.getItem("starNote_files");
-      if (saved) {
-        try { setNotes(JSON.parse(saved)); } catch (_) {}
-      }
-      setLoading(false);
-      return;
-    }
-
-    const params = {};
-    if (limit > 0) params.limit = limit;
-    if (page > 0) params.page = page;
-
-    notesService.getAll(params)
-      .then(res => {
-        setNotes(res.data.notes || []);
-        setTotal(res.data.total || res.data.notes?.length || 0);
-      })
-      .catch(() => {
-        // Fall back to localStorage if backend is unreachable
+  const { data = { notes: [], total: 0 }, isLoading: loading, refetch: fetchNotes } = useQuery({
+    queryKey: ["notes", { page, limit, cloudSyncEnabled }],
+    queryFn: async () => {
+      if (!cloudSyncEnabled) {
         const saved = localStorage.getItem("starNote_files");
-        if (saved) {
-          try { setNotes(JSON.parse(saved)); } catch (_) {}
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [cloudSyncEnabled, page, limit]);
+        const parsedNotes = saved ? JSON.parse(saved) : [];
+        return { notes: parsedNotes, total: parsedNotes.length };
+      }
 
-  useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+      const params = {};
+      if (limit > 0) params.limit = limit;
+      if (page > 0) params.page = page;
 
-  return { notes, total, loading, refetch: fetchNotes, setNotes };
+      try {
+        const res = await notesService.getAll(params);
+        return {
+          notes: res.data.notes || [],
+          total: res.data.total || res.data.notes?.length || 0
+        };
+      } catch (err) {
+        const saved = localStorage.getItem("starNote_files");
+        const parsedNotes = saved ? JSON.parse(saved) : [];
+        return { notes: parsedNotes, total: parsedNotes.length };
+      }
+    },
+  });
+
+  // Provide a setNotes function for backwards compatibility with optimistic updates
+  const setNotes = (updater) => {
+    queryClient.setQueryData(["notes", { page, limit, cloudSyncEnabled }], (oldData) => {
+      const currentNotes = oldData?.notes || [];
+      const newNotes = typeof updater === 'function' ? updater(currentNotes) : updater;
+      return { notes: newNotes, total: oldData?.total || newNotes.length };
+    });
+  };
+
+  return { notes: data.notes, total: data.total, loading, refetch: fetchNotes, setNotes };
 }

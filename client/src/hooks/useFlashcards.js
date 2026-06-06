@@ -1,34 +1,38 @@
 /**
- * useFlashcards — centralized flashcard fetching hook.
+ * useFlashcards — centralized flashcard fetching hook using React Query.
  * Computes due cards count using spaced repetition nextReviewDate.
- * Used by Dashboard, Flashcards page, and Reader AI sidebar.
  */
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { flashcardsService } from "../services/index";
 
 export function useFlashcards() {
-  const [flashcards, setFlashcards] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchFlashcards = useCallback(() => {
-    flashcardsService.getAll()
-      .then(res => setFlashcards(res.data.cards || []))
-      .catch(err => console.warn("Flashcards fetch failed:", err.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: flashcards = [], isLoading: loading, refetch: fetchFlashcards } = useQuery({
+    queryKey: ["flashcards"],
+    queryFn: async () => {
+      try {
+        const res = await flashcardsService.getAll();
+        return res.data.cards || [];
+      } catch (err) {
+        console.warn("Flashcards fetch failed:", err.message);
+        return [];
+      }
+    },
+  });
 
-  useEffect(() => {
-    fetchFlashcards();
-  }, [fetchFlashcards]);
-
-  // Compute due cards count (cards whose review date has passed or has no date)
-  const dueCards = useMemo(() => {
-    const today = new Date();
-    return flashcards.filter(c => {
-      if (!c.nextReviewDate) return true;
-      return new Date(c.nextReviewDate) <= today;
+  const setFlashcards = (updater) => {
+    queryClient.setQueryData(["flashcards"], (oldData) => {
+      const current = oldData || [];
+      return typeof updater === 'function' ? updater(current) : updater;
     });
-  }, [flashcards]);
+  };
+
+  const today = new Date();
+  const dueCards = flashcards.filter(c => {
+    if (!c.nextReviewDate) return true;
+    return new Date(c.nextReviewDate) <= today;
+  });
 
   const dueCardsCount = dueCards.length;
   const masteredCount = flashcards.filter(c => c.mastered).length;

@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./queryClient";
 import { UserProvider } from "./context/UserContext";
 import { TimerProvider } from "./context/TimerContext";
 import { AIProvider } from "./context/AIContext";
@@ -10,16 +12,18 @@ import App from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
-      <ErrorBoundary>
-        <UserProvider>
-          <TimerProvider>
-            <AIProvider>
-              <App />
-            </AIProvider>
-          </TimerProvider>
-        </UserProvider>
-      </ErrorBoundary>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <ErrorBoundary>
+          <UserProvider>
+            <TimerProvider>
+              <AIProvider>
+                <App />
+              </AIProvider>
+            </TimerProvider>
+          </UserProvider>
+        </ErrorBoundary>
+      </BrowserRouter>
+    </QueryClientProvider>
   </StrictMode>
 );
