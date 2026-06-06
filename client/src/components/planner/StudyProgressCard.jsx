@@ -37,7 +37,7 @@ export default function StudyProgressCard() {
       className="planner-card" 
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255, 184, 107, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--planner-orange)' }}>
             <Crown size={20} />
@@ -92,7 +92,7 @@ export default function StudyProgressCard() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', padding: '0 1rem' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', marginTop: '2rem', padding: '0 1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--planner-teal)' }}></div>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Projects 80%</span>

@@ -34,13 +34,13 @@ export default function Planner() {
     <div className="planner-page">
       <PlannerHero />
 
-      <div className="planner-grid-top" style={{ gridTemplateColumns: '1fr' }}>
+      <div className="planner-grid-top">
         <StudyProgressCard tasks={tasks} />
       </div>
 
       <div className="planner-grid-main">
         {/* Left Column - Schedule & Timeline */}
-        <div className="planner-card" style={{ padding: '2rem' }}>
+        <div className="planner-card">
           <WeeklyCalendar
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
@@ -53,7 +53,7 @@ export default function Planner() {
           />
 
           {/* Filter Tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1.5rem' }}>
             {[
               { key: 'task', label: `Tasks (${tasks.length})` },
               { key: 'project', label: 'Projects' },
