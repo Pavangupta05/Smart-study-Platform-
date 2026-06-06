@@ -31,12 +31,19 @@ export function UserProvider({ children }) {
       const u = res.data.user;
       setUser(u);
       localStorage.setItem("starNote_user", JSON.stringify(u));
-    } catch {
-      // Token expired or invalid — clear it immediately to prevent infinite loops
-      localStorage.removeItem("starNote_token");
-      localStorage.removeItem("isAuthenticated");
-      localStorage.removeItem("starNote_user");
-      setUser(null);
+    } catch (err) {
+      const status = err?.response?.status;
+      // Only clear session on a real 401 Unauthorized (invalid/expired token).
+      // Do NOT clear on network errors, timeouts, or 5xx (e.g. Render cold-start)
+      // — those are temporary and should not log the user out.
+      if (status === 401) {
+        localStorage.removeItem("starNote_token");
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("starNote_user");
+        setUser(null);
+      }
+      // For non-401 errors (network/timeout/server down), keep the cached user
+      // data from localStorage so the user stays logged in.
     } finally {
       setLoading(false);
     }

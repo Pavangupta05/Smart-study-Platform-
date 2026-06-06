@@ -46,11 +46,12 @@ router.put("/", protect, async (req, res) => {
 
 // PUT /api/settings/stats
 router.put("/stats", protect, async (req, res) => {
-  const { streak, cardsMastered, focusTime } = req.body;
+  const { streak, cardsMastered, focusTime, examDate } = req.body;
   const update = {};
   if (streak !== undefined) update["studyStats.streak"] = streak;
   if (cardsMastered !== undefined) update["studyStats.cardsMastered"] = cardsMastered;
   if (focusTime !== undefined) update["studyStats.focusTime"] = focusTime;
+  if (examDate !== undefined) update["studyStats.examDate"] = examDate;
 
   if (getMockMode()) {
     const user = await mockUsers.findByIdAndUpdate(req.userId, update);

@@ -3,6 +3,8 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
+const { body } = require("express-validator");
+const { validate } = require("../middleware/validation");
 const { getMockMode } = require("../config/db");
 const { mockUsers } = require("../utils/mockStore");
 
@@ -12,6 +14,50 @@ try { User = require("../models/User"); } catch (_) {}
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+
+// ── Email Utility (Resend API via fetch — no extra packages needed) ─────────
+const sendResetEmail = async (toEmail, resetUrl) => {
+  const apiKey = process.env.SMTP_PASSWORD; // Resend API key
+  const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
+  const fromName = process.env.FROM_NAME || "StarNote";
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0a0a;color:#f0f0f0;border-radius:16px">
+      <h2 style="color:#8b5cf6;margin-bottom:8px">🔒 Reset Your Password</h2>
+      <p style="color:#aaa;font-size:14px">Someone requested a password reset for your StarNote account.</p>
+      <p style="color:#aaa;font-size:14px">Click the button below within <strong style="color:#f0f0f0">10 minutes</strong>:</p>
+      <a href="${resetUrl}" style="display:inline-block;margin:24px 0;padding:14px 28px;background:#8b5cf6;color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px">Reset Password</a>
+      <p style="color:#666;font-size:12px">If you didn't request this, ignore this email. Your password won't change.</p>
+      <hr style="border:none;border-top:1px solid #222;margin:24px 0">
+      <p style="color:#444;font-size:11px">StarNote AI &mdash; Your Smart Study Platform</p>
+    </div>`;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to: [toEmail],
+        subject: "Reset your StarNote password",
+        html,
+      }),
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Resend email error:", err);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Failed to send reset email:", err.message);
+    return false;
+  }
+};
+
 
 // ── Rate Limiters ─────────────────────────────────────────────────────────────
 // Brute-force protection: max 10 login attempts per 15 minutes
@@ -32,8 +78,21 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// ── Validation Rules ──────────────────────────────────────────────────────────
+const registerValidation = [
+  body("name").trim().notEmpty().withMessage("Name is required.").isLength({ max: 80 }).withMessage("Name too long."),
+  body("email").trim().isEmail().withMessage("Valid email required.").normalizeEmail(),
+  body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters."),
+];
+
+const loginValidation = [
+  body("email").trim().isEmail().withMessage("Valid email required.").normalizeEmail(),
+  body("password").notEmpty().withMessage("Password is required."),
+];
+
+
 // ── POST /api/auth/register ──────────────────────────────────────────────────
-router.post("/register", registerLimiter, async (req, res) => {
+router.post("/register", registerLimiter, validate(registerValidation), async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ success: false, message: "All fields are required." });
@@ -68,7 +127,7 @@ router.post("/register", registerLimiter, async (req, res) => {
 });
 
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post("/login", loginLimiter, async (req, res) => {
+router.post("/login", loginLimiter, validate(loginValidation), async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ success: false, message: "Email and password required." });
@@ -133,18 +192,23 @@ router.post("/forgotpassword", async (req, res) => {
     await user.save();
   }
 
-  // Create reset URL (dynamically use the request origin to support both localhost and Vercel)
+  // Build reset URL dynamically from request origin
   const clientUrl = req.headers.origin || process.env.CLIENT_URL?.split(",")[0] || "http://localhost:5173";
   const resetUrl = `${clientUrl}/resetpassword/${resetToken}`;
 
-  // Log to console instead of sending email (since SMTP is not configured)
-  console.log("\n==================================================");
-  console.log("🔒 PASSWORD RESET REQUESTED");
-  console.log(`Email: ${user.email}`);
-  console.log(`Reset URL: ${resetUrl}`);
-  console.log("==================================================\n");
+  // Send real email via Resend
+  const emailSent = await sendResetEmail(user.email, resetUrl);
 
-  res.status(200).json({ success: true, message: "Email sent (Check server console for the reset link!)" });
+  if (!emailSent) {
+    // Fallback: log to console so developers can still test locally
+    console.log("\n==================================================");
+    console.log("🔒 PASSWORD RESET (email failed — fallback log)");
+    console.log(`Email: ${user.email}`);
+    console.log(`Reset URL: ${resetUrl}`);
+    console.log("==================================================\n");
+  }
+
+  res.status(200).json({ success: true, message: emailSent ? "Password reset email sent! Check your inbox." : "Email sent (Check server console for the reset link!)" });
 });
 
 // ── PUT /api/auth/resetpassword/:resettoken ──────────────────────────────────

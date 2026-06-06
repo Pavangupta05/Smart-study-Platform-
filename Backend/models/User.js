@@ -26,6 +26,7 @@ const UserSchema = new mongoose.Schema({
     cardsMastered: { type: Number, default: 0 },
     focusTime: { type: Number, default: 0 }, // in minutes
     lastStudied: { type: Date, default: null },
+    examDate: { type: String, default: null }, // ISO date string e.g. "2026-08-15"
   },
 }, { timestamps: true });
 

@@ -41,12 +41,27 @@ const ensureModel = (req, res, next) => {
 
 // GET /api/notes
 router.get("/", protect, ensureModel, async (req, res) => {
+  const page = parseInt(req.query.page) || 0;   // 0 = no pagination (all)
+  const limit = parseInt(req.query.limit) || 0;  // 0 = no limit
+
   if (getMockMode()) {
     const notes = await mockNotes.find({ user: req.userId, isTrashed: false });
-    return res.json({ success: true, notes });
+    const paginated = (limit > 0) ? notes.slice((page - 1) * limit, page * limit) : notes;
+    return res.json({ success: true, notes: paginated, total: notes.length });
   }
-  const notes = await Note.find({ user: req.userId, isTrashed: false }).sort({ updatedAt: -1 });
-  res.json({ success: true, notes });
+
+  const query = Note.find({ user: req.userId, isTrashed: false })
+    .sort({ updatedAt: -1 })
+    .select("-blobUrl -pages -drawHistory -notes -connectors -canvasImages"); // Exclude heavy fields for list view
+
+  const total = await Note.countDocuments({ user: req.userId, isTrashed: false });
+
+  if (limit > 0 && page > 0) {
+    query.skip((page - 1) * limit).limit(limit);
+  }
+
+  const notes = await query;
+  res.json({ success: true, notes, total, page: page || 1, limit: limit || total });
 });
 
 // GET /api/notes/trash

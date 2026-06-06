@@ -23,12 +23,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthRoute = error.config?.url?.includes("/auth/");
+    const isMeCheck = error.config?.url?.endsWith("/auth/me");
+    const hasResponse = !!error.response;
+
     if (error.response?.status === 401 && !isAuthRoute) {
+      // Global 401: real session expiry from a protected API call
       toast.error("Session expired. Please log in again.");
       localStorage.removeItem("starNote_token");
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("starNote_user");
       window.location.href = "/landing";
+    } else if (isMeCheck) {
+      // Suppress all errors from /auth/me — UserContext handles them silently.
+      // This prevents false "network error" toasts on Render cold-start.
+    } else if (!hasResponse) {
+      // Pure network error (server sleeping, offline, etc.) — suppress toast.
+      // The app will work with cached data from localStorage.
     } else if (error.response?.data?.message) {
       toast.error(error.response.data.message);
     } else if (error.message && error.message !== "Network Error") {

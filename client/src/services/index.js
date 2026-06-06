@@ -11,7 +11,7 @@ export const authService = {
 
 // NOTES
 export const notesService = {
-  getAll: () => api.get("/notes"),
+  getAll: (params = {}) => api.get("/notes", { params }), // supports ?page=1&limit=20
   getById: (id) => api.get(`/notes/${id}`),
   getTrash: () => api.get("/notes/trash"),
   create: (data) => api.post("/notes", data),

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { 
-  Play, Plus, CheckCircle2, Circle, Trash2,
+  Plus, CheckCircle2, Circle, Trash2,
   Sparkles, ArrowRight, Layout, Flame, Layers,
   FileText, Clock, TrendingUp, TrendingDown, BarChart2, Brain,
   Upload, Zap, Target, BookOpen, Award, Calendar, Edit2
@@ -8,7 +8,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
-import { tasksService, notesService, flashcardsService } from "../services/index";
+import { settingsService } from "../services/index";
+import { useTasks } from "../hooks/useTasks";
+import { useNotes } from "../hooks/useNotes";
+import { useFlashcards } from "../hooks/useFlashcards";
 import {
   AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer
@@ -22,16 +25,48 @@ function Dashboard() {
   const navigate = useNavigate();
   const { firstName, user, socket } = useUser();
   
-  const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [recentFiles, setRecentFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [chartTab, setChartTab] = useState("tasks");
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  // Exam Countdown State
+  const isCloudSyncEnabled = user?.settings?.cloudSync ?? true;
+
+  // ── Custom hooks replace 120 lines of duplicated fetch/CRUD logic ─────────
+  const {
+    tasks, loading: tasksLoading,
+    addTask: addTaskToList, toggleTask, deleteTask, pendingCount
+  } = useTasks(isCloudSyncEnabled);
+
+  const {
+    notes: recentFiles, loading: notesLoading,
+    refetch: refetchNotes
+  } = useNotes({ page: 1, limit: 20, cloudSyncEnabled: isCloudSyncEnabled });
+
+  const { dueCardsCount, refetch: refetchFlashcards } = useFlashcards();
+
+  // Loading state = all data is ready
+  useEffect(() => {
+    if (!tasksLoading && !notesLoading) setIsLoading(false);
+  }, [tasksLoading, notesLoading]);
+
+  // Real-time synchronization via socket
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("sync_tasks", () => {});
+    socket.on("sync_notes", refetchNotes);
+    socket.on("sync_flashcards", refetchFlashcards);
+    return () => {
+      socket.off("sync_tasks");
+      socket.off("sync_notes", refetchNotes);
+      socket.off("sync_flashcards", refetchFlashcards);
+    };
+  }, [socket, refetchNotes, refetchFlashcards]);
+
+  // ── Exam countdown — synced to DB (persists across devices) ──────────────
   const [examDateStr, setExamDateStr] = useState(() => {
+    // Prefer DB value (from user.studyStats.examDate), fall back to localStorage
+    if (user?.studyStats?.examDate) return user.studyStats.examDate;
     const saved = localStorage.getItem("starNote_examDate");
     if (saved) return saved;
     const d = new Date();
@@ -40,12 +75,57 @@ function Dashboard() {
   });
   const [isEditingExam, setIsEditingExam] = useState(false);
 
-  // Gamification XP Calculation
-  const userXP = (user?.studyStats?.cardsMastered || 0) * 10 + Math.round((user?.studyStats?.focusTime || 0) / 60 * 5) + (tasks.filter(t=>t.completed).length * 15);
+  const saveExamDate = useCallback(async (dateStr) => {
+    // Always save to localStorage as immediate fallback
+    localStorage.setItem("starNote_examDate", dateStr);
+    // Sync to DB so it persists on all devices
+    try {
+      await settingsService.updateStats({ examDate: dateStr });
+    } catch (err) {
+      console.warn("Could not sync exam date to server:", err.message);
+    }
+  }, []);
+
+  // ── Gamification XP Calculation ───────────────────────────────────────────
+  const completedTaskCount = tasks.filter(t => t.completed).length;
+  const userXP = (user?.studyStats?.cardsMastered || 0) * 10
+    + Math.round((user?.studyStats?.focusTime || 0) / 60 * 5)
+    + (completedTaskCount * 15);
   const currentLevel = Math.floor(userXP / 100) + 1;
-  const xpForNextLevel = currentLevel * 100;
   const currentLevelXP = userXP % 100;
   const xpProgress = (currentLevelXP / 100) * 100;
+
+  // ── Dynamic AI Daily Brief ────────────────────────────────────────────────
+  const dailyBrief = useMemo(() => {
+    const streak = user?.studyStats?.streak || 0;
+    const pending = tasks.filter(t => !t.completed).length;
+    const mastered = user?.studyStats?.cardsMastered || 0;
+    
+    if (streak >= 7) return `🔥 ${streak}-day streak! You're on fire. Don't break the chain — knock out ${pending > 0 ? `your ${pending} remaining task${pending > 1 ? 's' : ''}` : 'a flashcard session'} today.`;
+    if (dueCardsCount > 5) return `🧠 You have ${dueCardsCount} flashcards due. Your retention will drop significantly if you skip today's review. 15 minutes is all it takes.`;
+    if (pending === 0 && mastered > 0) return `✅ All tasks done! You've mastered ${mastered} cards so far. Try generating a new flashcard deck or a mock exam to push further.`;
+    if (pending > 5) return `📋 ${pending} tasks queued. Focus on the 2–3 most important ones first — don't let the list overwhelm you.`;
+    if (streak === 0) return `👋 Welcome back! Start fresh today. Even 20 minutes of focused study compounds over time. What's the first task?`;
+    return `🎯 ${pending > 0 ? `${pending} task${pending > 1 ? 's' : ''} left today.` : "All caught up!"} Streak: ${streak} day${streak !== 1 ? 's' : ''}. Keep building momentum!`;
+  }, [tasks, user, dueCardsCount]);
+
+  // ── Brain Facts — rotate randomly per session ─────────────────────────────
+  const [dailyFact] = useState(() => {
+    const facts = [
+      "Spaced repetition can improve long-term retention by up to 200%.",
+      "Taking a 5-minute break every 25 minutes (Pomodoro) maximizes focus.",
+      "Your brain processes visual information 60,000× faster than text.",
+      "Sleep consolidates memory — studying before bed boosts retention.",
+      "Teaching a concept to someone else is the best way to master it (Feynman Technique).",
+      "Interleaving different subjects in one study session improves long-term recall.",
+      "Drinking 500ml of water before study can boost cognitive performance by ~14%.",
+      "Active recall (testing yourself) is 3× more effective than re-reading notes.",
+      "Handwriting notes encodes information deeper than typing them.",
+      "The spacing effect: reviewing material at increasing intervals beats cramming.",
+    ];
+    return facts[Math.floor(Math.random() * facts.length)];
+  });
+
 
   // Build last-7-days data from real tasks & notes
   const { weeklyData, weekChange } = useMemo(() => {
@@ -87,81 +167,12 @@ function Dashboard() {
   const CHART_COLOR = { tasks: "#8b5cf6", notes: "#f59e0b", focus: "#10b981" };
   const CHART_LABEL = { tasks: "Tasks Done", notes: "Notes Created", focus: "Focus Mins" };
 
-  const isCloudSyncEnabled = user?.settings?.cloudSync ?? true;
 
-  // Load tasks from backend or local
-  const fetchTasks = useCallback(() => {
-    if (!isCloudSyncEnabled) {
-      const saved = localStorage.getItem("starNote_tasks");
-      if (saved) setTasks(JSON.parse(saved));
-      return;
-    }
-    tasksService.getAll()
-      .then(res => setTasks(res.data.tasks || []))
-      .catch(err => {
-        console.error("Fetch tasks error:", err);
-        const saved = localStorage.getItem("starNote_tasks");
-        if (saved) setTasks(JSON.parse(saved));
-      });
-  }, [isCloudSyncEnabled]);
 
-  // Load notes from backend or local
-  const fetchNotes = useCallback(() => {
-    if (!isCloudSyncEnabled) {
-      const saved = localStorage.getItem("starNote_files");
-      if (saved) setRecentFiles(JSON.parse(saved));
-      setIsLoading(false);
-      return;
-    }
-    notesService.getAll()
-      .then(res => setRecentFiles(res.data.notes || []))
-      .catch(err => {
-        console.error("Fetch notes error:", err);
-        const saved = localStorage.getItem("starNote_files");
-        if (saved) setRecentFiles(JSON.parse(saved));
-      })
-      .finally(() => setIsLoading(false));
-  }, [isCloudSyncEnabled]);
-
-  const [flashcards, setFlashcards] = useState([]);
-
-  const fetchFlashcards = useCallback(() => {
-    flashcardsService.getAll()
-      .then(res => setFlashcards(res.data.cards || []))
-      .catch(err => console.error("Fetch flashcards error:", err));
-  }, []);
-
-  const dueCardsCount = useMemo(() => {
-    const today = new Date();
-    return flashcards.filter(c => {
-      if (!c.nextReviewDate) return true;
-      return new Date(c.nextReviewDate) <= today;
-    }).length;
-  }, [flashcards]);
-
-  // Initial Fetch
-  useEffect(() => {
-    setIsLoading(true);
-    fetchTasks();
-    fetchNotes();
-    fetchFlashcards();
-  }, [fetchTasks, fetchNotes, fetchFlashcards]);
-
-  // Real-time synchronization
-  useEffect(() => {
-    if (!socket) return;
-    socket.on("sync_tasks", fetchTasks);
-    socket.on("sync_notes", fetchNotes);
-    socket.on("sync_flashcards", fetchFlashcards);
-    return () => {
-      socket.off("sync_tasks", fetchTasks);
-      socket.off("sync_notes", fetchNotes);
-      socket.off("sync_flashcards", fetchFlashcards);
-    };
-  }, [socket, fetchTasks, fetchNotes, fetchFlashcards]);
+  const [newTask, setNewTask] = useState("");
 
   const filteredFiles = recentFiles.filter(f => 
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+    f.name?.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 4);
 
   const addTask = async (e) => {
@@ -169,72 +180,12 @@ function Dashboard() {
     if (!newTask.trim()) return;
     const text = newTask;
     setNewTask("");
-    
-    if (!isCloudSyncEnabled) {
-      setTasks(prev => {
-        const newTasks = [{ _id: Date.now(), text, completed: false }, ...prev];
-        localStorage.setItem("starNote_tasks", JSON.stringify(newTasks));
-        return newTasks;
-      });
-      return;
-    }
-
-    try {
-      const res = await tasksService.create({ text });
-      setTasks(prev => [res.data.task, ...prev]);
-    } catch (err) {
-      console.error("Add task error:", err);
-      toast.error("Failed to sync task with server.");
-      setTasks(prev => [{ _id: Date.now(), text, completed: false }, ...prev]);
-    }
-  };
-
-  const toggleTask = async (id) => {
-    const task = tasks.find(t => (t._id || t.id) === id);
-    if (!task) return;
-    const completed = !task.completed;
-    
-    setTasks(prev => {
-      const updated = prev.map(t => (t._id || t.id) === id ? { ...t, completed } : t);
-      if (!isCloudSyncEnabled) localStorage.setItem("starNote_tasks", JSON.stringify(updated));
-      return updated;
-    });
-
-    if (isCloudSyncEnabled) {
-      try {
-        await tasksService.toggle(id, completed);
-      } catch (err) {
-        console.error("Toggle task error:", err);
-        toast.error("Failed to update task status.");
-        setTasks(prev => prev.map(t => (t._id || t.id) === id ? { ...t, completed: !completed } : t));
-      }
-    }
-  };
-
-  const deleteTask = async (id) => {
-    const taskToDelete = tasks.find(t => (t._id || t.id) === id);
-    if (!taskToDelete) return;
-    
-    setTasks(prev => {
-      const updated = prev.filter(t => (t._id || t.id) !== id);
-      if (!isCloudSyncEnabled) localStorage.setItem("starNote_tasks", JSON.stringify(updated));
-      return updated;
-    });
-
-    if (isCloudSyncEnabled) {
-      try { 
-        await tasksService.delete(id); 
-        toast.success("Task removed");
-      } catch (err) { 
-        console.error("Delete task error:", err);
-        toast.error("Failed to delete task.");
-        setTasks(prev => [taskToDelete, ...prev]);
-      }
-    }
+    await addTaskToList(text);
   };
 
   const completedCount = tasks.filter(t => t.completed).length;
   const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+
 
   const containerVars = {
     hidden: { opacity: 0 },
@@ -369,24 +320,10 @@ function Dashboard() {
               <h3>AI Daily Brief</h3>
             </div>
             <div className="di-content">
-              <p className="di-brief">
-                {tasks.filter(t => !t.completed).length > 0 
-                  ? `You have ${tasks.filter(t => !t.completed).length} tasks to tackle today. Let's start with the most important one! Keep your momentum going.` 
-                  : `Great job, you're all caught up on tasks! Time to review some flashcards or take a well-deserved break.`}
-              </p>
+              <p className="di-brief">{dailyBrief}</p>
               <div className="di-fact">
-                <div className="di-fact-label">💡 Daily Brain Fact</div>
-                <div className="di-fact-text">
-                  {[
-                    "Spaced repetition can improve long-term retention by up to 200%.",
-                    "Taking a 5-minute break every 25 minutes (Pomodoro) maximizes focus.",
-                    "Your brain processes visual information 60,000 times faster than text.",
-                    "Sleep is crucial for memory consolidation—don't pull an all-nighter!",
-                    "Teaching a concept to someone else is the best way to master it.",
-                    "Listening to binaural beats can help induce a state of deep focus.",
-                    "Drinking water increases cognitive performance by up to 14%."
-                  ][new Date().getDay()]}
-                </div>
+                <div className="di-fact-label">💡 Study Science Fact</div>
+                <div className="di-fact-text">{dailyFact}</div>
               </div>
             </div>
           </div>
@@ -674,7 +611,7 @@ function Dashboard() {
                   value={examDateStr}
                   onChange={(e) => {
                     setExamDateStr(e.target.value);
-                    localStorage.setItem("starNote_examDate", e.target.value);
+                    saveExamDate(e.target.value);
                   }}
                   className="exam-date-input"
                 />
