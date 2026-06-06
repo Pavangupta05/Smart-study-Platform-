@@ -23,6 +23,7 @@ const getDeckColor = (deckName) => {
 
 const processFlashcards = (cards) => {
   const grouped = {};
+  const now = new Date();
   cards.forEach(c => {
     const deckName = c.deck || "Default Deck";
     if (!grouped[deckName]) {
@@ -30,13 +31,22 @@ const processFlashcards = (cards) => {
         id: deckName,
         name: deckName,
         count: 0,
+        dueCount: 0,
         lastStudied: c.lastReviewed ? new Date(c.lastReviewed).toLocaleDateString() : "Never",
         color: getDeckColor(deckName),
-        cards: []
+        cards: [],
+        dueCards: []
       };
     }
     grouped[deckName].count++;
     grouped[deckName].cards.push(c);
+    
+    // Spaced Repetition logic: Card is due if nextReviewDate is <= now, or if it has never been reviewed.
+    const nextReview = c.nextReviewDate ? new Date(c.nextReviewDate) : new Date(0);
+    if (nextReview <= now || !c.lastReviewed) {
+      grouped[deckName].dueCount++;
+      grouped[deckName].dueCards.push(c);
+    }
     if (c.lastReviewed) {
       const lastDate = new Date(grouped[deckName].lastStudied);
       const thisDate = new Date(c.lastReviewed);
@@ -178,8 +188,11 @@ function Flashcards() {
       <AnimatePresence>
         {activeDeck && (
           <StudySession 
-            deck={activeDeck} 
-            onExit={() => setActiveDeck(null)} 
+            deck={{ ...activeDeck, cards: activeDeck.dueCards }} 
+            onExit={() => {
+              setActiveDeck(null);
+              fetchDecks(); // Refetch to update due counts after study
+            }} 
           />
         )}
       </AnimatePresence>
@@ -466,17 +479,31 @@ function Flashcards() {
                 <div className="deck-stats">
                   <div className="stat">
                     <Brain size={14} />
-                    <span>{deck.count} cards</span>
+                    <span>{deck.count} total cards</span>
                   </div>
                   <div className="stat">
                     <Clock size={14} />
                     <span>{deck.lastStudied}</span>
                   </div>
                 </div>
+                {deck.dueCount > 0 ? (
+                  <div style={{ marginTop: "12px", display: "inline-block", padding: "4px 10px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", borderRadius: "20px", fontSize: "12px", fontWeight: "bold" }}>
+                    🔥 {deck.dueCount} cards due for review!
+                  </div>
+                ) : (
+                  <div style={{ marginTop: "12px", display: "inline-block", padding: "4px 10px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", borderRadius: "20px", fontSize: "12px", fontWeight: "bold" }}>
+                    ✨ All caught up!
+                  </div>
+                )}
               </div>
-              <button className="btn-study" onClick={() => setActiveDeck(deck)}>
-                <span>Study</span>
-                <ChevronRight size={16} />
+              <button 
+                className="btn-study" 
+                onClick={() => setActiveDeck(deck)}
+                disabled={deck.dueCount === 0}
+                style={{ opacity: deck.dueCount === 0 ? 0.5 : 1, cursor: deck.dueCount === 0 ? "not-allowed" : "pointer" }}
+              >
+                <span>{deck.dueCount === 0 ? "Done" : "Study"}</span>
+                {deck.dueCount > 0 && <ChevronRight size={16} />}
               </button>
             </motion.div>
           ))

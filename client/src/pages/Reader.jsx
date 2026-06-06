@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { notesService, flashcardsService, tasksService } from "../services/index";
+import { notesService, flashcardsService, tasksService, aiService } from "../services/index";
 import { exportNoteToPDF } from "../utils/pdfExport";
 import VoiceTutor from "../components/VoiceTutor";
 import "../styles/reader.css";
@@ -848,6 +848,28 @@ Be precise, highly informative, use clean formatting with bold headings and bull
       const updated = [...notes, newSticky];
       setNotes(updated);
       saveFileChanges({ notes: updated });
+    } else if (action === "flashcard") {
+      const topicText = `Generate a single flashcard from this text:\n"${text}"`;
+      const deckName = file?.name || "Reader Highlights";
+      
+      toast.promise(
+        aiService.generateFlashcards(topicText, 1).then(res => {
+          let rawCards = res.data.data.cards || [];
+          const cards = rawCards.map(c => ({
+            front: c.front || c.question || c.q || "",
+            back: c.back || c.answer || c.a || ""
+          }));
+          if (cards.length > 0) {
+            return flashcardsService.bulkCreate(cards, deckName);
+          }
+          throw new Error("No cards generated");
+        }),
+        {
+          loading: 'Generating flashcard...',
+          success: `Flashcard saved to "${deckName}"!`,
+          error: 'Failed to generate flashcard'
+        }
+      );
     }
   };
 
@@ -1217,6 +1239,9 @@ Be precise, highly informative, use clean formatting with bold headings and bull
             </button>
             <button onClick={() => handleFloatingToolbarAction("quiz")}>
               <HelpCircle size={14} /> <span>Quiz</span>
+            </button>
+            <button onClick={() => handleFloatingToolbarAction("flashcard")}>
+              <Layers size={14} /> <span>Flashcard</span>
             </button>
             <button onClick={() => handleFloatingToolbarAction("notes")}>
               <StickyNote size={14} /> <span>Save</span>
