@@ -36,7 +36,16 @@ const apiLimiter = rateLimit({
   max: 120,
   message: { success: false, error: 'Too many requests, please try again later.' }
 });
+
+// Strict AI Rate Limiting: max 15 requests per minute per IP to protect OpenAI API
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  message: { success: false, error: 'AI request limit reached. Please wait a minute.' }
+});
+
 app.use('/api/', apiLimiter);
+app.use('/api/ai/', aiLimiter);
 const server = http.createServer(app);
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(",").map(o => o.trim())
@@ -92,8 +101,8 @@ connectDB();
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "10mb" })); // Reduced from 50mb to prevent DoS via payload exhaustion
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "2mb" })); // Reduced to 2mb to prevent DoS via payload exhaustion
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
