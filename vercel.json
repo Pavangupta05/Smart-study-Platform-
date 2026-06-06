@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd client && npm install && npm run build",
+  "buildCommand": "if [ -d 'client' ]; then cd client; fi && npm install && npm run build",
   "outputDirectory": "client/dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
