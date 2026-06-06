@@ -24,6 +24,9 @@ const upload = multer({
   }
 });
 
+console.warn("⚠️  WARNING: Files are being stored as base64 in MongoDB via memory storage. This works around Render's ephemeral filesystem (which wipes local files on restart), but will eventually hit MongoDB document size limits. Consider migrating to Cloudinary or AWS S3 for file storage in production.");
+
+
 let Note;
 try { 
   Note = require("../models/Note"); 
