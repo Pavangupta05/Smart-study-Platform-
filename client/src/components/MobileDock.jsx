@@ -12,7 +12,8 @@ import {
   CalendarPlus,
   BookMarked,
   ClipboardList,
-  History
+  History,
+  Users
 } from "lucide-react";
 import { notesService } from "../services/index";
 import "../styles/mobile-dock.css";
@@ -31,6 +32,7 @@ const FAB_ACTIONS = [
   { icon: BookMarked, label: "Flashcard", action: "flashcard", color: "#10b981" },
   { icon: ClipboardList, label: "Mock Exam", action: "exam", color: "#8b5cf6" },
   { icon: History, label: "Exam History", action: "exams", color: "#6366f1" },
+  { icon: Users, label: "Focus Room", action: "study", color: "#10b981" },
 ];
 
 const spring = { type: "spring", stiffness: 500, damping: 30 };
@@ -64,6 +66,7 @@ export default function MobileDock() {
     else if (action === "flashcard") navigate("/flashcards");
     else if (action === "exam") navigate("/exam");
     else if (action === "exams") navigate("/exams");
+    else if (action === "study") navigate("/study/global");
   };
 
   return (

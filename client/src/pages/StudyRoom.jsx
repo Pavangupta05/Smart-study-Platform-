@@ -71,7 +71,7 @@ function StudyRoom() {
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: "24px", flex: 1 }}>
+      <div className="study-room-layout">
         {/* Active Users Sidebar */}
         <div style={{ background: "rgba(var(--surface-rgb), 0.5)", border: "1px solid var(--border)", borderRadius: "20px", padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <h3 style={{ fontSize: "16px", display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid var(--border)", paddingBottom: "16px" }}>
@@ -115,6 +115,26 @@ function StudyRoom() {
             </p>
           </div>
           <style dangerouslySetInnerHTML={{__html: `
+            .study-room-layout {
+              display: grid;
+              grid-template-columns: 1fr 3fr;
+              gap: 24px;
+              flex: 1;
+            }
+            @media (max-width: 768px) {
+              .study-room-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+              }
+              .study-room-page {
+                padding: 20px !important;
+              }
+              .page-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 15px;
+              }
+            }
             @keyframes pulse {
               0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
               70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }

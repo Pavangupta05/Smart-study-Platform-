@@ -856,8 +856,8 @@ Be precise, highly informative, use clean formatting with bold headings and bull
         aiService.generateFlashcards(topicText, 1).then(res => {
           let rawCards = res.data.data.cards || [];
           const cards = rawCards.map(c => ({
-            front: c.front || c.question || c.q || "",
-            back: c.back || c.answer || c.a || ""
+            front: c.front || c.question || c.Question || c.q || c.Q || "No Question Provided",
+            back: c.back || c.answer || c.Answer || c.a || c.A || "No Answer Provided"
           }));
           if (cards.length > 0) {
             return flashcardsService.bulkCreate(cards, deckName);

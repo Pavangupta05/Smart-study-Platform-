@@ -180,7 +180,7 @@ function StudySession({ deck, onExit }) {
                     handleFeedback(1); // Swipe Left = Again
                   }
                 }}
-                onClick={() => { if (isTopCard) setIsFlipped(!isFlipped); }}
+                onTap={() => { if (isTopCard) setIsFlipped(!isFlipped); }}
               >
                 <div className="flashcard-front">
                   <div className="card-tag">QUESTION</div>
