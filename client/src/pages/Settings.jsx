@@ -3,7 +3,8 @@ import { useLocation } from "react-router-dom";
 import {
   User, Bell, Palette, Lock, Sliders, Puzzle,
   CreditCard, MonitorSmartphone, Key, Zap,
-  Smartphone, Laptop, Copy, Search, Download
+  Smartphone, Laptop, Copy, Search, Download,
+  LifeBuoy, Command, Info, Shield, FileText
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -136,6 +137,16 @@ function Settings() {
         { id: "privacy", label: "Privacy & Data", icon: <Lock size={16} /> },
         { id: "devices", label: "Active Devices", icon: <MonitorSmartphone size={16} /> },
         { id: "developer", label: "Developer / API", icon: <Key size={16} /> },
+      ]
+    },
+    {
+      label: "Support & Legal",
+      items: [
+        { id: "help", label: "Help & Support", icon: <LifeBuoy size={16} /> },
+        { id: "shortcuts", label: "Keyboard Shortcuts", icon: <Command size={16} /> },
+        { id: "about", label: "About Us", icon: <Info size={16} /> },
+        { id: "privacy-policy", label: "Privacy Policy", icon: <Shield size={16} /> },
+        { id: "terms", label: "Terms of Service", icon: <FileText size={16} /> },
       ]
     }
   ];
@@ -573,6 +584,132 @@ function Settings() {
                       </button>
                     </div>
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* HELP & SUPPORT TAB */}
+            {activeTab === "help" && (
+              <motion.div key="help" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
+                <h2>Help & Support</h2>
+                <p>Find answers or contact our support team.</p>
+
+                <div className="setting-card">
+                  <div className="setting-item">
+                    <div className="setting-info">
+                      <label>Contact Support</label>
+                      <p>Email us at support@starnote.ai for priority assistance.</p>
+                    </div>
+                    <div className="setting-action">
+                      <button className="btn-secondary-sm" onClick={() => window.location.href="mailto:support@starnote.ai"}>Email Support</button>
+                    </div>
+                  </div>
+                  <div className="setting-item">
+                    <div className="setting-info">
+                      <label>Knowledge Base</label>
+                      <p>Browse our detailed documentation and guides.</p>
+                    </div>
+                    <div className="setting-action">
+                      <button className="btn-secondary-sm" onClick={() => toast.info("Knowledge Base is opening in a new tab...")}>View Docs</button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* KEYBOARD SHORTCUTS TAB */}
+            {activeTab === "shortcuts" && (
+              <motion.div key="shortcuts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
+                <h2>Keyboard Shortcuts</h2>
+                <p>Master these shortcuts to navigate StarNote like a pro.</p>
+
+                <div className="setting-card">
+                  {[
+                    { label: "Open Command Palette", key: "Ctrl + K" },
+                    { label: "Create New Note", key: "C + N" },
+                    { label: "Go to Dashboard", key: "G + D" },
+                    { label: "Go to Notes", key: "G + N" },
+                    { label: "Ask AI", key: "G + A" },
+                    { label: "Toggle Dark Mode", key: "Ctrl + Shift + L" }
+                  ].map((shortcut, i) => (
+                    <div className="setting-item" key={i}>
+                      <div className="setting-info">
+                        <label>{shortcut.label}</label>
+                      </div>
+                      <div className="setting-action">
+                        <kbd style={{ background: "var(--bg)", border: "1px solid var(--border)", padding: "4px 8px", borderRadius: "6px", fontSize: "12px", fontFamily: "monospace", color: "var(--text)" }}>{shortcut.key}</kbd>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ABOUT US TAB */}
+            {activeTab === "about" && (
+              <motion.div key="about" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
+                <h2>About StarNote</h2>
+                <p>The AI-native workspace for elite students.</p>
+
+                <div className="setting-card" style={{ padding: "32px", textAlign: "center" }}>
+                  <div style={{ width: "64px", height: "64px", background: "var(--primary-weak)", color: "var(--primary)", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    <Info size={32} />
+                  </div>
+                  <h3 style={{ fontSize: "20px", marginBottom: "8px" }}>StarNote AI</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "24px" }}>Version 2.0.0 (Build 4912)</p>
+                  
+                  <p style={{ color: "var(--text)", lineHeight: "1.6", maxWidth: "400px", margin: "0 auto 24px" }}>
+                    Our mission is to help students learn faster, retain more, and completely eliminate friction from the studying process using cutting-edge AI.
+                  </p>
+
+                  <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+                    <button className="btn-secondary-sm">Check for Updates</button>
+                    <button className="btn-secondary-sm">Follow on Twitter</button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* PRIVACY POLICY TAB */}
+            {activeTab === "privacy-policy" && (
+              <motion.div key="privacy-policy" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
+                <h2>Privacy Policy</h2>
+                <p>Last updated: June 6, 2026</p>
+
+                <div className="setting-card" style={{ padding: "24px", lineHeight: "1.6", color: "var(--text)" }}>
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>1. Information We Collect</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>We collect information you provide directly to us, such as when you create an account, upload documents, or communicate with us. This includes your name, email, and uploaded study materials.</p>
+
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>2. How We Use Your Information</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>We use the information we collect to provide, maintain, and improve our services, including processing your documents through our AI models (which are not trained on your private data) to generate summaries and flashcards.</p>
+
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>3. Data Security</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>We use industry-standard encryption (AES-256) to protect your data at rest and in transit. Your documents remain private and are only accessible by you.</p>
+
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>4. Contact Us</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>If you have any questions about this Privacy Policy, please contact us at privacy@starnote.ai.</p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* TERMS OF SERVICE TAB */}
+            {activeTab === "terms" && (
+              <motion.div key="terms" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="settings-content-section">
+                <h2>Terms of Service</h2>
+                <p>Last updated: June 6, 2026</p>
+
+                <div className="setting-card" style={{ padding: "24px", lineHeight: "1.6", color: "var(--text)" }}>
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>1. Acceptance of Terms</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>By accessing or using StarNote, you agree to be bound by these Terms. If you disagree with any part of the terms, you may not access the service.</p>
+
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>2. Description of Service</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>StarNote provides an AI-assisted study platform. We reserve the right to modify or discontinue, temporarily or permanently, the service with or without notice.</p>
+
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>3. User Conduct & Uploads</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>You retain all rights to the content you upload. You agree not to upload any content that is illegal, infringes on intellectual property, or contains malicious software.</p>
+
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>4. AI Generation Disclaimer</h3>
+                  <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "20px" }}>Content generated by StarNote's AI is for educational purposes only. We do not guarantee 100% accuracy, and users should verify critical information against primary sources.</p>
                 </div>
               </motion.div>
             )}
