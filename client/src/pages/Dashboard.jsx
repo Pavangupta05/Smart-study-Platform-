@@ -3,7 +3,8 @@ import {
   Plus, CheckCircle2, Circle, Trash2,
   Sparkles, ArrowRight, Layout, Flame, Layers,
   FileText, Clock, TrendingUp, TrendingDown, BarChart2, Brain,
-  Upload, Zap, Target, BookOpen, Award, Calendar, Edit2
+  Upload, Zap, Target, BookOpen, Award, Calendar, Edit2,
+  Trophy, Quote, List, AlignLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +30,7 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [chartTab, setChartTab] = useState("tasks");
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [timelineMode, setTimelineMode] = useState(false);
 
   const isCloudSyncEnabled = user?.settings?.cloudSync ?? true;
 
@@ -126,6 +128,18 @@ function Dashboard() {
     return facts[Math.floor(Math.random() * facts.length)];
   });
 
+  const [dailyQuote] = useState(() => {
+    const quotes = [
+      "Discipline equals freedom. Let's study.",
+      "The expert in anything was once a beginner.",
+      "Don't stop when you're tired. Stop when you're done.",
+      "Focus on being productive instead of busy.",
+      "Success is the sum of small efforts, repeated day in and day out.",
+      "It always seems impossible until it is done."
+    ];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  });
+
 
   // Build last-7-days data from real tasks & notes
   const { weeklyData, weekChange } = useMemo(() => {
@@ -217,6 +231,29 @@ function Dashboard() {
           </button>
         </div>
       </header>
+
+      {/* MOTIVATIONAL BANNER */}
+      <motion.div 
+        className="motivational-banner"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          background: "linear-gradient(135deg, var(--primary), var(--primary-dark))",
+          color: "white",
+          borderRadius: "16px",
+          padding: "16px 24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          marginBottom: "24px",
+          boxShadow: "0 4px 12px rgba(var(--primary-rgb), 0.2)"
+        }}
+      >
+        <Quote size={24} style={{ opacity: 0.8 }} />
+        <p style={{ margin: 0, fontSize: "15px", fontWeight: 500, letterSpacing: "0.2px" }}>
+          {dailyQuote}
+        </p>
+      </motion.div>
 
       {/* QUICK START ACTION HUB */}
       <motion.section 
@@ -643,10 +680,55 @@ function Dashboard() {
             )}
           </section>
 
+          {/* FRIENDS LEADERBOARD WIDGET */}
+          <section className="dash-section leaderboard-widget">
+            <div className="section-header" style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Trophy size={16} color="#f59e0b" />
+                <h2>Weekly Leaderboard</h2>
+              </div>
+            </div>
+            <div className="leaderboard-list" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {[
+                { rank: 1, name: "Alex Chen", hours: 14.5, color: "#f59e0b", you: false },
+                { rank: 2, name: `${firstName} (You)`, hours: Math.round((user?.studyStats?.focusTime || 0) / 60 * 10) / 10 || 12.2, color: "var(--primary)", you: true },
+                { rank: 3, name: "Sarah M.", hours: 8.4, color: "var(--text-muted)", you: false }
+              ].sort((a,b) => b.hours - a.hours).map((userCard, i) => (
+                <div key={i} style={{ 
+                  display: "flex", alignItems: "center", justifyContent: "space-between", 
+                  padding: "10px 12px", background: userCard.you ? "rgba(var(--primary-rgb), 0.1)" : "var(--bg-secondary)", 
+                  borderRadius: "10px", border: userCard.you ? "1px solid var(--primary-weak)" : "1px solid transparent"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: userCard.color, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold" }}>
+                      {i + 1}
+                    </div>
+                    <span style={{ fontWeight: userCard.you ? 600 : 500, color: "var(--text)", fontSize: "14px" }}>{userCard.name}</span>
+                  </div>
+                  <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{userCard.hours}h</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* TASKS LIST */}
           <section className="dash-section">
-            <div className="section-header">
+            <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h2>Tasks</h2>
+              <div style={{ display: "flex", background: "var(--bg-secondary)", borderRadius: "8px", padding: "2px" }}>
+                <button 
+                  onClick={() => setTimelineMode(false)}
+                  style={{ background: !timelineMode ? "var(--bg)" : "transparent", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", color: !timelineMode ? "var(--text)" : "var(--text-muted)" }}
+                >
+                  <List size={14} />
+                </button>
+                <button 
+                  onClick={() => setTimelineMode(true)}
+                  style={{ background: timelineMode ? "var(--bg)" : "transparent", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", color: timelineMode ? "var(--text)" : "var(--text-muted)" }}
+                >
+                  <AlignLeft size={14} />
+                </button>
+              </div>
             </div>
             
             <form className="quick-add-task" onSubmit={addTask}>
@@ -658,7 +740,7 @@ function Dashboard() {
               />
             </form>
 
-            <div className="dashboard-task-list">
+            <div className={`dashboard-task-list ${timelineMode ? 'timeline-mode' : ''}`}>
               {tasksLoading ? (
                 [1, 2, 3].map(i => (
                   <div key={i} className="dash-task-item skeleton" style={{ height: '48px', marginBottom: '8px', border: 'none' }}></div>
@@ -671,6 +753,28 @@ function Dashboard() {
                   </div>
                   <h3>All caught up!</h3>
                   <p>You have no pending tasks today.</p>
+                </div>
+              ) : timelineMode ? (
+                <div style={{ position: "relative", paddingLeft: "16px", marginTop: "16px" }}>
+                  <div style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: "2px", background: "var(--border)", borderRadius: "2px" }}></div>
+                  {tasks.map((task, idx) => {
+                    const taskId = task._id || task.id;
+                    const dateObj = new Date(task.createdAt || Date.now());
+                    const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    return (
+                      <div key={taskId} style={{ position: "relative", marginBottom: "20px", display: "flex", gap: "12px", opacity: task.completed ? 0.6 : 1 }}>
+                        <div style={{ position: "absolute", left: "-21px", top: "4px", width: "12px", height: "12px", borderRadius: "50%", background: task.completed ? "var(--primary)" : "var(--bg)", border: `2px solid ${task.completed ? "var(--primary)" : "var(--border)"}`, zIndex: 1 }}></div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", width: "50px", paddingTop: "2px" }}>{timeString}</div>
+                        <div style={{ flex: 1, background: "var(--bg-secondary)", padding: "10px 14px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                           <span style={{ fontSize: "14px", color: "var(--text)", textDecoration: task.completed ? "line-through" : "none" }}>{task.text}</span>
+                           <button className="btn-check" aria-label="Toggle Task" onClick={() => toggleTask(taskId)} style={{ background: "transparent", border: "none", cursor: "pointer", color: task.completed ? "var(--primary)" : "var(--text-muted)" }}>
+                             {task.completed ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                           </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 tasks.map(task => {
