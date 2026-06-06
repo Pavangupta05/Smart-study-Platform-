@@ -825,7 +825,7 @@ function Reader({ zenMode, setZenMode }) {
     ctx.fillStyle = penColor;
     ctx.fillText(textInput.value, x, y);
 
-    const dataUrl = canvas.toDataURL();
+    const dataUrl = canvas.toDataURL("image/webp", 0.8);
     setDrawHistory(prev => {
       const pageHistory = prev[pageIdx] || [];
       const newHistory = { ...prev, [pageIdx]: [...pageHistory, dataUrl] };
@@ -1001,7 +1001,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     startPointRef.current = { x, y };
     strokePointsRef.current = [{ x, y }];
     lastStrokePointRef.current = { x, y };
-    setCanvasSnapshot(canvas.toDataURL());
+    setCanvasSnapshot(canvas.toDataURL("image/webp", 0.8));
 
     const ctx = canvas.getContext("2d");
     ctx.beginPath();
@@ -1171,7 +1171,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
   const commitCanvasState = (pageIdx) => {
     const canvas = canvasRefs.current[pageIdx];
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL();
+    const dataUrl = canvas.toDataURL("image/webp", 0.8);
     setDrawHistory(prev => {
       const pageHistory = prev[pageIdx] || [];
       const newHistory = { ...prev, [pageIdx]: [...pageHistory, dataUrl] };

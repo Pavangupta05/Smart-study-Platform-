@@ -52,15 +52,23 @@ function Flashcards() {
   const [activeDeck, setActiveDeck] = useState(null);
   const [decks, setDecks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchDecks = () => {
+    setIsLoading(true);
+    setError(null);
     flashcardsService.getAll()
       .then(res => setDecks(processFlashcards(res.data.cards || [])))
       .catch(err => {
-        console.error(err);
+        console.error("Fetch decks error:", err);
+        setError("Failed to load your flashcards. Please check your connection.");
         toast.error("Failed to load flashcards.");
       })
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDecks();
   }, []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGenModal, setShowGenModal] = useState(false);
@@ -416,6 +424,16 @@ function Flashcards() {
           [1, 2, 3].map(i => (
             <div key={i} className="deck-card skeleton" style={{ minHeight: 120 }} />
           ))
+        ) : error ? (
+          <div style={{ gridColumn: "1 / -1" }}>
+            <EmptyState
+              icon={<Brain size={48} strokeWidth={1.2} style={{ color: "var(--error)" }} />}
+              title="Oops, something went wrong"
+              description={error}
+              ctaLabel="Try Again"
+              onCta={fetchDecks}
+            />
+          </div>
         ) : decks.length === 0 ? (
           <div style={{ gridColumn: "1 / -1" }}>
             <EmptyState
