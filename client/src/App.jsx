@@ -29,6 +29,7 @@ const MindMap = lazy(() => import("./pages/MindMap"));
 const Exam = lazy(() => import("./pages/Exam"));
 const ExamHistory = lazy(() => import("./pages/ExamHistory"));
 const PublicReader = lazy(() => import("./pages/PublicReader"));
+const StudyRoom = lazy(() => import("./pages/StudyRoom"));
 
 function PageSkeleton() {
   return (
@@ -252,6 +253,7 @@ function App() {
               <Route path="/mindmap/:noteId" element={<PageTransition><MindMap /></PageTransition>} />
               <Route path="/exam" element={<PageTransition><Exam /></PageTransition>} />
               <Route path="/exams" element={<PageTransition><ExamHistory /></PageTransition>} />
+              <Route path="/study/:roomId" element={<PageTransition><StudyRoom /></PageTransition>} />
               <Route path="*" element={<PageTransition><Dashboard /></PageTransition>} />
             </Routes>
           </Suspense>

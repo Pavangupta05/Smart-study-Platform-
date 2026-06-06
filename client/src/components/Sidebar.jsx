@@ -25,6 +25,7 @@ import {
   ClipboardList,
   GitBranch,
   History,
+  Users,
 } from "lucide-react";
 import { useUser } from "../context/UserContext";
 import { notesService } from "../services/index";
@@ -38,6 +39,7 @@ const CORE_NAV = [
   { to: "/flashcards", Icon: LibraryBig, label: "Flashcards" },
   { to: "/exam", Icon: ClipboardList, label: "Mock Exam" },
   { to: "/exams", Icon: History, label: "Exam History" },
+  { to: "/study/global", Icon: Users, label: "Focus Room" },
   { to: "/ai", Icon: Sparkles, label: "AI Tutor" },
 ];
 

@@ -72,6 +72,8 @@ const io = new Server(server, {
 // Pass IO to routes
 app.set("io", io);
 
+const activeStudyUsers = new Map(); // socketId -> { roomId, user: { id, firstName, initials } }
+
 io.on("connection", (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
   
@@ -83,13 +85,46 @@ io.on("connection", (socket) => {
   socket.on("timer_sync", (data) => {
     // Get user room from socket
     const rooms = Array.from(socket.rooms);
-    const userId = rooms.find(r => r !== socket.id);
+    const userId = rooms.find(r => r !== socket.id && !r.startsWith("study_"));
     if (userId) {
       socket.to(userId).emit("timer_sync", data);
     }
   });
 
+  // Multiplayer Study Room Logic
+  socket.on("join_study_room", (data) => {
+    socket.join(`study_${data.roomId}`);
+    activeStudyUsers.set(socket.id, { roomId: data.roomId, user: data.user });
+    
+    // Broadcast updated users to everyone in the room
+    const usersInRoom = Array.from(activeStudyUsers.values())
+      .filter(u => u.roomId === data.roomId)
+      .map(u => u.user);
+      
+    io.to(`study_${data.roomId}`).emit("study_room_users", usersInRoom);
+    console.log(`👥 ${data.user.firstName} joined study room ${data.roomId}`);
+  });
+
+  socket.on("leave_study_room", (roomId) => {
+    socket.leave(`study_${roomId}`);
+    activeStudyUsers.delete(socket.id);
+    const usersInRoom = Array.from(activeStudyUsers.values())
+      .filter(u => u.roomId === roomId)
+      .map(u => u.user);
+    io.to(`study_${roomId}`).emit("study_room_users", usersInRoom);
+  });
+
   socket.on("disconnect", () => {
+    // Cleanup Study Rooms
+    const studySession = activeStudyUsers.get(socket.id);
+    if (studySession) {
+      const { roomId } = studySession;
+      activeStudyUsers.delete(socket.id);
+      const usersInRoom = Array.from(activeStudyUsers.values())
+        .filter(u => u.roomId === roomId)
+        .map(u => u.user);
+      io.to(`study_${roomId}`).emit("study_room_users", usersInRoom);
+    }
     console.log(`❌ Socket disconnected: ${socket.id}`);
   });
 });
