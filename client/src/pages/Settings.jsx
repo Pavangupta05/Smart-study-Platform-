@@ -251,7 +251,7 @@ function Settings() {
                     <div className="profile-avatar-wrap">
                       <div className="profile-avatar-large">
                         {user?.avatar ? (
-                          <img src={user.avatar} alt="Profile" />
+                          <img src={user.avatar} alt="Profile" loading="lazy" width="80" height="80" />
                         ) : (
                           initials
                         )}

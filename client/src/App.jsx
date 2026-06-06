@@ -11,6 +11,31 @@ import StudyTimer from "./components/StudyTimer";
 import { useUser } from "./context/UserContext";
 import "./styles/simple-ui.css";
 
+// Per-route page titles for SEO
+const PAGE_TITLES = {
+  "/": "Dashboard — StarNote",
+  "/notes": "Notes — StarNote",
+  "/flashcards": "Flashcards — StarNote",
+  "/ai": "AI Tutor — StarNote",
+  "/planner": "Study Planner — StarNote",
+  "/exam": "Mock Exam — StarNote",
+  "/exams": "Exam History — StarNote",
+  "/profile": "Profile — StarNote",
+  "/settings": "Settings — StarNote",
+  "/templates": "Templates — StarNote",
+  "/trash": "Trash — StarNote",
+  "/landing": "StarNote — AI-Powered Smart Study Platform",
+  "/auth": "Sign In — StarNote",
+};
+
+function usePageTitle(location) {
+  useEffect(() => {
+    const base = location.pathname.split("/").slice(0, 2).join("/") || "/";
+    const title = PAGE_TITLES[base] || "StarNote — AI-Powered Smart Study Platform";
+    document.title = title;
+  }, [location.pathname]);
+}
+
 // Lazy-loaded pages — code split for faster initial load
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Notes = lazy(() => import("./pages/Notes"));
@@ -81,6 +106,7 @@ function App() {
     return saved !== null ? JSON.parse(saved) : true;
   });
   const location = useLocation();
+  usePageTitle(location);
 
   useEffect(() => {
     localStorage.setItem("sidebarOpen", JSON.stringify(isSidebarOpen));
@@ -226,7 +252,7 @@ function App() {
         />
       )}
 
-      <div className="main">
+      <div className="main" id="main-content">
         <Topbar 
           theme={theme}
           setTheme={(nextVal, event) => triggerThemeTransition(nextVal, event?.clientX, event?.clientY)}

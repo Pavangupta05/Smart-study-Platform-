@@ -107,7 +107,7 @@ function Profile() {
             <div className="profile-avatar-wrapper">
               <label htmlFor="avatar-upload" className="profile-avatar-large clickable">
                 {photoPreview ? (
-                  <img src={photoPreview} alt="Profile" className="avatar-img-full" />
+                  <img src={photoPreview} alt="Profile" className="avatar-img-full" loading="lazy" width="120" height="120" />
                 ) : (
                   initials
                 )}

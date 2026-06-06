@@ -1835,6 +1835,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                       <img 
                         src={img.url} 
                         alt="Sticker" 
+                        loading="lazy" 
                         style={{ 
                           width: '100%', 
                           height: '100%', 
@@ -1861,7 +1862,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                 {/* Document Source rendering (PDF / Rich Text editor) */}
                 {file?.blobUrl ? (
                   file.fileType && file.fileType.startsWith("image/") ? (
-                    <img src={file.blobUrl} alt={file.name} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    <img src={file.blobUrl} alt={file.name} loading="lazy" style={{ width: '100%', height: 'auto', display: 'block' }} />
                   ) : (
                     <iframe src={objectUrl || file.blobUrl} title={file.name} className="pdf-iframe-view" />
                   )

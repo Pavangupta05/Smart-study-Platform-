@@ -296,7 +296,7 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
           <div className="sb-user-left" onClick={() => navigate("/profile")} role="button" tabIndex={0}>
             <div className="sb-user-avatar">
               {user?.avatar
-                ? <img src={user.avatar} alt="Profile" className="sb-avatar-img" />
+                ? <img src={user.avatar} alt="Profile" className="sb-avatar-img" loading="lazy" width="32" height="32" />
                 : initials
               }
               <span className="sb-online-dot" />

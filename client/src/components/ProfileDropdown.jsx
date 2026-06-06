@@ -27,7 +27,7 @@ function ProfileDropdown() {
       <button className="avatar-btn" onClick={() => setIsOpen(!isOpen)} aria-label="Open profile menu">
         <div className="avatar">
           {user?.avatar ? (
-            <img src={user.avatar} alt="Profile" className="avatar-img-tiny" />
+            <img src={user.avatar} alt="Profile" className="avatar-img-tiny" loading="lazy" width="32" height="32" />
           ) : (
             initials
           )}
@@ -51,7 +51,7 @@ function ProfileDropdown() {
             <div className="dropdown-header">
               <div className="dropdown-avatar">
                 {user?.avatar ? (
-                  <img src={user.avatar} alt="Profile" className="avatar-img-tiny" />
+                  <img src={user.avatar} alt="Profile" className="avatar-img-tiny" loading="lazy" width="32" height="32" />
                 ) : (
                   initials
                 )}

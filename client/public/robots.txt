@@ -1,0 +1,24 @@
+# StarNote — robots.txt
+# Allow all crawlers to index the public landing page
+
+User-agent: *
+Allow: /
+Allow: /landing
+Disallow: /dashboard
+Disallow: /notes
+Disallow: /flashcards
+Disallow: /ai
+Disallow: /planner
+Disallow: /exam
+Disallow: /exams
+Disallow: /profile
+Disallow: /settings
+Disallow: /templates
+Disallow: /trash
+Disallow: /reader/
+Disallow: /mindmap/
+Disallow: /study/
+Disallow: /auth
+Disallow: /resetpassword/
+
+Sitemap: https://starnote.vercel.app/sitemap.xml

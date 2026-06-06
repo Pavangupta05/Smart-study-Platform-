@@ -10,6 +10,25 @@
   -ms-overflow-style: none;
 }
 
+/* Skip to main content — keyboard/screen reader accessibility */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 99999;
+  padding: 10px 20px;
+  background: var(--primary, #6366f1);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-to-content:focus {
+  top: 16px;
+}
+
 html,
 body,
 #root {
