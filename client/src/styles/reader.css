@@ -74,18 +74,25 @@
 
 /* Header */
 .reader-header-modern {
-  min-height: calc(56px + env(safe-area-inset-top));
-  height: calc(56px + env(safe-area-inset-top));
-  background: rgba(255, 255, 255, 0.78);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.055);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  min-width: 600px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 100px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: env(safe-area-inset-top) max(20px, env(safe-area-inset-left)) 0 max(20px, env(safe-area-inset-right));
-  flex-shrink: 0;
+  padding: 0 20px;
   z-index: 2010;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03);
+  transition: all 0.3s ease;
 }
 
 .theme-dark .reader-header-modern {
@@ -436,7 +443,7 @@
 .document-viewport-modern {
   flex: 1;
   overflow: auto;
-  padding: 40px 20px;
+  padding: 100px 20px 40px; /* Top padding clears the floating header */
   display: flex;
   flex-direction: column;
   align-items: center;

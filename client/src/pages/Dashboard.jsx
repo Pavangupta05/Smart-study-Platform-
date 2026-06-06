@@ -211,93 +211,124 @@ function Dashboard() {
 
   return (
     <div className="dashboard-minimal">
-      <header className="dash-header">
-        <div className="dash-greeting">
-          <h1>Welcome back, {firstName}! 👋</h1>
-          <p>{tasks.filter(t => !t.completed).length} tasks left today.</p>
-        </div>
-        <div className="dash-header-actions">
-          <div className="dash-search">
-            <input 
-              type="text" 
-              placeholder="Search materials..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <button className="btn-resume" aria-label="Ask AI Tutor" onClick={() => navigate("/ai")}>
-            <Sparkles size={16} />
-            <span>Ask AI Tutor</span>
-          </button>
-        </div>
-      </header>
-
-      {/* MOTIVATIONAL BANNER */}
-      <motion.div 
-        className="motivational-banner"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          background: "linear-gradient(135deg, var(--primary), var(--primary-dark))",
-          color: "white",
-          borderRadius: "16px",
-          padding: "16px 24px",
+      <header className="dash-header" style={{
+        display: "flex", flexDirection: "column", gap: "24px", marginBottom: "40px"
+      }}>
+        {/* HERO SECTION */}
+        <div className="hero-section" style={{
+          position: "relative",
+          padding: "48px 40px",
+          borderRadius: "32px",
+          background: "linear-gradient(135deg, rgba(var(--primary-rgb), 0.03), rgba(var(--primary-rgb), 0.08))",
+          border: "1px solid var(--border)",
+          overflow: "hidden",
           display: "flex",
           alignItems: "center",
-          gap: "16px",
-          marginBottom: "24px",
-          boxShadow: "0 4px 12px rgba(var(--primary-rgb), 0.2)"
-        }}
-      >
-        <Quote size={24} style={{ opacity: 0.8 }} />
-        <p style={{ margin: 0, fontSize: "15px", fontWeight: 500, letterSpacing: "0.2px" }}>
-          {dailyQuote}
-        </p>
-      </motion.div>
+          justifyContent: "space-between"
+        }}>
+          {/* Dynamic Greeting */}
+          <div style={{ zIndex: 2 }}>
+            <h1 style={{ fontSize: "42px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
+              {new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening"}, {firstName}.
+            </h1>
+            <p style={{ fontSize: "16px", color: "var(--text-secondary)", fontWeight: 500, maxWidth: "500px", lineHeight: 1.5 }}>
+              {dailyBrief}
+            </p>
+          </div>
 
+          {/* Resume Studying CTA */}
+          <div style={{ zIndex: 2 }}>
+            {recentFiles.length > 0 ? (
+              <motion.button 
+                className="magnetic-btn hover-glow"
+                whileHover={{ scale: 1.02 }}
+                onClick={() => navigate(`/reader/${recentFiles[0]._id}`)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "12px",
+                  padding: "16px 32px",
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                  borderRadius: "20px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  boxShadow: "0 12px 24px -8px rgba(var(--primary-rgb), 0.3)"
+                }}
+              >
+                <span>Resume: {recentFiles[0].name || "Last Document"}</span>
+                <ArrowRight size={20} />
+              </motion.button>
+            ) : (
+              <motion.button 
+                className="magnetic-btn hover-glow"
+                whileHover={{ scale: 1.02 }}
+                onClick={() => navigate(`/notes`)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "12px",
+                  padding: "16px 32px",
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                  borderRadius: "20px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  boxShadow: "0 12px 24px -8px rgba(var(--primary-rgb), 0.3)"
+                }}
+              >
+                <Plus size={20} />
+                <span>Upload a Document</span>
+              </motion.button>
+            )}
+          </div>
+          
+          {/* Background Decor */}
+          <div style={{
+            position: "absolute", right: "-10%", top: "-50%",
+            width: "600px", height: "600px",
+            background: "radial-gradient(circle, rgba(var(--primary-rgb), 0.05) 0%, transparent 70%)",
+            borderRadius: "50%", pointerEvents: "none"
+          }} />
+        </div>
+      </header>
       {/* QUICK START ACTION HUB */}
       <motion.section 
         className="quick-start-hub"
         variants={containerVars}
         initial="hidden"
         animate="show"
+        style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "40px"
+        }}
       >
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/notes")}>
-          <div className="qa-icon" style={{ background: "rgba(99, 102, 241, 0.1)", color: "#6366f1" }}>
+        <motion.div variants={itemVars} className="card magnetic-btn" onClick={() => navigate("/notes")} style={{ padding: "20px", display: "flex", gap: "16px", alignItems: "center", cursor: "pointer", borderRadius: "20px" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "16px", background: "rgba(99, 102, 241, 0.1)", color: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Upload size={24} />
           </div>
-          <div className="qa-text">
-            <h3>Upload PDF</h3>
-            <p>Read & annotate</p>
-          </div>
+          <div><h3 style={{ margin: 0, fontSize: "15px" }}>Upload PDF</h3><p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>Read & annotate</p></div>
         </motion.div>
         
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/flashcards")}>
-          <div className="qa-icon" style={{ background: "rgba(236, 72, 153, 0.1)", color: "#ec4899" }}>
+        <motion.div variants={itemVars} className="card magnetic-btn" onClick={() => navigate("/flashcards")} style={{ padding: "20px", display: "flex", gap: "16px", alignItems: "center", cursor: "pointer", borderRadius: "20px" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "16px", background: "rgba(236, 72, 153, 0.1)", color: "#ec4899", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Zap size={24} />
           </div>
-          <div className="qa-text">
-            <h3>AI Flashcards</h3>
-            <p>Generate from notes</p>
-          </div>
+          <div><h3 style={{ margin: 0, fontSize: "15px" }}>AI Flashcards</h3><p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>Generate from notes</p></div>
         </motion.div>
         
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/ai")}>
-          <div className="qa-icon" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>
+        <motion.div variants={itemVars} className="card magnetic-btn" onClick={() => navigate("/ai")} style={{ padding: "20px", display: "flex", gap: "16px", alignItems: "center", cursor: "pointer", borderRadius: "20px" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "16px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Target size={24} />
           </div>
-          <div className="qa-text">
-            <h3>Mock Exam</h3>
-            <p>Test your knowledge</p>
-          </div>
+          <div><h3 style={{ margin: 0, fontSize: "15px" }}>Mock Exam</h3><p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>Test your knowledge</p></div>
         </motion.div>
         
-        <motion.div variants={itemVars} className="quick-action-card" onClick={() => navigate("/notes")}>
-          <div className="qa-icon" style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" }}>
-            <BookOpen size={24} />
+        <motion.div variants={itemVars} className="card magnetic-btn" onClick={() => navigate("/study/global")} style={{ padding: "20px", display: "flex", gap: "16px", alignItems: "center", cursor: "pointer", borderRadius: "20px" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "16px", background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Brain size={24} />
           </div>
-          <div className="qa-text">
-            <h3>Blank Note</h3>
+          <div><h3 style={{ margin: 0, fontSize: "15px" }}>Focus Room</h3><p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>Study with others</p></div>
+        </motion.div>
             <p>Start writing</p>
           </div>
         </motion.div>

@@ -120,6 +120,37 @@ body.dark .card::before, body.dark .glass-card::before, body.dark .doc-card-mini
   opacity: 1;
 }
 
+/* ── Magnetic & Smooth Interactions ── */
+.magnetic-btn {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+  will-change: transform;
+}
+.magnetic-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+}
+body.dark .magnetic-btn:hover {
+  box-shadow: 0 12px 24px -8px rgba(255, 255, 255, 0.1);
+}
+
+.hover-glow {
+  position: relative;
+  overflow: hidden;
+}
+.hover-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, transparent 60%);
+  opacity: 0;
+  mix-blend-mode: overlay;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.hover-glow:hover::after {
+  opacity: 0.15;
+}
+
 .focus-card {
   background-image: none !important;
 }
