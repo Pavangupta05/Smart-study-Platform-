@@ -235,10 +235,25 @@ body.dark {
   100% { transform: scale(1.15) translate(-1%, -2%) rotate(2deg); filter: hue-rotate(5deg); }
 }
 
-h1, h2, h3, .h1, .h2, .h3 {
-  font-family: 'Urbanist', sans-serif;
-  letter-spacing: -0.04em;
+h1, .h1 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.03em;
   font-weight: 800;
+  line-height: 1.15;
+}
+
+h2, .h2 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h3, h4, h5, h6, .h3 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 /* ===== BASE ===== */
