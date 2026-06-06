@@ -187,6 +187,9 @@ function App() {
     return (
       <div className={theme}>
         <div className="global-bg">
+          <div className="ambient-orb orb-1" />
+          <div className="ambient-orb orb-2" />
+          <div className="ambient-orb orb-3" />
           <div className="bg-layer bg-light" />
           <div className="bg-layer bg-dark" />
         </div>
@@ -207,6 +210,9 @@ function App() {
   return (
     <div className={`app ${theme} ${zenMode ? "zen-mode" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
       <div className="global-bg">
+        <div className="ambient-orb orb-1" />
+        <div className="ambient-orb orb-2" />
+        <div className="ambient-orb orb-3" />
         <div className="bg-layer bg-light" />
         <div className="bg-layer bg-dark" />
       </div>
