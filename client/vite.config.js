@@ -46,8 +46,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['framer-motion', 'lucide-react', 'sonner'],
-          charts: ['recharts'],
-          editor: ['@tiptap/react', '@tiptap/starter-kit']
+          charts: ['recharts']
         }
       }
     }
