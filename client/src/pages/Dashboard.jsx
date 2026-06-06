@@ -26,7 +26,6 @@ function Dashboard() {
   const navigate = useNavigate();
   const { firstName, user, socket } = useUser();
   
-  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [chartTab, setChartTab] = useState("tasks");
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -37,7 +36,7 @@ function Dashboard() {
   // ── Custom hooks replace 120 lines of duplicated fetch/CRUD logic ─────────
   const {
     tasks, loading: tasksLoading,
-    addTask: addTaskToList, toggleTask, deleteTask, pendingCount
+    addTask: addTaskToList, toggleTask, deleteTask
   } = useTasks(isCloudSyncEnabled);
 
   const {
@@ -50,6 +49,7 @@ function Dashboard() {
   // Loading state = all data is ready
   useEffect(() => {
     if (!tasksLoading && !notesLoading) setIsLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasksLoading, notesLoading]);
 
   // Real-time synchronization via socket
@@ -111,6 +111,7 @@ function Dashboard() {
     return `🎯 ${pending > 0 ? `${pending} task${pending > 1 ? 's' : ''} left today.` : "All caught up!"} Streak: ${streak} day${streak !== 1 ? 's' : ''}. Keep building momentum!`;
   }, [tasks, user, dueCardsCount]);
 
+
   // ── Brain Facts — rotate randomly per session ─────────────────────────────
   const [dailyFact] = useState(() => {
     const facts = [
@@ -126,18 +127,6 @@ function Dashboard() {
       "The spacing effect: reviewing material at increasing intervals beats cramming.",
     ];
     return facts[Math.floor(Math.random() * facts.length)];
-  });
-
-  const [dailyQuote] = useState(() => {
-    const quotes = [
-      "Discipline equals freedom. Let's study.",
-      "The expert in anything was once a beginner.",
-      "Don't stop when you're tired. Stop when you're done.",
-      "Focus on being productive instead of busy.",
-      "Success is the sum of small efforts, repeated day in and day out.",
-      "It always seems impossible until it is done."
-    ];
-    return quotes[Math.floor(Math.random() * quotes.length)];
   });
 
 
@@ -183,10 +172,6 @@ function Dashboard() {
 
   const [newTask, setNewTask] = useState("");
 
-  const filteredFiles = recentFiles.filter(f => 
-    f.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 4);
-
   const addTask = async (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
@@ -196,7 +181,6 @@ function Dashboard() {
   };
 
   const completedCount = tasks.filter(t => t.completed).length;
-  const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
 
 
   const containerVars = {
@@ -211,85 +195,10 @@ function Dashboard() {
 
   return (
     <div className="dashboard-minimal">
-      <header className="dash-header" style={{
-        display: "flex", flexDirection: "column", gap: "24px", marginBottom: "40px"
-      }}>
-        {/* HERO SECTION */}
-        <div className="hero-section" style={{
-          position: "relative",
-          padding: "48px 40px",
-          borderRadius: "32px",
-          background: "linear-gradient(135deg, rgba(var(--primary-rgb), 0.03), rgba(var(--primary-rgb), 0.08))",
-          border: "1px solid var(--border)",
-          overflow: "hidden",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between"
-        }}>
-          {/* Dynamic Greeting */}
-          <div style={{ zIndex: 2 }}>
-            <h1 style={{ fontSize: "42px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-              {new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening"}, {firstName}.
-            </h1>
-            <p style={{ fontSize: "16px", color: "var(--text-secondary)", fontWeight: 500, maxWidth: "500px", lineHeight: 1.5 }}>
-              {dailyBrief}
-            </p>
-          </div>
-
-          {/* Resume Studying CTA */}
-          <div style={{ zIndex: 2 }}>
-            {recentFiles.length > 0 ? (
-              <motion.button 
-                className="magnetic-btn hover-glow"
-                whileHover={{ scale: 1.02 }}
-                onClick={() => navigate(`/reader/${recentFiles[0]._id}`)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  padding: "16px 32px",
-                  background: "var(--primary)",
-                  color: "var(--primary-foreground)",
-                  borderRadius: "20px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: "16px",
-                  boxShadow: "0 12px 24px -8px rgba(var(--primary-rgb), 0.3)"
-                }}
-              >
-                <span>Resume: {recentFiles[0].name || "Last Document"}</span>
-                <ArrowRight size={20} />
-              </motion.button>
-            ) : (
-              <motion.button 
-                className="magnetic-btn hover-glow"
-                whileHover={{ scale: 1.02 }}
-                onClick={() => navigate(`/notes`)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "12px",
-                  padding: "16px 32px",
-                  background: "var(--primary)",
-                  color: "var(--primary-foreground)",
-                  borderRadius: "20px",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: "16px",
-                  boxShadow: "0 12px 24px -8px rgba(var(--primary-rgb), 0.3)"
-                }}
-              >
-                <Plus size={20} />
-                <span>Upload a Document</span>
-              </motion.button>
-            )}
-          </div>
-          
-          {/* Background Decor */}
-          <div style={{
-            position: "absolute", right: "-10%", top: "-50%",
-            width: "600px", height: "600px",
-            background: "radial-gradient(circle, rgba(var(--primary-rgb), 0.05) 0%, transparent 70%)",
-            borderRadius: "50%", pointerEvents: "none"
-          }} />
+      <header className="dash-header">
+        <div className="dash-greeting">
+          <h1>Welcome back, {firstName}! 👋</h1>
+          <p>{tasks.filter(t => !t.completed).length} tasks left today.</p>
         </div>
       </header>
       {/* QUICK START ACTION HUB */}
@@ -328,9 +237,6 @@ function Dashboard() {
             <Brain size={24} />
           </div>
           <div><h3 style={{ margin: 0, fontSize: "15px" }}>Focus Room</h3><p style={{ margin: 0, fontSize: "12px", color: "var(--text-secondary)" }}>Study with others</p></div>
-        </motion.div>
-            <p>Start writing</p>
-          </div>
         </motion.div>
       </motion.section>
 
@@ -610,8 +516,8 @@ function Dashboard() {
                     </div>
                   </div>
                 ))
-              ) : filteredFiles.length > 0 ? (
-                filteredFiles.map((file) => (
+              ) : recentFiles.length > 0 ? (
+                recentFiles.slice(0, 4).map((file) => (
                   <div key={file._id || file.id || file.originalIndex} className="doc-card-mini" onClick={() => navigate(`/reader/${file._id || file.id || file.originalIndex}`)}>
                     <div className="doc-icon-small">{file.icon || "📄"}</div>
                     <div className="doc-details">
@@ -627,7 +533,7 @@ function Dashboard() {
                     <Layout size={40} className="icon-main" />
                   </div>
                   <h3>No materials yet</h3>
-                  <p>{searchQuery ? "No matching materials found." : "Start your journey by creating or uploading your first study note."}</p>
+                  <p>Start your journey by creating or uploading your first study note.</p>
                   <button className="btn-primary-small">Create Note</button>
                 </div>
               )}
@@ -788,8 +694,9 @@ function Dashboard() {
               ) : timelineMode ? (
                 <div style={{ position: "relative", paddingLeft: "16px", marginTop: "16px" }}>
                   <div style={{ position: "absolute", left: "0", top: "0", bottom: "0", width: "2px", background: "var(--border)", borderRadius: "2px" }}></div>
-                  {tasks.map((task, idx) => {
+                  {tasks.map((task) => {
                     const taskId = task._id || task.id;
+                    // eslint-disable-next-line react-hooks/rules-of-hooks
                     const dateObj = new Date(task.createdAt || Date.now());
                     const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     
