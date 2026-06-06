@@ -118,7 +118,7 @@ export default function Planner() {
                   onSubmit={handleAddTask}
                   style={{ marginBottom: '1rem', overflow: 'hidden' }}
                 >
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     <input
                       autoFocus
                       className="planner-quick-add-input"
@@ -127,7 +127,7 @@ export default function Planner() {
                       onKeyDown={e => e.key === 'Escape' && setIsAddingTask(false)}
                       placeholder="What do you need to study?"
                       style={{
-                        flex: 1, padding: '12px 16px',
+                        flex: '1 1 150px', padding: '12px 16px', minWidth: 0,
                         background: 'var(--bg-secondary)',
                         border: '1.5px solid var(--planner-purple)',
                         borderRadius: '12px', color: 'var(--text-primary)',
@@ -140,7 +140,8 @@ export default function Planner() {
                       style={{
                         padding: '0 16px', background: 'var(--planner-purple)',
                         color: 'white', border: 'none', borderRadius: '12px',
-                        fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
+                        fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                        flex: '0 1 auto'
                       }}
                     >
                       Add
@@ -152,7 +153,8 @@ export default function Planner() {
                       style={{
                         padding: '0 12px', background: 'var(--bg-secondary)',
                         color: 'var(--text-secondary)', border: 'none',
-                        borderRadius: '12px', cursor: 'pointer'
+                        borderRadius: '12px', cursor: 'pointer',
+                        flex: '0 1 auto'
                       }}
                     >
                       ✕
