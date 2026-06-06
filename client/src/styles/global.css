@@ -258,6 +258,15 @@ body.dark {
 }
 
 /* Ambient Floating Orbs */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: inherit;
+}
+
+body.dark ::selection {
+  background: rgba(99, 102, 241, 0.4);
+}
+
 .ambient-orb {
   position: absolute;
   border-radius: 50%;

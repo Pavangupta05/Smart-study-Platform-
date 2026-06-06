@@ -431,6 +431,13 @@ body.dark .btn-cancel-file:hover {
 .card-icon {
   font-size: 36px;
   margin-bottom: 16px;
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center center;
+}
+
+.notion-card:hover .card-icon {
+  transform: scale(1.15) rotate(-5deg);
 }
 
 .card-info h3 {
