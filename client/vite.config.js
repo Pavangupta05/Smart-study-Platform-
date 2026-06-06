@@ -39,5 +39,17 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['framer-motion', 'lucide-react', 'sonner'],
+          charts: ['recharts'],
+          editor: ['@tiptap/react', '@tiptap/starter-kit']
+        }
+      }
+    }
   }
 })
