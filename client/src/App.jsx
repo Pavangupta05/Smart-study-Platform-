@@ -123,26 +123,8 @@ function App() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // Global Mouse Tracker for Card Glow Effects
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      // Set global coordinates for backgrounds
-      document.documentElement.style.setProperty("--mouse-x", `${e.clientX}px`);
-      document.documentElement.style.setProperty("--mouse-y", `${e.clientY}px`);
-
-      // Find if we are hovering over a glow-enabled card
-      const targetCard = e.target.closest('.card, .glass-card, .doc-card-mini, .insight-card, .study-card, .ss-card');
-      if (targetCard) {
-        const rect = targetCard.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        targetCard.style.setProperty("--local-mouse-x", `${x}px`);
-        targetCard.style.setProperty("--local-mouse-y", `${y}px`);
-      }
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+  // Global Mouse Tracker removed to drastically improve performance and prevent UI hangs.
+  // CSS hover effects will handle interactive states instead.
 
   const triggerThemeTransition = (nextTheme, clientX, clientY) => {
     const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -249,6 +231,7 @@ function App() {
           theme={theme}
           isSidebarOpen={isSidebarOpen} 
           setIsSidebarOpen={setIsSidebarOpen} 
+          onOpenSearch={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
         />
       )}
 

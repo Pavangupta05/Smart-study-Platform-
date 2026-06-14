@@ -21,6 +21,11 @@ const chatRoutes = require("./routes/chat.routes");
 const aiRoutes = require("./routes/ai.routes");
 const examRoutes = require("./routes/exam.routes");
 const notificationsRoutes = require("./routes/notifications.routes");
+let billingRoutes;
+try { billingRoutes = require("./routes/billing.routes"); } catch (_) {}
+
+// Connect DB as early as possible to avoid race conditions
+connectDB();
 
 const app = express();
 
@@ -129,10 +134,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 5001;
-
-// Connect DB
-connectDB();
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors(corsOptions));
@@ -152,6 +154,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/exams", examRoutes);
 app.use("/api/notifications", notificationsRoutes);
+if (billingRoutes) app.use("/api/billing", billingRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

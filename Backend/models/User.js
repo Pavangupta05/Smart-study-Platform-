@@ -28,6 +28,11 @@ const UserSchema = new mongoose.Schema({
     lastStudied: { type: Date, default: null },
     examDate: { type: String, default: null }, // ISO date string e.g. "2026-08-15"
   },
+  usageStats: {
+    aiQueriesThisMonth: { type: Number, default: 0 },
+    aiQueriesResetDate: { type: Date, default: null },
+    notesCount: { type: Number, default: 0 },
+  },
 }, { timestamps: true });
 
 // Hash password before save (Mongoose 9+ — async middleware, no `next`)

@@ -5,12 +5,13 @@ import {
   CreditCard, MonitorSmartphone, Key, Zap,
   Smartphone, Laptop, Copy, Search, Download,
   LifeBuoy, Command, Info, Shield, FileText,
-  Gift, Brain, Target, Eye, Database, Share2, UploadCloud
+  Gift, Brain, Target, Eye, Database, Share2, UploadCloud,
+  CheckCircle2, TrendingUp, Crown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
-import { settingsService } from "../services/index";
+import { settingsService, billingService } from "../services/index";
 import "../styles/settings.css";
 
 const MinimalSwitch = ({ isOn, onToggle }) => (
@@ -42,6 +43,12 @@ function Settings() {
   const [cloudSync, setCloudSync] = useState(user?.settings?.cloudSync ?? true);
   const [publicMap, setPublicMap] = useState(false);
 
+  // SaaS: billing state
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [usage, setUsage] = useState(null);
+
   // Sync name/email when user context changes
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -53,6 +60,16 @@ function Settings() {
     }
   }, [user?.name, user?.email, name, email]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Fetch usage stats for billing tab
+  useEffect(() => {
+    if (activeTab === "billing") {
+      billingService.getUsage().then(res => {
+        if (res.data?.usage) setUsage(res.data.usage);
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleThemeToggle = (nextTheme, e) => {
     window.dispatchEvent(new CustomEvent("themeChange", {
@@ -105,6 +122,29 @@ function Settings() {
       setUser(res.data.user);
     } catch (e) {
       console.error("Failed to save setting:", e);
+    }
+  };
+
+  // Fix 6: Theme switch — don't pass event object through, just the value
+  const handleMinimalSwitchTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    // Get a synthetic position for ripple animation
+    handleThemeToggle(next, null);
+  };
+
+  const handleUpgrade = async () => {
+    setIsUpgrading(true);
+    try {
+      toast.info("Connecting to billing... (demo mode)");
+      await new Promise(r => setTimeout(r, 1500));
+      const res = await billingService.upgrade("pro");
+      setUser(res.data.user);
+      setShowUpgradeModal(false);
+      toast.success("🎉 Welcome to StarNote Pro! Enjoy unlimited access!");
+    } catch (err) {
+      toast.error("Upgrade failed. Please try again.");
+    } finally {
+      setIsUpgrading(false);
     }
   };
 
@@ -297,21 +337,70 @@ function Settings() {
                 <h2>Billing & Plans</h2>
                 <p>Manage your subscription and billing details.</p>
 
+                {/* Current Plan Banner */}
                 {user?.plan === 'pro' ? (
-                  <div className="plan-card">
-                    <div>
-                      <h3 style={{ color: "var(--primary)" }}><Zap size={18} fill="currentColor" /> Pro Plan Active</h3>
-                      <p>You are on the Pro plan. Renews on June 15, 2026.</p>
+                  <div className="plan-card" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(236,72,153,0.08))", border: "1px solid rgba(99,102,241,0.3)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "12px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+                        <Zap size={20} fill="currentColor" />
+                      </div>
+                      <div>
+                        <h3 style={{ color: "#6366f1", fontSize: "16px", fontWeight: 700, margin: 0 }}>StarNote Pro — Active ✓</h3>
+                        <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "2px 0 0" }}>Unlimited AI, notes, and all features. Renews monthly.</p>
+                      </div>
                     </div>
-                    <button className="btn-secondary-sm">Manage Billing</button>
+                    <button className="btn-secondary-sm" onClick={() => toast.info("Billing portal coming soon!")}>Manage Billing</button>
                   </div>
                 ) : (
-                  <div className="plan-card">
-                    <div>
-                      <h3>Free Plan</h3>
-                      <p>Upgrade to Pro for unlimited AI and advanced features.</p>
+                  <div className="plan-card" style={{ position: "relative", overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "12px", background: "var(--bg-secondary, var(--surface))", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
+                        <CreditCard size={20} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: "16px", fontWeight: 700, margin: 0 }}>Free Plan</h3>
+                        <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "2px 0 0" }}>50 notes · 10 AI queries/month · Basic flashcards</p>
+                      </div>
                     </div>
-                    <button className="btn-primary-sm">Upgrade Now</button>
+                    <button className="btn-primary-sm" onClick={() => setShowUpgradeModal(true)} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Zap size={14} fill="currentColor" /> Upgrade to Pro
+                    </button>
+                  </div>
+                )}
+
+                {/* Usage Meter */}
+                {usage && user?.plan !== 'pro' && (
+                  <div className="setting-card" style={{ marginBottom: "16px" }}>
+                    <div style={{ padding: "20px 24px" }}>
+                      <h3 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "16px", color: "var(--text)" }}>📊 This Month's Usage</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                            <span style={{ color: "var(--text)" }}>AI Queries</span>
+                            <span style={{ color: usage.aiQueriesThisMonth >= usage.aiQueriesLimit ? "#ef4444" : "var(--text-muted)" }}>
+                              {usage.aiQueriesThisMonth} / {usage.aiQueriesLimit}
+                            </span>
+                          </div>
+                          <div style={{ height: "6px", background: "var(--border)", borderRadius: "99px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${Math.min((usage.aiQueriesThisMonth / usage.aiQueriesLimit) * 100, 100)}%`, background: usage.aiQueriesThisMonth >= usage.aiQueriesLimit ? "#ef4444" : "linear-gradient(90deg, #6366f1, #8b5cf6)", borderRadius: "99px", transition: "width 0.5s ease" }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                            <span style={{ color: "var(--text)" }}>Notes</span>
+                            <span style={{ color: usage.notesCount >= usage.notesLimit ? "#ef4444" : "var(--text-muted)" }}>
+                              {usage.notesCount} / {usage.notesLimit}
+                            </span>
+                          </div>
+                          <div style={{ height: "6px", background: "var(--border)", borderRadius: "99px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${Math.min((usage.notesCount / usage.notesLimit) * 100, 100)}%`, background: usage.notesCount >= usage.notesLimit ? "#ef4444" : "linear-gradient(90deg, #f59e0b, #f97316)", borderRadius: "99px", transition: "width 0.5s ease" }} />
+                          </div>
+                        </div>
+                      </div>
+                      <button className="btn-primary-sm" style={{ marginTop: "16px", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }} onClick={() => setShowUpgradeModal(true)}>
+                        <Zap size={14} fill="currentColor" /> Remove all limits — Upgrade to Pro
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -322,7 +411,7 @@ function Settings() {
                       <p>No payment methods on file.</p>
                     </div>
                     <div className="setting-action">
-                      <button className="btn-secondary-sm">Add Card</button>
+                      <button className="btn-secondary-sm" onClick={() => toast.info("Payment setup coming soon!")}>Add Card</button>
                     </div>
                   </div>
                   <div className="setting-item">
@@ -331,7 +420,7 @@ function Settings() {
                       <p>View your past billing statements.</p>
                     </div>
                     <div className="setting-action">
-                      <button className="btn-secondary-sm">View History</button>
+                      <button className="btn-secondary-sm" onClick={() => toast.info("Invoice history coming soon!")}>View History</button>
                     </div>
                   </div>
                 </div>
@@ -376,10 +465,8 @@ function Settings() {
                       <p>Switch between light and dark modes.</p>
                     </div>
                     <div className="setting-action">
-                      <MinimalSwitch isOn={theme === "dark"} onToggle={(e) => {
-                        const next = theme === "dark" ? "light" : "dark";
-                        handleThemeToggle(next, e);
-                      }} />
+                      {/* Fix 6: Use handleMinimalSwitchTheme — no event object passed */}
+                      <MinimalSwitch isOn={theme === "dark"} onToggle={handleMinimalSwitchTheme} />
                     </div>
                   </div>
                   <div className="setting-item">
@@ -907,6 +994,81 @@ function Settings() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Upgrade Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <div className="modal-backdrop" onClick={() => setShowUpgradeModal(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ background: 'var(--bg)', borderRadius: '16px', maxWidth: '500px', width: '100%', overflow: 'hidden', boxShadow: '0 24px 50px rgba(0,0,0,0.3)', border: '1px solid var(--border)' }}
+            >
+              <div style={{ padding: '32px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1))' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <Zap size={32} fill="currentColor" />
+                </div>
+                <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px' }}>Upgrade to StarNote Pro</h2>
+                <p style={{ color: 'var(--text-muted)' }}>Unlock your full potential with unlimited everything.</p>
+              </div>
+              
+              <div style={{ padding: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '32px' }}>
+                  <span style={{ fontSize: '14px', color: billingCycle === 'monthly' ? 'var(--text)' : 'var(--text-muted)' }}>Monthly</span>
+                  <div 
+                    style={{ width: '44px', height: '24px', background: 'var(--primary)', borderRadius: '99px', position: 'relative', cursor: 'pointer' }}
+                    onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'annual' : 'monthly')}
+                  >
+                    <div style={{ 
+                      width: '18px', height: '18px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '3px', 
+                      left: billingCycle === 'annual' ? '23px' : '3px', transition: 'left 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '14px', color: billingCycle === 'annual' ? 'var(--text)' : 'var(--text-muted)' }}>
+                    Annually <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 6px', borderRadius: '4px', marginLeft: '4px' }}>Save 20%</span>
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                  {[
+                    "Unlimited Notes & Flashcards",
+                    "Unlimited AI Chat Queries",
+                    "Advanced Exam Generation",
+                    "Priority Customer Support"
+                  ].map((feat, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <CheckCircle2 size={18} color="#10b981" />
+                      <span style={{ fontWeight: 500, color: 'var(--text)' }}>{feat}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Total Due Today</div>
+                    <div style={{ fontSize: '24px', fontWeight: 800 }}>${billingCycle === 'annual' ? '76.80' : '8.00'}</div>
+                  </div>
+                  <button 
+                    onClick={handleUpgrade}
+                    disabled={isUpgrading}
+                    style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 600, cursor: isUpgrading ? 'not-allowed' : 'pointer', opacity: isUpgrading ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    {isUpgrading ? "Upgrading..." : "Upgrade Now"}
+                  </button>
+                </div>
+                
+                <div style={{ textAlign: 'center' }}>
+                  <button onClick={() => setShowUpgradeModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline' }}>
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

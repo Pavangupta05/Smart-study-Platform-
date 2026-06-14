@@ -53,6 +53,7 @@ import "../styles/reader-tablet.css";
 import SlashEditor from "../components/SlashEditor";
 import NotebookPagePanel from "../components/NotebookPagePanel";
 import AmbientAudio from "../components/reader/AmbientAudio";
+import ReaderCanvas from "../components/ReaderCanvas";
 
 // The backend AI service is used for all AI calls now to keep keys secure.
 
@@ -96,6 +97,7 @@ function Reader({ zenMode, setZenMode }) {
   const lastStrokePointRef = useRef(null);
   const startPointRef = useRef({ x: 0, y: 0 });
   const [drawHistory, setDrawHistory] = useState({});
+  const [vectorData, setVectorData] = useState({});
   const [penColor, setPenColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(3);
   
@@ -250,6 +252,7 @@ function Reader({ zenMode, setZenMode }) {
           if (found.pages && found.pages.length > 0) setPages(found.pages);
           else setPages([found.content || ""]);
           setDrawHistory(found.drawHistory || {});
+          setVectorData(found.vectorData || {});
           setNotes(found.notes || []);
           setConnectors(found.connectors || []);
           setCanvasImages(found.canvasImages || []);
@@ -266,6 +269,7 @@ function Reader({ zenMode, setZenMode }) {
             setFile(found);
             setPages(found.pages || [found.content || ""]);
             setDrawHistory(found.drawHistory || {});
+            setVectorData(found.vectorData || {});
             setNotes(found.notes || []);
             setConnectors(found.connectors || []);
             setCanvasImages(found.canvasImages || []);
@@ -293,23 +297,6 @@ function Reader({ zenMode, setZenMode }) {
 
     return file.blobUrl;
   }, [file]);
-
-  // Redraw Canvas content for all canvases when drawHistory is updated or mounted
-  useEffect(() => {
-    pages.forEach((_, idx) => {
-      const canvas = canvasRefs.current[idx];
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const historyStack = drawHistory[idx] || [];
-        if (historyStack.length > 0) {
-          const img = new Image();
-          img.src = historyStack[historyStack.length - 1];
-          img.onload = () => ctx.drawImage(img, 0, 0);
-        }
-      }
-    });
-  }, [pages, drawHistory]);
 
   const saveFileChanges = useCallback(async (updates) => {
     setIsSaving(true);
@@ -512,8 +499,20 @@ function Reader({ zenMode, setZenMode }) {
       }
     });
     
-    
     setCurrentPage(currentVisible);
+
+    // Auto-add page when scrolling past the absolute bottom (stretch to add)
+    if (!file?.blobUrl) {
+      const isAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 5;
+      if (isAtBottom && currentVisible === pages.length - 1) {
+        // Prevent rapid firing by only adding if the user keeps scrolling
+        if (!window.lastAddPageAttempt || Date.now() - window.lastAddPageAttempt > 2000) {
+          window.lastAddPageAttempt = Date.now();
+          // Wrap in setTimeout to ensure it is called in next tick, bypassing hoisting issue if any
+          setTimeout(() => handleAddPage(pages.length - 1), 0);
+        }
+      }
+    }
   };
 
   // ── Advanced Page Operations (GoodNotes/Notion style) ────────────────────
@@ -525,25 +524,27 @@ function Reader({ zenMode, setZenMode }) {
     // Default to the last page if not provided by simple buttons
     const targetIdx = typeof afterIdx === 'number' && !isNaN(afterIdx) ? afterIdx : pages.length - 1;
     const insertAt = position === "after" ? targetIdx + 1 : targetIdx;
-    const newPage = { __template: templateId, __title: `Page ${pages.length + 1}` };
+    
+    // Pages is an array of strings representing Rich Text content. Do not use objects.
+    const newPage = ""; 
     const newPages = [...pages];
     newPages.splice(insertAt, 0, newPage);
     setPages(newPages);
 
-    // Shift drawHistory, notes, connectors at/after insertAt
-    const newDH = {};
-    Object.keys(drawHistory).forEach(k => {
+    // Shift vectorData, notes, connectors at/after insertAt
+    const newVectorData = {};
+    Object.keys(vectorData).forEach(k => {
       const i = parseInt(k);
-      newDH[i < insertAt ? i : i + 1] = drawHistory[k];
+      newVectorData[i < insertAt ? i : i + 1] = vectorData[k];
     });
-    setDrawHistory(newDH);
+    setVectorData(newVectorData);
 
     const shiftedNotes = notes.map(n => n.page >= insertAt ? { ...n, page: n.page + 1 } : n);
     const shiftedConns = connectors.map(c => c.page >= insertAt ? { ...c, page: c.page + 1 } : c);
     setNotes(shiftedNotes);
     setConnectors(shiftedConns);
 
-    saveFileChanges({ pages: newPages, drawHistory: newDH, notes: shiftedNotes, connectors: shiftedConns });
+    saveFileChanges({ pages: newPages, vectorData: newVectorData, notes: shiftedNotes, connectors: shiftedConns });
     setTimeout(() => jumpToPage(insertAt), 120);
   };
 
@@ -733,38 +734,14 @@ function Reader({ zenMode, setZenMode }) {
     setStickyContextMenu(null);
   };
 
-  // Text Tool Canvas committer
+  // Text Tool Canvas committer (Deprecated in vector mode)
   const commitCanvasText = () => {
-    if (!textInput.value.trim() || textInput.page === undefined) {
-      setTextInput({ show: false, page: 0, x: 0, y: 0, value: "" });
+    if (!textInput.value.trim()) {
+      setTextInput(prev => ({ ...prev, show: false, value: "" }));
       return;
     }
-
-    const pageIdx = textInput.page;
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) {
-      isDrawingRef.current = false;
-      activeDrawingPageRef.current = null;
-      return;
-    }
-    const ctx = canvas.getContext("2d");
-
-    const x = (textInput.x / 100) * canvas.width;
-    const y = (textInput.y / 100) * canvas.height;
-
-    ctx.font = "bold 20px Inter, system-ui, sans-serif";
-    ctx.fillStyle = penColor;
-    ctx.fillText(textInput.value, x, y);
-
-    const dataUrl = canvas.toDataURL("image/webp", 0.8);
-    setDrawHistory(prev => {
-      const pageHistory = prev[pageIdx] || [];
-      const newHistory = { ...prev, [pageIdx]: [...pageHistory, dataUrl] };
-      saveFileChanges({ drawHistory: newHistory });
-      return newHistory;
-    });
-
-    setTextInput({ show: false, page: 0, x: 0, y: 0, value: "" });
+    // TODO: Convert to vector text element
+    setTextInput(prev => ({ ...prev, show: false, value: "" }));
   };
 
   // AI completions
@@ -873,17 +850,16 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     }
   };
 
-  // Drawing Engine helpers
-  const getCoordinates = (pageIdx, e) => {
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const getCanvasCoords = (e, pageIdx) => {
+    const container = document.querySelectorAll('.reader-canvas-container')[pageIdx];
+    if (!container) return { x: 0, y: 0 };
+    const rect = container.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
     
     return {
-      x: ((clientX - rect.left) / rect.width) * canvas.width,
-      y: ((clientY - rect.top) / rect.height) * canvas.height
+      x: ((clientX - rect.left) / rect.width) * 900,
+      y: ((clientY - rect.top) / rect.height) * 1200
     };
   };
 
@@ -912,259 +888,42 @@ Be precise, highly informative, use clean formatting with bold headings and bull
     ctx.lineJoin = "round";
   };
 
-  const drawContinuousSegment = (ctx, point, event) => {
-    const previous = lastStrokePointRef.current;
-    if (!previous) {
-      lastStrokePointRef.current = point;
-      return;
-    }
-
-    const dx = point.x - previous.x;
-    const dy = point.y - previous.y;
-    const distance = Math.hypot(dx, dy);
-    const steps = Math.max(1, Math.ceil(distance / 2));
-
-    for (let i = 1; i <= steps; i += 1) {
-      const t = i / steps;
-      const nextPoint = {
-        x: previous.x + dx * t,
-        y: previous.y + dy * t,
-      };
-
-      applyDrawingStyle(ctx, event);
-      ctx.beginPath();
-      ctx.moveTo(lastStrokePointRef.current.x, lastStrokePointRef.current.y);
-      ctx.lineTo(nextPoint.x, nextPoint.y);
-      ctx.stroke();
-      lastStrokePointRef.current = nextPoint;
-    }
-  };
-
   const startDrawing = (pageIdx, e) => {
-    if (!drawTools.includes(activeTool)) return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    isDrawingRef.current = true;
-    activeDrawingPageRef.current = pageIdx;
-    
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) return;
-    
-    const { x, y } = getCoordinates(pageIdx, e);
-    startPointRef.current = { x, y };
-    strokePointsRef.current = [{ x, y }];
-    lastStrokePointRef.current = { x, y };
-    setCanvasSnapshot(canvas.toDataURL("image/webp", 0.8));
-
-    const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    applyDrawingStyle(ctx, e);
+    // Handled by ReaderCanvas
   };
 
   const draw = (e) => {
-    if (!isDrawingRef.current || activeDrawingPageRef.current === null) return;
-    e.preventDefault();
-    const pageIdx = activeDrawingPageRef.current;
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const { x, y } = getCoordinates(pageIdx, e);
-
-    const isShape = ["shape", "circle", "line", "arrow"].includes(activeTool);
-    if (isShape) {
-      const historyStack = drawHistory[pageIdx] || [];
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (historyStack.length > 0) {
-        const img = new Image();
-        img.src = historyStack[historyStack.length - 1];
-        ctx.drawImage(img, 0, 0);
-      }
-      ctx.beginPath();
-      ctx.lineWidth = strokeWidth;
-      ctx.strokeStyle = penColor;
-      const { x: shapeStartX, y: shapeStartY } = startPointRef.current;
-
-      if (activeTool === "shape") {
-        ctx.strokeRect(shapeStartX, shapeStartY, x - shapeStartX, y - shapeStartY);
-      } else if (activeTool === "circle") {
-        const radius = Math.sqrt(Math.pow(x - shapeStartX, 2) + Math.pow(y - shapeStartY, 2));
-        ctx.arc(shapeStartX, shapeStartY, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-      } else if (activeTool === "line") {
-        ctx.moveTo(shapeStartX, shapeStartY);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      } else if (activeTool === "arrow") {
-        drawArrow(ctx, shapeStartX, shapeStartY, x, y);
-      }
-    } else {
-      const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [e];
-      events.forEach((event) => {
-        const point = getCoordinates(pageIdx, event);
-        strokePointsRef.current.push(point);
-        drawContinuousSegment(ctx, point, event);
-      });
-    }
+    // Handled by ReaderCanvas
   };
 
-  const drawArrow = (ctx, fromX, fromY, toX, toY) => {
-    ctx.moveTo(fromX, fromY);
-    ctx.lineTo(toX, toY);
-    ctx.stroke();
-
-    const angle = Math.atan2(toY - fromY, toX - fromX);
-    ctx.beginPath();
-    ctx.moveTo(toX, toY);
-    ctx.lineTo(toX - 15 * Math.cos(angle - Math.PI / 6), toY - 15 * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(toX - 15 * Math.cos(angle + Math.PI / 6), toY - 15 * Math.sin(angle + Math.PI / 6));
-    ctx.closePath();
-    ctx.fillStyle = penColor;
-    ctx.fill();
+  const stopDrawing = () => {
+    // Handled by ReaderCanvas
   };
 
-  // Snaps freehand stroke shape outlines into geometrical shapes
-  const detectAndDrawShape = (ctx, points) => {
-    if (points.length < 6) return;
-    const start = points[0];
-    const end = points[points.length - 1];
-    
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    points.forEach(p => {
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
+  const handleUndo = () => {
+    if (activeTool === 'concept') return;
+    setVectorData(prev => {
+      const stack = prev[currentPage] || [];
+      if (stack.length === 0) return prev;
+      const newStack = stack.slice(0, -1);
+      const updated = { ...prev, [currentPage]: newStack };
+      saveFileChanges({ vectorData: updated });
+      return updated;
     });
-    
-    const width = maxX - minX;
-    const height = maxY - minY;
-    const cx = minX + width / 2;
-    const cy = minY + height / 2;
-    
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    const endDist = Math.sqrt(dx * dx + dy * dy);
-    
-    let sumRadius = 0;
-    points.forEach(p => {
-      const rx = p.x - cx;
-      const ry = p.y - cy;
-      sumRadius += Math.sqrt(rx * rx + ry * ry);
-    });
-    const avgRadius = sumRadius / points.length;
-    
-    let varRadius = 0;
-    points.forEach(p => {
-      const rx = p.x - cx;
-      const ry = p.y - cy;
-      const r = Math.sqrt(rx * rx + ry * ry);
-      varRadius += Math.pow(r - avgRadius, 2);
-    });
-    const stdDevRadius = Math.sqrt(varRadius / points.length);
-    const circularity = stdDevRadius / avgRadius; 
-    
-    ctx.beginPath();
-    ctx.strokeStyle = penColor;
-    ctx.lineWidth = strokeWidth;
-
-    if (endDist < 60) {
-      if (circularity < 0.18) {
-        ctx.arc(cx, cy, avgRadius, 0, 2 * Math.PI);
-        ctx.stroke();
-      } else {
-        ctx.strokeRect(minX, minY, width, height);
-      }
-    } else {
-      ctx.moveTo(start.x, start.y);
-      ctx.lineTo(end.x, end.y);
-      ctx.stroke();
-    }
-  };
-
-  const stopDrawing = (e) => {
-    if (!isDrawingRef.current || activeDrawingPageRef.current === null) return;
-    e?.preventDefault?.();
-    if (e?.currentTarget?.hasPointerCapture?.(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-    const pageIdx = activeDrawingPageRef.current;
-    isDrawingRef.current = false;
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) {
-      activeDrawingPageRef.current = null;
-      lastStrokePointRef.current = null;
-      return;
-    }
-    const ctx = canvas.getContext("2d");
-
-    if (activeTool === "pen" && penStyle === "autosnap") {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (canvasSnapshot) {
-        const img = new Image();
-        img.src = canvasSnapshot;
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0);
-          detectAndDrawShape(ctx, strokePointsRef.current);
-          commitCanvasState(pageIdx);
-          activeDrawingPageRef.current = null;
-          lastStrokePointRef.current = null;
-        };
-      } else {
-        activeDrawingPageRef.current = null;
-        lastStrokePointRef.current = null;
-      }
-    } else {
-      commitCanvasState(pageIdx);
-      activeDrawingPageRef.current = null;
-      lastStrokePointRef.current = null;
-    }
   };
 
   const commitCanvasState = (pageIdx) => {
-    const canvas = canvasRefs.current[pageIdx];
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/webp", 0.8);
-    setDrawHistory(prev => {
-      const pageHistory = prev[pageIdx] || [];
-      const newHistory = { ...prev, [pageIdx]: [...pageHistory, dataUrl] };
-      saveFileChanges({ drawHistory: newHistory });
-      return newHistory;
-    });
-  };
-
-  const undo = () => {
-    setDrawHistory(prev => {
-      const pageHistory = prev[currentPage] || [];
-      if (pageHistory.length === 0) return prev;
-      const newPageHistory = pageHistory.slice(0, -1);
-      const newHistory = { ...prev, [currentPage]: newPageHistory };
-      const canvas = canvasRefs.current[currentPage];
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (newPageHistory.length > 0) {
-          const img = new Image();
-          img.src = newPageHistory[newPageHistory.length - 1];
-          img.onload = () => ctx.drawImage(img, 0, 0);
-        }
-      }
-      saveFileChanges({ drawHistory: newHistory });
-      return newHistory;
-    });
+    // Deprecated for vector rendering
   };
 
   const clearCanvas = () => {
-    setDrawHistory(prev => {
-      const newHistory = { ...prev, [currentPage]: [] };
-      const canvas = canvasRefs.current[currentPage];
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      saveFileChanges({ drawHistory: newHistory });
-      return newHistory;
-    });
+    if (window.confirm("Clear drawing on this page?")) {
+      setVectorData(prev => {
+        const updated = { ...prev, [currentPage]: [] };
+        saveFileChanges({ vectorData: updated });
+        return updated;
+      });
+    }
   };
 
   const handlePrint = async () => {
@@ -1269,117 +1028,48 @@ Be precise, highly informative, use clean formatting with bold headings and bull
 
       {/* 1. Header (Premium, Minimal) */}
       {!zenMode && (
-        <header className="reader-header-modern">
-          <div className="header-left">
+        <header className="reader-header-modern" style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 24px', alignItems: 'center', borderBottom: '1px solid var(--reader-border)' }}>
+          <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button className="back-btn" onClick={() => navigate("/notes")}><ChevronLeft size={20} /></button>
-            
-            <button 
-              className={`thumbnail-toggle-btn ${showPagePanel ? 'active' : ''}`}
-              onClick={() => setShowPagePanel(!showPagePanel)}
-              title="Manage notebook pages"
-            >
+            <button className={`thumbnail-toggle-btn ${showPagePanel ? 'active' : ''}`} onClick={() => setShowPagePanel(!showPagePanel)}>
               <Layers size={18} />
             </button>
-
             {!isMobile && (
-              <button 
-                className={`thumbnail-toggle-btn tool-rail-toggle-btn ${showLeftRail ? 'active' : ''}`}
-                onClick={() => setShowLeftRail(!showLeftRail)}
-                title={showLeftRail ? "Hide toolbar" : "Show toolbar"}
-              >
+              <button className={`thumbnail-toggle-btn ${showLeftRail ? 'active' : ''}`} onClick={() => setShowLeftRail(!showLeftRail)}>
                 <Sliders size={18} />
               </button>
             )}
-
-            <span className="file-name">{file?.name}</span>
-            <div className="autosave-indicator" style={{ display: 'flex', alignItems: 'center', marginLeft: '12px', gap: '6px' }}>
-              {isSaving ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--reader-accent)', fontSize: '11px', fontWeight: '600' }}>
-                  <Cloud size={15} className="cloud-pulse" />
-                  <span className="m-hide-mobile">Saving...</span>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#10b981', fontSize: '11px', fontWeight: '600' }}>
-                  <Cloud size={15} />
-                  <span className="m-hide-mobile">Saved</span>
-                </div>
-              )}
+            <span className="file-name" style={{ fontWeight: '600', fontSize: '16px' }}>{file?.name}</span>
+            <div className="autosave-indicator">
+              {isSaving ? <span style={{ color: '#6366f1', fontSize: '12px', fontWeight: 'bold' }}>Saving...</span> : <span style={{ color: '#10b981', fontSize: '12px', fontWeight: 'bold' }}>Saved</span>}
             </div>
           </div>
           
-          <div className="header-actions">
-            {/* Mobile Theme Cycle Toggle */}
-            {isMobile && (
-              <button 
-                className="m-theme-toggle-btn" 
-                onClick={toggleMobileTheme}
-                title="Change display theme"
-                style={{
-                  background: 'var(--reader-accent-weak)',
-                  border: '1px solid var(--reader-border)',
-                  color: 'var(--reader-text)',
-                  padding: '8px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  marginRight: '8px'
-                }}
-              >
-                {readingTheme === "light" && <Sun size={18} />}
-                {readingTheme === "sepia" && <BookOpen size={18} />}
-                {readingTheme === "dark" && <Moon size={18} />}
+          <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {!file?.blobUrl && (
+              <div className="paper-style-pill" style={{ display: 'flex', gap: '4px', background: 'var(--reader-surface-alt)', padding: '4px', borderRadius: '20px' }}>
+                <button className={paperStyle === "blank" ? "active" : ""} onClick={() => setPaperStyle("blank")} style={{ padding: '4px 12px', borderRadius: '16px', background: paperStyle === "blank" ? 'white' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Blank</button>
+                <button className={paperStyle === "ruled" ? "active" : ""} onClick={() => setPaperStyle("ruled")} style={{ padding: '4px 12px', borderRadius: '16px', background: paperStyle === "ruled" ? 'white' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Ruled</button>
+                <button className={paperStyle === "grid" ? "active" : ""} onClick={() => setPaperStyle("grid")} style={{ padding: '4px 12px', borderRadius: '16px', background: paperStyle === "grid" ? 'white' : 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>Grid</button>
+              </div>
+            )}
+            
+            <div className="zoom-pill" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--reader-surface-alt)', padding: '6px 12px', borderRadius: '20px' }}>
+              <button onClick={() => setZoom(Math.max(50, zoom - 10))} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}><ZoomOut size={14} /></button>
+              <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{zoom}%</span>
+              <button onClick={() => setZoom(Math.min(200, zoom + 10))} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}><ZoomIn size={14} /></button>
+            </div>
+
+            {!file?.blobUrl && (
+              <button onClick={() => handleAddPage(currentPage)} style={{ background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <Plus size={16} /> Add Page
               </button>
             )}
-
-            {/* Custom display settings */}
-            <div className="display-pill-selector">
-              <button className={readingTheme === "light" ? "active" : ""} onClick={() => setReadingTheme("light")}>Light</button>
-              <button className={readingTheme === "sepia" ? "active" : ""} onClick={() => setReadingTheme("sepia")}>Sepia</button>
-              <button className={readingTheme === "dark" ? "active" : ""} onClick={() => setReadingTheme("dark")}>Dark</button>
-            </div>
-            
-            <div className="font-pill-selector">
-              <button className={fontFamily === "serif" ? "active" : ""} onClick={() => setFontFamily("serif")}>Serif</button>
-              <button className={fontFamily === "sans" ? "active" : ""} onClick={() => setFontFamily("sans")}>Sans</button>
-            </div>
-
-            <div className="size-selector">
-              <button onClick={() => setFontSize(Math.max(12, fontSize - 2))}>A-</button>
-              <span>{fontSize}px</span>
-              <button onClick={() => setFontSize(Math.min(24, fontSize + 2))}>A+</button>
-            </div>
-            
-            <button
-              className="focus-mode-toggle"
-              onClick={handleShare}
-              title={file?.isPublic ? "Shared Publicly" : "Share Note"}
-              style={{ background: file?.isPublic ? 'rgba(16,185,129,0.1)' : 'var(--reader-surface-alt)', color: file?.isPublic ? '#10b981' : 'var(--reader-text)' }}
-            >
-              <Share2 size={16} /> <span className="m-hide-mobile">{file?.isPublic ? "Shared" : "Share"}</span>
+            <button onClick={handlePrint} style={{ background: 'transparent', border: '1px solid var(--reader-border)', padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--reader-text)' }}>
+              <Printer size={16} /> Export
             </button>
-
-            <button className="focus-mode-toggle" onClick={() => setZenMode(true)}>
-              <Maximize2 size={16} /> <span>Focus</span>
-            </button>
-
-            <button
-              className="focus-mode-toggle"
-              onClick={() => navigate(`/mindmap/${id}`)}
-              title="AI Mind Map"
-              style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', borderColor: 'rgba(99,102,241,0.2)' }}
-            >
-              <Play size={16} /> <span>Mind Map</span>
-            </button>
-
-            <button
-              className="focus-mode-toggle"
-              onClick={() => setShowVoiceTutor(true)}
-              title="Voice Tutor"
-              style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.2)' }}
-            >
-              <Volume2 size={16} /> <span>Listen</span>
+            <button onClick={handleShare} style={{ background: 'transparent', border: '1px solid var(--reader-border)', padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--reader-text)' }}>
+              <Share2 size={16} /> Share
             </button>
           </div>
         </header>
@@ -1505,7 +1195,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
             <div className="tool-divider"></div>
             <div className="tool-category-title">Edit</div>
 
-            <button className="tool-icon" onClick={undo} title="Undo last draw">
+            <button className="tool-icon" onClick={handleUndo} title="Undo last draw">
               <RotateCcw size={18} /> <span>Undo Ink</span>
             </button>
 
@@ -1609,49 +1299,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
         {/* 3. Immersive Center Reading Canvas (Dynamic Vertical Page Stack) */}
         <main className="immersive-center-reading-canvas">
           <AmbientAudio active={ambientAudioActive} zenMode={zenMode} />
-          {/* Document and zoom controls */}
-          {!zenMode && (
-            <div className="canvas-header-controls">
-              <div className="page-navigation-pill">
-                <button onClick={() => jumpToPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0}>
-                  <ChevronLeft size={16} />
-                </button>
-                <span>Page {currentPage + 1} of {pages.length}</span>
-                <button onClick={() => jumpToPage(Math.min(pages.length - 1, currentPage + 1))} disabled={currentPage === pages.length - 1}>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-
-              {/* GoodNotes Paper Selector (hidden for PDFs) */}
-              {!file?.blobUrl && (
-                <div className="paper-style-pill">
-                  <button className={paperStyle === "blank" ? "active" : ""} onClick={() => setPaperStyle("blank")}>Blank</button>
-                  <button className={paperStyle === "ruled" ? "active" : ""} onClick={() => setPaperStyle("ruled")}>Ruled</button>
-                  <button className={paperStyle === "grid" ? "active" : ""} onClick={() => setPaperStyle("grid")}>Grid</button>
-                  <button className={paperStyle === "dotted" ? "active" : ""} onClick={() => setPaperStyle("dotted")}>Dotted</button>
-                </div>
-              )}
-
-              <div className="zoom-pill">
-                <button onClick={() => setZoom(Math.max(50, zoom - 10))}><ZoomOut size={14} /></button>
-                <span>{zoom}%</span>
-                <button onClick={() => setZoom(Math.min(200, zoom + 10))}><ZoomIn size={14} /></button>
-              </div>
-
-              <div className="utility-buttons">
-                {!file?.blobUrl && (
-                  <button className="utility-btn btn-accent" onClick={handleAddPage}>
-                    <Plus size={14} /> <span>Add Page</span>
-                  </button>
-                )}
-                <button className="utility-btn" onClick={handlePrint}><Printer size={16} /> <span>Print/Export</span></button>
-                <button className="utility-btn" onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  toast.success("Deep Link copied to clipboard!");
-                }}><Share2 size={16} /> <span>Share</span></button>
-              </div>
-            </div>
-          )}
+          {/* Document controls removed to prevent clutter */}
 
           {/* Reading Canvas viewport - Stacks all notebook pages vertically */}
           <div 
@@ -1720,25 +1368,15 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                 </svg>
 
                 {/* Whiteboard Overlay Canvas for current page */}
-                <canvas 
-                  ref={el => canvasRefs.current[idx] = el}
-                  style={{ 
-                    position: 'absolute', 
-                    top: 0, 
-                    left: 0, 
-                    width: '100%', 
-                    height: '100%', 
-                    zIndex: 5,
-                    pointerEvents: ['pen', 'highlighter', 'eraser', 'shape', 'circle', 'line', 'arrow'].includes(activeTool) ? 'auto' : 'none',
-                    touchAction: 'none'
-                  }}
-                  width={900} 
-                  height={1200}
-                  onPointerDown={(e) => startDrawing(idx, e)}
-                  onPointerMove={draw}
-                  onPointerUp={stopDrawing}
-                  onPointerLeave={stopDrawing}
-                  onPointerCancel={stopDrawing}
+                <ReaderCanvas 
+                  pageIdx={idx}
+                  activeTool={activeTool}
+                  penStyle={penStyle}
+                  penColor={penColor}
+                  strokeWidth={strokeWidth}
+                  elements={vectorData[idx] || []}
+                  setElements={(newEls) => setVectorData(prev => ({ ...prev, [idx]: newEls }))}
+                  onSave={(newEls) => saveFileChanges({ vectorData: { ...vectorData, [idx]: newEls } })}
                 />
 
                 {/* Canvas Text Input Overlay (for direct text annotations) */}
@@ -1872,7 +1510,7 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                     style={{ fontFamily: fontFamily === 'serif' ? 'var(--font-serif)' : 'var(--font-sans)', fontSize: `${fontSize}px` }}
                   >
                     <SlashEditor 
-                      initialContent={pageTextContent || ""}
+                      initialContent={typeof pageTextContent === 'string' ? pageTextContent : (pageTextContent?.content || pageTextContent?.__content || "")}
                       onChange={(val) => {
                         const updated = [...pages];
                         updated[idx] = val;
@@ -2248,9 +1886,9 @@ Be precise, highly informative, use clean formatting with bold headings and bull
                         setIsSummarizing(true);
                         try {
                           const prompt = `Summarize this text in 3 paragraphs focusing on key insights: ${(file?.content || pages.join("\n")).substring(0, 5000)}`;
-                          const res = await aiModel.generateContent(prompt);
-                          setSummary(res.response.text());
-                        } catch {
+                          const res = await aiService.completeWithPrompt([{ role: 'user', content: prompt }], "You are a helpful AI summarizing a document.");
+                          setSummary(res.data?.data?.text || res.data?.text || "Summary generated successfully.");
+                        } catch (e) {
                           setSummary("Failed to generate summary completion.");
                         }
                         setIsSummarizing(false);

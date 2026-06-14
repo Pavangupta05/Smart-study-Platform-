@@ -5,10 +5,44 @@ const { getProvider } = require("../services/ai/ai.provider");
 
 let Note;
 try { Note = require("../models/Note"); } catch (_) {}
+let User;
+try { User = require("../models/User"); } catch (_) {}
+const { getMockMode } = require("../config/db");
+
+// ── PLAN ENFORCEMENT MIDDLEWARE ──────────────────────────────────────────────
+const enforceAILimit = async (req, res, next) => {
+  if (getMockMode() || !User) return next();
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return next();
+    
+    const limit = user.plan === "pro" ? Infinity : 10;
+    const now = new Date();
+    const resetDate = user.usageStats?.aiQueriesResetDate ? new Date(user.usageStats.aiQueriesResetDate) : null;
+    let currentCount = user.usageStats?.aiQueriesThisMonth || 0;
+    
+    if (!resetDate || now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
+      currentCount = 0;
+    }
+    
+    if (currentCount >= limit) {
+      return res.status(403).json({ success: false, message: "Free plan limit reached. Please upgrade to Pro for unlimited AI." });
+    }
+    
+    // Optimistically increment
+    await User.findByIdAndUpdate(req.userId, {
+      $inc: { "usageStats.aiQueriesThisMonth": 1 },
+      "usageStats.aiQueriesResetDate": resetDate || now
+    });
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
 
 // ── POST /api/ai/chat ────────────────────────────────────────────────────────
 // Full chat with context awareness + optional multi-doc context
-router.post("/chat", protect, async (req, res) => {
+router.post("/chat", protect, enforceAILimit, async (req, res) => {
   const { messages = [], context = {}, provider: reqProvider, contextNoteIds = [] } = req.body;
 
   if (!messages.length) {
@@ -48,7 +82,7 @@ router.post("/chat", protect, async (req, res) => {
 
 // ── POST /api/ai/chat/stream ─────────────────────────────────────────────────
 // Streaming chat via SSE — for typewriter effect
-router.post("/chat/stream", protect, async (req, res) => {
+router.post("/chat/stream", protect, enforceAILimit, async (req, res) => {
   const { messages = [], context = {}, provider: reqProvider, file = null } = req.body;
 
   if (!messages.length) {
@@ -68,7 +102,7 @@ router.post("/chat/stream", protect, async (req, res) => {
 
 // ── POST /api/ai/flashcards ──────────────────────────────────────────────────
 // Generate flashcards for a topic
-router.post("/flashcards", protect, async (req, res) => {
+router.post("/flashcards", protect, enforceAILimit, async (req, res) => {
   const { topic, count = 10, provider: reqProvider } = req.body;
 
   if (!topic?.trim()) {
@@ -94,7 +128,7 @@ router.post("/flashcards", protect, async (req, res) => {
 
 // ── POST /api/ai/optimize-schedule ──────────────────────────────────────────
 // AI schedule optimization
-router.post("/optimize-schedule", protect, async (req, res) => {
+router.post("/optimize-schedule", protect, enforceAILimit, async (req, res) => {
   const { tasks = [], provider: reqProvider } = req.body;
 
   if (!tasks.length) {
@@ -124,7 +158,7 @@ router.post("/optimize-schedule", protect, async (req, res) => {
 
 // ── POST /api/ai/mindmap ─────────────────────────────────────────────────────
 // Generate a JSON mind map from note content
-router.post("/mindmap", protect, async (req, res) => {
+router.post("/mindmap", protect, enforceAILimit, async (req, res) => {
   const { noteContent, provider: reqProvider } = req.body;
   if (!noteContent?.trim()) {
     return res.status(400).json({ success: false, message: "noteContent is required." });
@@ -155,7 +189,7 @@ ${noteContent.substring(0, 4000)}`;
 
 // ── POST /api/ai/podcast ─────────────────────────────────────────────────────
 // Generate a dialogue-style podcast script
-router.post("/podcast", protect, async (req, res) => {
+router.post("/podcast", protect, enforceAILimit, async (req, res) => {
   const { topic, length = "short", provider: reqProvider } = req.body;
   if (!topic?.trim()) {
     return res.status(400).json({ success: false, message: "Topic is required." });
@@ -181,7 +215,7 @@ Make it educational, natural, and engaging.`;
 
 // ── POST /api/ai/exam/generate ───────────────────────────────────────────────
 // Generate a structured mock exam
-router.post("/exam/generate", protect, async (req, res) => {
+router.post("/exam/generate", protect, enforceAILimit, async (req, res) => {
   const { noteContent, numQuestions = 5, examType = "mixed", provider: reqProvider } = req.body;
   if (!noteContent?.trim()) {
     return res.status(400).json({ success: false, message: "noteContent is required." });
@@ -220,7 +254,7 @@ ${noteContent.substring(0, 5000)}`;
 
 // ── POST /api/ai/exam/grade ──────────────────────────────────────────────────
 // AI-grade a completed exam
-router.post("/exam/grade", protect, async (req, res) => {
+router.post("/exam/grade", protect, enforceAILimit, async (req, res) => {
   const { questions = [], answers = {}, noteContent = "", provider: reqProvider } = req.body;
   if (!questions.length) {
     return res.status(400).json({ success: false, message: "Questions are required." });

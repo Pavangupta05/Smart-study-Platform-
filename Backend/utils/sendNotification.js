@@ -12,14 +12,28 @@ const Notification = require("../models/Notification");
  */
 const sendNotification = async (io, userId, title, message, type = "info", link = null) => {
   try {
-    // 1. Save to the Database so it persists
-    const notification = await Notification.create({
+    const { getMockMode } = require("../config/db");
+    
+    let notification = {
+      _id: "mock-" + Date.now(),
       user: userId,
       title,
       message,
       type,
-      link
-    });
+      link,
+      createdAt: new Date()
+    };
+
+    // 1. Save to the Database so it persists (only if not in mock mode)
+    if (!getMockMode()) {
+      notification = await Notification.create({
+        user: userId,
+        title,
+        message,
+        type,
+        link
+      });
+    }
 
     // 2. Emit live via Socket.IO to the specific user's room
     if (io) {

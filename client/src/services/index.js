@@ -94,7 +94,8 @@ export const aiService = {
    */
   streamChat: async (messages, context = {}, provider = null, file = null, options = {}) => {
     const token = localStorage.getItem("starNote_token");
-    const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const BASE_URL = import.meta.env.VITE_API_URL || (isLocalhost ? `http://${window.location.hostname}:5000/api` : "https://starnote-backend.onrender.com/api");
     const response = await fetch(`${BASE_URL}/ai/chat/stream`, {
       method: "POST",
       headers: {
@@ -153,3 +154,11 @@ export const notificationsService = {
   clearAll: () => api.delete("/notifications/clear"),
   clear: (id) => api.delete(`/notifications/${id}`),
 };
+
+// BILLING & PLAN
+export const billingService = {
+  getUsage: () => api.get("/billing/usage"),
+  upgrade: (plan) => api.post("/billing/upgrade", { plan }),
+  trackAiQuery: () => api.post("/billing/track-ai-query"),
+};
+

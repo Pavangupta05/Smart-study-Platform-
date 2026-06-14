@@ -84,71 +84,10 @@ body.dark .sidebar {
   box-shadow: var(--simple-elevated-shadow) !important;
 }
 
-/* Premium Card Glow Effect */
-.card, .glass-card, .doc-card-mini, .insight-card, .study-card, .ss-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.card::before, .glass-card::before, .doc-card-mini::before, .insight-card::before, .study-card::before, .ss-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    400px circle at var(--local-mouse-x) var(--local-mouse-y), 
-    rgba(99, 102, 241, 0.08),
-    transparent 40%
-  );
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.5s;
-}
-
-body.dark .card::before, body.dark .glass-card::before, body.dark .doc-card-mini::before, body.dark .insight-card::before, body.dark .study-card::before, body.dark .ss-card::before {
-  background: radial-gradient(
-    400px circle at var(--local-mouse-x) var(--local-mouse-y), 
-    rgba(255, 255, 255, 0.06),
-    transparent 40%
-  );
-}
-
-.card:hover::before, .glass-card:hover::before, .doc-card-mini:hover::before, .insight-card:hover::before, .study-card:hover::before, .ss-card:hover::before {
-  opacity: 1;
-}
-
-/* ── Magnetic & Smooth Interactions ── */
-.magnetic-btn {
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
-  will-change: transform;
-}
-.magnetic-btn:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
-}
-body.dark .magnetic-btn:hover {
-  box-shadow: 0 12px 24px -8px rgba(255, 255, 255, 0.1);
-}
-
-.hover-glow {
-  position: relative;
-  overflow: hidden;
-}
-.hover-glow::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, transparent 60%);
-  opacity: 0;
-  mix-blend-mode: overlay;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.hover-glow:hover::after {
-  opacity: 0.15;
+/* Card hover: clean border highlight, no glow */
+.card:hover, .glass-card:hover, .doc-card-mini:hover, .insight-card:hover {
+  border-color: var(--primary-weak) !important;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
 .focus-card {

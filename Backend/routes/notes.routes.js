@@ -34,6 +34,9 @@ try {
   console.warn("⚠️ Note model not found, falling back to mock mode only.");
 }
 
+let User;
+try { User = require("../models/User"); } catch (_) {}
+
 // Middleware to ensure Note model exists if not in mock mode
 const ensureModel = (req, res, next) => {
   if (!getMockMode() && !Note) {
@@ -42,29 +45,69 @@ const ensureModel = (req, res, next) => {
   next();
 };
 
-// GET /api/notes
+const enforceNoteLimit = async (req, res, next) => {
+  if (getMockMode() || !User) return next();
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return next();
+    
+    const limit = user.plan === "pro" ? Infinity : 50;
+    const currentCount = user.usageStats?.notesCount || 0;
+    
+    if (currentCount >= limit) {
+      return res.status(403).json({ success: false, message: "Free plan limit reached (50 notes). Please upgrade to Pro for unlimited notes." });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/notes — cursor-based pagination
+// Query params: ?cursor=<lastNoteId>&limit=<number>
 router.get("/", protect, ensureModel, async (req, res) => {
-  const page = parseInt(req.query.page) || 0;   // 0 = no pagination (all)
-  const limit = parseInt(req.query.limit) || 0;  // 0 = no limit
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const cursor = req.query.cursor || null; // ObjectId of last loaded note
 
   if (getMockMode()) {
-    const notes = await mockNotes.find({ user: req.userId, isTrashed: false });
-    const paginated = (limit > 0) ? notes.slice((page - 1) * limit, page * limit) : notes;
-    return res.json({ success: true, notes: paginated, total: notes.length });
+    const allNotes = await mockNotes.find({ user: req.userId, isTrashed: false });
+    // Simulate cursor: find where cursor is, slice from there
+    let startIdx = 0;
+    if (cursor) {
+      const idx = allNotes.findIndex(n => (n._id || n.id)?.toString() === cursor);
+      startIdx = idx !== -1 ? idx + 1 : 0;
+    }
+    const paginated = allNotes.slice(startIdx, startIdx + limit);
+    const hasMore = startIdx + limit < allNotes.length;
+    const nextCursor = hasMore ? paginated[paginated.length - 1]?._id?.toString() : null;
+    return res.json({ success: true, notes: paginated, nextCursor, hasMore, total: allNotes.length });
   }
 
-  const query = Note.find({ user: req.userId, isTrashed: false })
-    .sort({ updatedAt: -1 })
-    .select("-blobUrl -pages -drawHistory -notes -connectors -canvasImages"); // Exclude heavy fields for list view
+  // Build query with cursor
+  const query = { user: req.userId, isTrashed: false };
+  if (cursor) {
+    // _id is monotonically increasing (ObjectId) — fetch notes older than cursor
+    try {
+      const mongoose = require("mongoose");
+      query._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+    } catch (_) {
+      // Invalid cursor — just ignore and fetch from beginning
+    }
+  }
 
+  const notes = await Note
+    .find(query)
+    .sort({ _id: -1 }) // newest first
+    .limit(limit + 1)   // fetch one extra to determine hasMore
+    .select("-blobUrl -pages -drawHistory -notes -connectors -canvasImages");
+
+  const hasMore = notes.length > limit;
+  if (hasMore) notes.pop(); // remove the extra sentinel
+
+  const nextCursor = hasMore ? notes[notes.length - 1]?._id?.toString() : null;
   const total = await Note.countDocuments({ user: req.userId, isTrashed: false });
 
-  if (limit > 0 && page > 0) {
-    query.skip((page - 1) * limit).limit(limit);
-  }
-
-  const notes = await query;
-  res.json({ success: true, notes, total, page: page || 1, limit: limit || total });
+  res.json({ success: true, notes, nextCursor, hasMore, total });
 });
 
 // GET /api/notes/trash
@@ -136,7 +179,7 @@ router.post("/", protect, ensureModel, upload.single("file"), validate([
     require('express-validator').body('category').optional().isString(),
     require('express-validator').body('content').optional().isString(),
     require('express-validator').body('fileType').optional().isString(),
-  ]), async (req, res) => {
+  ]), enforceNoteLimit, async (req, res) => {
   let { name, icon, category, content, blobUrl, fileType, size, pages } = req.body;
   
   if (req.file) {
@@ -178,6 +221,9 @@ router.post("/", protect, ensureModel, upload.single("file"), validate([
     return res.status(201).json({ success: true, note });
   }
   const note = await Note.create(data);
+  if (!getMockMode() && User) {
+    await User.findByIdAndUpdate(req.userId, { $inc: { "usageStats.notesCount": 1 } });
+  }
   req.app.get("io")?.to(req.userId).emit("sync_notes");
   await sendNotification(
     req.app.get("io"), 
@@ -220,6 +266,11 @@ router.delete("/:id", protect, ensureModel, async (req, res) => {
   }
   const note = await Note.findOneAndUpdate({ _id: req.params.id, user: req.userId }, { isTrashed: true, trashedAt: new Date() }, { new: true });
   if (!note) return res.status(404).json({ success: false, message: "Note not found." });
+  
+  if (!getMockMode() && User) {
+    await User.findByIdAndUpdate(req.userId, { $inc: { "usageStats.notesCount": -1 } });
+  }
+
   req.app.get("io")?.to(req.userId).emit("sync_notes");
   res.json({ success: true, message: "Note moved to trash." });
 });
@@ -244,6 +295,11 @@ router.post("/:id/restore", protect, ensureModel, async (req, res) => {
     return res.json({ success: true, note });
   }
   const note = await Note.findOneAndUpdate({ _id: req.params.id, user: req.userId }, { isTrashed: false, trashedAt: null }, { new: true });
+  
+  if (!getMockMode() && User) {
+    await User.findByIdAndUpdate(req.userId, { $inc: { "usageStats.notesCount": 1 } });
+  }
+
   req.app.get("io")?.to(req.userId).emit("sync_notes");
   res.json({ success: true, note });
 });

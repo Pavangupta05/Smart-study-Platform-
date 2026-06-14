@@ -127,7 +127,14 @@ function Profile() {
           
           <div className="profile-main-info">
             <div className="info-left">
-              <h1 className="profile-name">{user?.name || "Student"}</h1>
+              <h1 className="profile-name">
+                {user?.name || "Student"}
+                {user?.plan === 'pro' && (
+                  <span style={{ marginLeft: "12px", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "14px", fontWeight: "600", padding: "4px 10px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "white", borderRadius: "99px", verticalAlign: "middle" }}>
+                    <Zap size={14} fill="currentColor" /> Pro
+                  </span>
+                )}
+              </h1>
               <div className="profile-meta-row">
                 <span className="meta-item">
                   <Mail size={15} />
@@ -186,12 +193,14 @@ function Profile() {
                 </div>
                 <div className="info-field">
                   <span className="field-label">Subscription</span>
-                  <span className="field-value">Free Plan</span>
+                  <span className="field-value">{user?.plan === "pro" ? "StarNote Pro" : "Free Plan"}</span>
                 </div>
-                <button className="btn-upgrade">
-                  <Zap size={16} fill="currentColor" />
-                  <span>Upgrade to Premium</span>
-                </button>
+                {user?.plan !== "pro" && (
+                  <button className="btn-upgrade" onClick={() => navigate("/settings", { state: { tab: "billing" } })}>
+                    <Zap size={16} fill="currentColor" />
+                    <span>Upgrade to Premium</span>
+                  </button>
+                )}
               </div>
             </motion.section>
           </div>

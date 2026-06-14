@@ -42,7 +42,7 @@ function Dashboard() {
   const {
     notes: recentFiles, loading: notesLoading,
     refetch: refetchNotes
-  } = useNotes({ page: 1, limit: 20, cloudSyncEnabled: isCloudSyncEnabled });
+  } = useNotes({ limit: 6, cloudSyncEnabled: isCloudSyncEnabled });
 
   const { dueCardsCount, refetch: refetchFlashcards } = useFlashcards();
 
@@ -197,7 +197,14 @@ function Dashboard() {
     <div className="dashboard-minimal">
       <header className="dash-header">
         <div className="dash-greeting">
-          <h1>Welcome back, {firstName}! 👋</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Welcome back, {firstName}! 👋
+            {user?.plan === 'pro' && (
+              <span style={{ fontSize: "12px", fontWeight: "600", padding: "4px 8px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "white", borderRadius: "99px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <Zap size={12} fill="currentColor" /> Pro
+              </span>
+            )}
+          </h1>
           <p>{tasks.filter(t => !t.completed).length} tasks left today.</p>
         </div>
       </header>
@@ -627,10 +634,8 @@ function Dashboard() {
             </div>
             <div className="leaderboard-list" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {[
-                { rank: 1, name: "Alex Chen", hours: 14.5, color: "#f59e0b", you: false },
-                { rank: 2, name: `${firstName} (You)`, hours: Math.round((user?.studyStats?.focusTime || 0) / 60 * 10) / 10 || 12.2, color: "var(--primary)", you: true },
-                { rank: 3, name: "Sarah M.", hours: 8.4, color: "var(--text-muted)", you: false }
-              ].sort((a,b) => b.hours - a.hours).map((userCard, i) => (
+                { rank: 1, name: `${firstName} (You)`, hours: Math.round((user?.studyStats?.focusTime || 0) / 60 * 10) / 10 || 0, color: "var(--primary)", you: true }
+              ].map((userCard, i) => (
                 <div key={i} style={{ 
                   display: "flex", alignItems: "center", justifyContent: "space-between", 
                   padding: "10px 12px", background: userCard.you ? "rgba(var(--primary-rgb), 0.1)" : "var(--bg-secondary)", 
@@ -645,6 +650,9 @@ function Dashboard() {
                   <span style={{ fontSize: "13px", color: "var(--text-muted)", fontWeight: 500 }}>{userCard.hours}h</span>
                 </div>
               ))}
+              <div style={{ textAlign: "center", padding: "12px", fontSize: "13px", color: "var(--text-muted)", background: "var(--bg-secondary)", borderRadius: "10px", marginTop: "4px" }}>
+                Connect with friends to see how you rank!
+              </div>
             </div>
           </section>
 

@@ -122,7 +122,14 @@ function Sidebar({ theme, onOpenSearch, isSidebarOpen, setIsSidebarOpen }) {
               <LibraryBig size={16} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-              <span className="sb-logo-text" style={{ lineHeight: 1 }}>StarNote</span>
+              <span className="sb-logo-text" style={{ lineHeight: 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                StarNote
+                {user?.plan === 'pro' && (
+                  <span style={{ fontSize: "9px", padding: "2px 5px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "white", borderRadius: "4px", fontWeight: "bold" }}>
+                    PRO
+                  </span>
+                )}
+              </span>
               <span style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "3px", fontWeight: 500 }}>Personal Workspace</span>
             </div>
             <ChevronDown size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />

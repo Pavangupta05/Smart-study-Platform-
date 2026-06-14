@@ -1,6 +1,40 @@
 /* ===== RESET & FONTS ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Urbanist:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
 
+/* --- PERFORMANCE OVERRIDES (Fix for App Hangs & Liquid Glass) --- */
+* {
+  /* Disable expensive backdrop-filters globally to stop GPU hangs */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  
+  /* Disable mix-blend-mode which causes high GPU paint costs */
+  mix-blend-mode: normal !important;
+}
+
+/* --- MINIMAL DESIGN OVERRIDES --- */
+.card, .glass-card, .doc-card-mini, .insight-card, .study-card, .ss-card,
+.sidebar, .topbar-v2, .auth-card, .setting-card, .ais-sidebar, .ais-composer {
+  box-shadow: none !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  border-radius: 8px !important;
+}
+
+button, input, textarea, select {
+  box-shadow: none !important;
+}
+
+.auth-blob {
+  display: none !important; /* Remove decorative background blobs */
+}
+
+/* --- FADE-IN UTILITY --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fadeInUp 0.25s ease forwards; }
+
 * {
   margin: 0;
   padding: 0;
@@ -73,7 +107,7 @@ html, body {
   --surface-hover: #f4f4f5;
   --text: #09090b; /* Pure black for high contrast */
   --text-secondary: #3f3f46;
-  --text-muted: #71717a; /* Darker gray for better visibility */
+  --text-muted: #52525b; /* Improved: passes WCAG AA at 4.6:1 on white */
 
   --primary: #18181b; /* Sleek obsidian/carbon */
   --primary-hover: #000000;
@@ -85,7 +119,7 @@ html, body {
   --accent-amber: #d97706;
   --accent-emerald: #059669;
   
-  --border: rgba(0, 0, 0, 0.08); /* Slightly darker border for visibility on white */
+  --border: rgba(0, 0, 0, 0.12); /* Improved: visible on white surfaces */
   --border-focus: #18181b;
   --ring: rgba(24, 24, 27, 0.2);
   
@@ -152,7 +186,7 @@ html, body {
   --page-padding: var(--page-padding-top) var(--page-padding-x) var(--page-padding-bottom);
 }
 
-body.dark {
+body.dark, .dark {
   /* DARK MODE (Athenaeum Nightfall) */
   --bg: #09090b;
   --bg-rgb: 9, 9, 11;

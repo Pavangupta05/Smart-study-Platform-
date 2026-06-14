@@ -1,53 +1,149 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, Brain, RefreshCw, Maximize2, BookOpen, Layers, X } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { ArrowLeft, Loader2, Brain, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { notesService, aiService } from "../services/index";
 import "../styles/mindmap.css";
 
 // ── Node type config ─────────────────────────────────────────────────────────
 const NODE_CONFIG = {
-  main:       { color: "#6366f1", glow: "rgba(99,102,241,0.5)",  size: 52, labelSize: 14 },
-  concept:    { color: "#8b5cf6", glow: "rgba(139,92,246,0.4)", size: 40, labelSize: 12 },
-  definition: { color: "#06b6d4", glow: "rgba(6,182,212,0.4)",  size: 36, labelSize: 11 },
-  example:    { color: "#10b981", glow: "rgba(16,185,129,0.4)", size: 32, labelSize: 11 },
+  main:       { color: "#3b82f6", glow: "rgba(59,130,246,0.6)",  size: 56, labelSize: 15 },
+  concept:    { color: "#8b5cf6", glow: "rgba(139,92,246,0.5)",  size: 44, labelSize: 13 },
+  definition: { color: "#ec4899", glow: "rgba(236,72,153,0.5)",  size: 38, labelSize: 12 },
+  example:    { color: "#10b981", glow: "rgba(16,185,129,0.5)",  size: 34, labelSize: 12 },
 };
 
-// ── Force-directed layout (simplified) ───────────────────────────────────────
-function computeLayout(nodes, edges, W, H) {
-  const pos = {};
-  const n = nodes.length;
-  if (n === 0) return pos;
+// ── Physics Engine Hook ──────────────────────────────────────────────────────
+function usePhysicsLayout(nodes, edges, W, H, draggedNode, mousePos) {
+  const [positions, setPositions] = useState({});
+  const physicsRef = useRef({ pos: {}, vel: {} });
 
-  // Place main node at center
-  const main = nodes.find(nd => nd.type === "main") || nodes[0];
-  pos[main.id] = { x: W / 2, y: H / 2 };
+  // Initialize positions randomly near center
+  useEffect(() => {
+    const { pos, vel } = physicsRef.current;
+    let changed = false;
+    nodes.forEach((n) => {
+      if (!pos[n.id]) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * (Math.min(W, H) * 0.2 || 100);
+        pos[n.id] = { x: (W || 800) / 2 + Math.cos(angle) * radius, y: (H || 600) / 2 + Math.sin(angle) * radius };
+        vel[n.id] = { x: 0, y: 0 };
+        changed = true;
+      }
+    });
+    if (changed) setPositions({ ...pos });
+  }, [nodes, W, H]);
 
-  // Radial layout for the rest
-  const rest = nodes.filter(nd => nd.id !== main.id);
-  const angleStep = (2 * Math.PI) / Math.max(rest.length, 1);
-  const radius = Math.min(W, H) * 0.32;
+  useEffect(() => {
+    let raf;
+    const { pos, vel } = physicsRef.current;
+    
+    const tick = () => {
+      if (!W || !H || nodes.length === 0) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      
+      // Repulsion
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n1 = nodes[i].id;
+          const n2 = nodes[j].id;
+          if (!pos[n1] || !pos[n2]) continue;
 
-  rest.forEach((nd, i) => {
-    const angle = angleStep * i - Math.PI / 2;
-    const r = radius + (i % 3) * 30;
-    pos[nd.id] = {
-      x: W / 2 + Math.cos(angle) * r,
-      y: H / 2 + Math.sin(angle) * r,
+          const dx = pos[n1].x - pos[n2].x;
+          const dy = pos[n1].y - pos[n2].y;
+          let d = Math.sqrt(dx * dx + dy * dy);
+          if (d === 0) d = 0.1;
+          
+          if (d < 350) {
+            const force = 4000 / (d * d); // Coulomb-like repulsion
+            const fx = (dx / d) * force;
+            const fy = (dy / d) * force;
+            vel[n1].x += fx; vel[n1].y += fy;
+            vel[n2].x -= fx; vel[n2].y -= fy;
+          }
+        }
+      }
+      
+      // Attraction (Edges)
+      edges.forEach(edge => {
+        const n1 = edge.from;
+        const n2 = edge.to;
+        if (!pos[n1] || !pos[n2]) return;
+
+        const dx = pos[n2].x - pos[n1].x;
+        const dy = pos[n2].y - pos[n1].y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.1;
+        
+        const target = 160; 
+        const force = (d - target) * 0.04; // Hooke's law
+        const fx = (dx / d) * force;
+        const fy = (dy / d) * force;
+        
+        vel[n1].x += fx; vel[n1].y += fy;
+        vel[n2].x -= fx; vel[n2].y -= fy;
+      });
+      
+      // Center Gravity
+      nodes.forEach(n => {
+        if (!pos[n.id]) return;
+        const dx = W / 2 - pos[n.id].x;
+        const dy = H / 2 - pos[n.id].y;
+        vel[n.id].x += dx * 0.015;
+        vel[n.id].y += dy * 0.015;
+      });
+      
+      // Integration
+      let moving = false;
+      nodes.forEach(n => {
+        if (!pos[n.id]) return;
+        if (draggedNode === n.id && mousePos) {
+          pos[n.id].x = mousePos.x;
+          pos[n.id].y = mousePos.y;
+          vel[n.id].x = 0;
+          vel[n.id].y = 0;
+          moving = true;
+        } else {
+          vel[n.id].x *= 0.82; // Damping
+          vel[n.id].y *= 0.82;
+          pos[n.id].x += vel[n.id].x;
+          pos[n.id].y += vel[n.id].y;
+          
+          if (Math.abs(vel[n.id].x) > 0.1 || Math.abs(vel[n.id].y) > 0.1) {
+            moving = true;
+          }
+        }
+      });
+      
+      if (moving) {
+        setPositions({ ...pos });
+      }
+      
+      raf = requestAnimationFrame(tick);
     };
-  });
+    
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [nodes, edges, W, H, draggedNode, mousePos]);
 
-  return pos;
+  return positions;
 }
 
 // ── MindMap Canvas ────────────────────────────────────────────────────────────
 function MindMapCanvas({ graph, onNodeClick, selectedNodeId }) {
   const svgRef = useRef(null);
-  const [dims, setDims] = useState({ w: 800, h: 600 });
-  const [positions, setPositions] = useState({});
-  const [dragging, setDragging] = useState(null);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [draggedNode, setDraggedNode] = useState(null);
+  const [mousePos, setMousePos] = useState(null);
+
+  // Parallax setup
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const springCfg = { damping: 30, stiffness: 100, mass: 0.5 };
+  const px = useSpring(useTransform(mouseX, [0, dims.w || 1000], [20, -20]), springCfg);
+  const py = useSpring(useTransform(mouseY, [0, dims.h || 1000], [20, -20]), springCfg);
 
   useEffect(() => {
     const update = () => {
@@ -61,32 +157,27 @@ function MindMapCanvas({ graph, onNodeClick, selectedNodeId }) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  useEffect(() => {
-    if (graph?.nodes?.length > 0) {
-      setPositions(computeLayout(graph.nodes, graph.edges || [], dims.w, dims.h));
-    }
-  }, [graph, dims]);
+  const positions = usePhysicsLayout(graph.nodes, graph.edges || [], dims.w, dims.h, draggedNode, mousePos);
 
   const handleMouseDown = (e, nodeId) => {
     e.stopPropagation();
-    const pos = positions[nodeId] || { x: 0, y: 0 };
-    setDragging(nodeId);
-    setOffset({ x: e.clientX - pos.x, y: e.clientY - pos.y });
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    setDraggedNode(nodeId);
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
   const handleMouseMove = useCallback((e) => {
-    if (!dragging || !svgRef.current) return;
+    if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
-    setPositions(prev => ({
-      ...prev,
-      [dragging]: {
-        x: Math.max(40, Math.min(dims.w - 40, e.clientX - rect.left)),
-        y: Math.max(40, Math.min(dims.h - 40, e.clientY - rect.top)),
-      }
-    }));
-  }, [dragging, dims]);
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    mouseX.set(x);
+    mouseY.set(y);
+    if (draggedNode) setMousePos({ x, y });
+  }, [draggedNode, mouseX, mouseY]);
 
-  const handleMouseUp = () => setDragging(null);
+  const handleMouseUp = () => setDraggedNode(null);
 
   if (!graph?.nodes?.length) return null;
 
@@ -98,43 +189,59 @@ function MindMapCanvas({ graph, onNodeClick, selectedNodeId }) {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      {/* Background grid */}
       <defs>
-        <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-          <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
         </pattern>
         {graph.nodes.map(node => {
           const cfg = NODE_CONFIG[node.type] || NODE_CONFIG.concept;
           return (
-            <radialGradient key={`grad-${node.id}`} id={`grad-${node.id}`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor={cfg.color} stopOpacity="1" />
-              <stop offset="100%" stopColor={cfg.color} stopOpacity="0.7" />
+            <radialGradient key={`grad-${node.id}`} id={`grad-${node.id}`} cx="30%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+              <stop offset="30%" stopColor={cfg.color} stopOpacity="1" />
+              <stop offset="100%" stopColor={cfg.color} stopOpacity="0.6" />
             </radialGradient>
           );
         })}
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="4" result="blur" />
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="6" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
+      
+      {/* Background */}
       <rect width="100%" height="100%" fill="url(#grid)" />
 
-      {/* Edges */}
+      <motion.g style={{ x: px, y: py }}>
+        {/* Edges */}
       {(graph.edges || []).map((edge, i) => {
         const from = positions[edge.from];
         const to = positions[edge.to];
         if (!from || !to) return null;
+        
+        // Quadratic bezier curve slightly offset for elegance
+        const cpx = (from.x + to.x) / 2 + (from.y - to.y) * 0.1;
+        const cpy = (from.y + to.y) / 2 + (to.x - from.x) * 0.1;
+
         return (
           <motion.path
             key={i}
-            d={`M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${(from.y + to.y) / 2 - 20} ${to.x} ${to.y}`}
+            d={`M ${from.x} ${from.y} Q ${cpx} ${cpy} ${to.x} ${to.y}`}
             fill="none"
-            stroke="rgba(139,92,246,0.3)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth="2"
+            strokeDasharray="6 6"
             initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: 0.8, delay: i * 0.05 }}
+            animate={{ 
+              pathLength: 1, 
+              opacity: 1,
+              strokeDashoffset: [0, -24]
+            }}
+            transition={{ 
+              pathLength: { duration: 1, delay: i * 0.02 },
+              opacity: { duration: 1, delay: i * 0.02 },
+              strokeDashoffset: { duration: 1.5, repeat: Infinity, ease: "linear" }
+            }}
           />
         );
       })}
@@ -148,58 +255,61 @@ function MindMapCanvas({ graph, onNodeClick, selectedNodeId }) {
         const isMain = node.type === "main";
 
         return (
-          <g
-            key={node.id}
-            transform={`translate(${pos.x},${pos.y})`}
-            onMouseDown={e => handleMouseDown(e, node.id)}
-            onClick={() => onNodeClick(node)}
-            style={{ cursor: "pointer" }}
-          >
-            {/* Glow ring on selected */}
-            {isSelected && (
-              <circle r={cfg.size + 6} fill="none" stroke={cfg.color} strokeWidth="2" opacity="0.6" />
-            )}
-
-            {/* Pulse ring for main */}
-            {isMain && (
-              <motion.circle
-                r={cfg.size + 8}
-                fill="none"
-                stroke={cfg.color}
-                strokeWidth="1"
-                animate={{ r: [cfg.size + 6, cfg.size + 18], opacity: [0.4, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-              />
-            )}
-
-            <motion.circle
-              r={cfg.size}
-              fill={`url(#grad-${node.id})`}
-              filter="url(#glow)"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4, delay: i * 0.06, type: "spring" }}
-              whileHover={{ scale: 1.1 }}
-            />
-
-            {/* Label */}
-            <motion.text
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontSize={cfg.labelSize}
-              fontWeight={isMain ? "800" : "600"}
-              fontFamily="inherit"
-              style={{ pointerEvents: "none", userSelect: "none" }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.06 + 0.3 }}
+          <g key={node.id} transform={`translate(${pos.x},${pos.y})`}>
+            <motion.g
+              onMouseDown={e => handleMouseDown(e, node.id)}
+              onClick={() => onNodeClick(node)}
+              style={{ cursor: draggedNode === node.id ? "grabbing" : "grab" }}
+              whileHover={{ scale: 1.15 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
-              {node.label.length > 14 ? node.label.slice(0, 13) + "…" : node.label}
-            </motion.text>
+              {/* Selection Glow */}
+              {isSelected && (
+                <circle r={cfg.size + 10} fill={cfg.glow} filter="url(#glow)" opacity="0.8" />
+              )}
+
+              {/* Pulse ring for main */}
+              {isMain && (
+                <motion.circle
+                  r={cfg.size + 12}
+                  fill="none"
+                  stroke={cfg.color}
+                  strokeWidth="2"
+                  animate={{ r: [cfg.size + 8, cfg.size + 24], opacity: [0.6, 0] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
+                />
+              )}
+
+              {/* Main Circle */}
+              <motion.circle
+                r={cfg.size}
+                fill={`url(#grad-${node.id})`}
+                filter="url(#glow)"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: i * 0.03, type: "spring", bounce: 0.4 }}
+              />
+
+              {/* Label */}
+              <motion.text
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="#ffffff"
+                fontSize={cfg.labelSize}
+                fontWeight={isMain ? "800" : "700"}
+                fontFamily="-apple-system, 'Inter', sans-serif"
+                style={{ pointerEvents: "none", userSelect: "none", textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 + 0.3 }}
+              >
+                {node.label.length > 15 ? node.label.slice(0, 14) + "…" : node.label}
+              </motion.text>
+            </motion.g>
           </g>
         );
       })}
+      </motion.g>
     </svg>
   );
 }
@@ -219,7 +329,7 @@ function NodePanel({ node, noteContent, onClose }) {
     ).then(res => setInfo(res.data.data.text))
       .catch(() => setInfo("Could not load explanation."))
       .finally(() => setLoading(false));
-  }, [node?.id]);
+  }, [node?.id, noteContent]);
 
   if (!node) return null;
   const cfg = NODE_CONFIG[node.type] || NODE_CONFIG.concept;
@@ -235,7 +345,7 @@ function NodePanel({ node, noteContent, onClose }) {
       <div className="mnp-header">
         <div className="mnp-badge" style={{ background: cfg.color }}>
           <Brain size={14} />
-          <span>{node.type}</span>
+          <span style={{ textTransform: "capitalize" }}>{node.type}</span>
         </div>
         <button className="mnp-close" onClick={onClose}><X size={15} /></button>
       </div>
@@ -315,28 +425,11 @@ export default function MindMap() {
 
       {/* Canvas Area */}
       <div className="mindmap-canvas-area">
-        {/* Stars background */}
-        <div className="mindmap-stars" aria-hidden>
-          {Array.from({ length: 80 }).map((_, i) => (
-            <div
-              key={i}
-              className="mm-star"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                width: `${Math.random() * 2 + 1}px`,
-                height: `${Math.random() * 2 + 1}px`,
-                animationDelay: `${Math.random() * 3}s`,
-              }}
-            />
-          ))}
-        </div>
-
         {loading ? (
           <div className="mindmap-loading">
             <Loader2 size={32} className="spin" />
             <p>Analyzing note with AI…</p>
-            <span>Extracting concepts and relationships</span>
+            <span>Extracting concepts and constructing neural network</span>
           </div>
         ) : error ? (
           <div className="mindmap-error">
@@ -357,8 +450,8 @@ export default function MindMap() {
           <div className="mindmap-legend">
             {Object.entries(NODE_CONFIG).map(([type, cfg]) => (
               <div key={type} className="mm-legend-item">
-                <div className="mm-legend-dot" style={{ background: cfg.color }} />
-                <span>{type}</span>
+                <div className="mm-legend-dot" style={{ background: cfg.color, boxShadow: `0 0 8px ${cfg.color}` }} />
+                <span style={{ textTransform: "capitalize" }}>{type}</span>
               </div>
             ))}
           </div>

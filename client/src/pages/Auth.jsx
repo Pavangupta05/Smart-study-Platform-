@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2, XCircle, Shield, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/index";
+import { useUser } from "../context/UserContext";
 import { toast } from "sonner";
 import "../styles/auth.css";
 
@@ -54,6 +55,7 @@ function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const navigate = useNavigate();
+  const { refetch } = useUser();
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -101,7 +103,9 @@ function Auth() {
       localStorage.setItem("starNote_token", token);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("starNote_user", JSON.stringify(user));
-      window.location.href = "/";
+      // Fix 2: Use context refetch + navigate instead of full page reload
+      await refetch();
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
@@ -123,7 +127,8 @@ function Auth() {
       <div className="auth-blob auth-blob-2" />
 
       <div className="auth-card-container">
-        <button className="auth-back-btn" onClick={() => navigate("/landing")}>
+        {/* Fix 12: Use navigate(-1) or go to landing only if history is empty */}
+        <button className="auth-back-btn" onClick={() => navigate("/")}>
           <ArrowLeft size={16} /> Back
         </button>
         <motion.div
